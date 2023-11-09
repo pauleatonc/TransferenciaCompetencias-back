@@ -18,8 +18,14 @@ DJANGO_APPS = [
 
 LOCAL_APPS = [
 
+    'applications.base',
     'applications.users',
     'applications.regioncomuna',
+    'applications.competencias',
+    'applications.sectores_gubernamentales',
+    # 'applications.etapas',
+    # 'applications.formularios_sectoriales',
+
 
 ]
 
