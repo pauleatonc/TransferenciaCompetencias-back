@@ -4,8 +4,10 @@ from django.db.models import Q
 from django.db.models.signals import pre_save, m2m_changed
 from django.dispatch import receiver
 from django.core.validators import MinValueValidator, MaxValueValidator
-#
+from django.contrib.auth import get_user_model
 from django.conf import settings
+#
+
 from applications.base.models import BaseModel
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
@@ -41,7 +43,7 @@ class Competencia(BaseModel):
         blank=False,
         verbose_name='Sectores'
     )
-    ambito = models.CharField(max_length=5, choices=ORIGEN, default='AP')
+    ambito = models.CharField(max_length=5, choices=AMBITO, default='AP')
     regiones = models.ManyToManyField(
         Region,
         blank=False,
@@ -82,6 +84,11 @@ class Competencia(BaseModel):
         blank=True,
         limit_choices_to=Q(groups__name='GORE')
     )
+
+
+    class Meta:
+        verbose_name = 'Competencia'
+        verbose_name_plural = 'Competencias'
 
 
     def total_etapas(self):

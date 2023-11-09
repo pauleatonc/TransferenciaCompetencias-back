@@ -24,7 +24,6 @@ class EtapaBase(models.Model):
     estado = models.CharField(max_length=50, choices=ESTADOS, default='no_iniciada')
     fecha_inicio = models.DateField(null=True, blank=True)
     plazo_dias = models.IntegerField(null=True, blank=True)
-    usuarios = models.ManyToManyField(User, related_name="%(class)s_usuarios")
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
 
@@ -73,7 +72,7 @@ class Etapa1(EtapaBase):
 
     @property
     def usuario_sectorial_vinculado(self):
-        return self.usuarios.exists()
+        return self.competencia.usuarios_sectoriales.exists()
 
     def save(self, *args, **kwargs):
         if self.usuario_sectorial_vinculado and not self.fecha_inicio:
@@ -82,14 +81,8 @@ class Etapa1(EtapaBase):
             self.aprobada = True
         super().save(*args, **kwargs)
 
-# Este receptor se activará cada vez que los usuarios de una etapa sean modificados.
-@receiver(m2m_changed, sender=EtapaBase.usuarios.through)
-def usuarios_cambiados(sender, instance, **kwargs):
-    if instance.usuario_sectorial_vinculado:
-        instance.save()
 
-
-class Etapa2(EtapaBase):
+"""class Etapa2(EtapaBase):
 
     comentario_observacion = models.TextField(max_length=500, blank=True)
     archivo_observacion = models.FileField(upload_to='observaciones',
@@ -142,4 +135,4 @@ def validar_usuarios_por_sector(sender, instance, **kwargs):
         usuarios_activos = instance.usuarios.filter(is_active=True)
         sectores = [usuario.sector for usuario in usuarios_activos]
         if len(sectores) != len(set(sectores)):
-            raise ValidationError("No puede haber más de un usuario activo por sector.")
+            raise ValidationError("No puede haber más de un usuario activo por sector.")"""

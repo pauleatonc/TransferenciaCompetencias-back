@@ -23,8 +23,8 @@ LOCAL_APPS = [
     'applications.regioncomuna',
     'applications.competencias',
     'applications.sectores_gubernamentales',
-    # 'applications.etapas',
-    # 'applications.formularios_sectoriales',
+    'applications.etapas',
+    'applications.formularios_sectoriales',
 
 
 ]
