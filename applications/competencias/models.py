@@ -123,15 +123,23 @@ class Competencia(BaseModel):
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
 def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
     if action == 'pre_add':
+        User = get_user_model()
         for pk in pk_set:
-            usuario = settings.AUTH_USER_MODEL.objects.get(pk=pk)
-            if usuario.sector not in instance.sectores.all():
-                raise ValidationError(f"El usuario {usuario.username} no pertenece a los sectores asignados a esta competencia.")
+            try:
+                usuario = User.objects.get(pk=pk)
+                if usuario.sector not in instance.sectores.all():
+                    raise ValidationError(f"El usuario {usuario.username} no pertenece al o los sectores asignados a esta competencia.")
+            except User.DoesNotExist:
+                raise ValidationError("El usuario no existe.")
 
 @receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
 def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
     if action == 'pre_add':
+        User = get_user_model()
         for pk in pk_set:
-            usuario = settings.AUTH_USER_MODEL.objects.get(pk=pk)
-            if usuario.region not in instance.regiones.all():
-                raise ValidationError(f"El usuario {usuario.username} no pertenece a las regiones asignadas a esta competencia.")
+            try:
+                usuario = User.objects.get(pk=pk)
+                if usuario.region not in instance.regiones.all():
+                    raise ValidationError(f"El usuario {usuario.username} no pertenece a la o las regiones asignadas a esta competencia.")
+            except User.DoesNotExist:
+                raise ValidationError("El usuario no existe.")
