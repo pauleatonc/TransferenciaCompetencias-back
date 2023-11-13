@@ -20,6 +20,19 @@ def is_Observador(user: User) -> bool:
     return user.groups.filter(name='Usuario Observador').exists() or user.is_superuser
 
 
+class IsSUBDEREOrSuperuser(BasePermission):
+    """
+    Permite el acceso solo a los usuarios SUBDERE o superusuarios.
+    """
+
+    def has_permission(self, request, view):
+        return is_SUBDERE_or_superuser(request.user)
+
+    def has_object_permission(self, request, view, obj):
+        # La lógica para permisos de objeto puede ser diferente si es necesario
+        return is_SUBDERE_or_superuser(request.user)
+
+
 class CanEditUser(permissions.BasePermission):
     """
     Permiso personalizado para verificar quién puede editar a quién.

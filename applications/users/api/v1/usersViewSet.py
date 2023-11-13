@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from applications.users.models import User
 from applications.users.api.v1.serializers import (
@@ -17,6 +17,7 @@ from applications.users.api.v1.serializers import (
     PermissionSerializer,
     UserProfileUpdateSerializer
 )
+from applications.users.permissions import CanEditUser, IsSUBDEREOrSuperuser
 
 
 class UserViewSet(viewsets.GenericViewSet):
@@ -33,7 +34,24 @@ class UserViewSet(viewsets.GenericViewSet):
             self.queryset = self.model.objects.filter(is_active=True)
         return self.queryset
 
-    @action(detail=True, methods=['post'])
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'set_password':
+            permission_classes = [IsAuthenticated]  # Los usuarios deben estar autenticados para cambiar su contraseña.
+        elif self.action in ['list', 'create', 'update', 'destroy']:
+            permission_classes = [IsSUBDEREOrSuperuser]  # Solo SUBDERE o superusuarios pueden realizar estas acciones.
+        elif self.action == 'retrieve':
+            permission_classes = [
+                IsAuthenticated]  # Los usuarios pueden ver sus detalles o si son SUBDERE o superusuarios.
+        elif self.action == 'update_profile':
+            permission_classes = [IsAuthenticated]  # Los usuarios pueden editar su propio perfil.
+        else:
+            permission_classes = [AllowAny]  # Define tu política por defecto aquí.
+        return [permission() for permission in permission_classes]
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def set_password(self, request, pk=None):
         """
         Endpoint para cambio de contraseñas.
@@ -92,8 +110,11 @@ class UserViewSet(viewsets.GenericViewSet):
         Detalles del usuario solo de lectura
         """
         user = self.get_object(pk)
-        user_serializer = self.serializer_class(user)
-        return Response(user_serializer.data)
+        if request.user.is_authenticated and (user == request.user or IsSUBDEREOrSuperuser):
+            user_serializer = self.serializer_class(user)
+            return Response(user_serializer.data)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
 
     def update(self, request, pk=None):
         """
@@ -117,19 +138,18 @@ class UserViewSet(viewsets.GenericViewSet):
             'errors': user_serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['patch'], name='Update My Profile')
+    @action(detail=False, methods=['patch'], permission_classes=[IsAuthenticated], name='Actualizar mi Perfil de Usuario')
     def update_profile(self, request, *args, **kwargs):
         """
         Edición de campos del propio usuario autenticado
 
 
-        Permite editar solo los campos
-                'nombres',
-                'primer_apellido',
-                'segundo_apellido',
-                'comuna',
+        Permite editar solo los campos:
+                'nombre completo',
+                'perfil',
+                'sector',
+                'region',
                 'email',
-                'institucion'
         """
         instance = request.user
         serializer = UserProfileUpdateSerializer(instance, data=request.data, partial=True)
