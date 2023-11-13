@@ -60,6 +60,13 @@ class Competencia(BaseModel):
         ],
         help_text="El plazo debe estar entre 15 y 30 días."
     )
+    plazo_formulario_gore = models.IntegerField(
+        validators=[
+            MinValueValidator(15),
+            MaxValueValidator(30)
+        ],
+        help_text="El plazo debe estar entre 15 y 30 días."
+    )
     usuarios_subdere = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='competencias_subdere',
@@ -91,33 +98,25 @@ class Competencia(BaseModel):
         verbose_name_plural = 'Competencias'
 
 
-    def total_etapas(self):
-        return self.etapas.count()
-
-    def etapas_finalizadas(self):
-        return self.etapas.filter(estado='finalizada').count()
-
-    @property
-    def porcentaje_avance(self):
-        total = self.total_etapas()
-        finalizadas = self.etapas_finalizadas()
-        return (finalizadas / total * 100) if total > 0 else 0
 
     def clean(self):
-        # Validación para asegurarse de que solo haya un usuario SUBDERE y DIPRES activos
-        if self.usuarios_subdere.filter(is_active=True).count() > 1:
-            raise ValidationError("Solo puede haber un usuario SUBDERE activo.")
-        if self.usuarios_dipres.filter(is_active=True).count() > 1:
-            raise ValidationError("Solo puede haber un usuario DIPRES activo.")
-        # Aquí puedes agregar las validaciones para usuarios_sectoriales y usuarios_gore
         super().clean()
 
     def save(self, *args, **kwargs):
-        if not self.pk:  # Indica que la instancia es nueva
-            # Asume que el usuario que crea la competencia es un usuario SUBDERE
-            self.usuarios_subdere.add(self.creado_por)  # 'creado_por' debe ser el usuario SUBDERE que crea la competencia
-        self.full_clean()
-        super().save(*args, **kwargs)
+        creating = not bool(self.pk)  # Verificar si es una creación
+        super().save(*args, **kwargs)  # Primero guardamos para obtener un ID
+
+        # Ahora se pueden manejar las relaciones many-to-many
+        if creating:
+            if self.usuarios_subdere.filter(is_active=True).count() > 1:
+                raise ValidationError("Solo puede haber un usuario SUBDERE activo.")
+            if self.usuarios_dipres.filter(is_active=True).count() > 1:
+                raise ValidationError("Solo puede haber un usuario DIPRES activo.")
+            # ... otras validaciones many-to-many ...
+
+        # Finalmente, asignar usuarios si es un nuevo objeto
+        if creating and self.creado_por:
+            self.usuarios_subdere.add(self.creado_por)
 
 
 # Receptor de señal para la validación de usuarios sectoriales y GORE

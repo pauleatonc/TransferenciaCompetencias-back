@@ -47,6 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     def clean(self):
+        super().clean()
         # Validar que el sector y la región son obligatorios si el perfil es Sectorial o GORE
         if self.perfil == 'Usuario Sectorial' and not self.sector:
             raise ValidationError({'sector': 'El campo sector es obligatorio para el perfil Usuario Sectorial.'})

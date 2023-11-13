@@ -8,20 +8,23 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     pass
 
 class UserSerializer(serializers.ModelSerializer):
-    tipo_de_usuario = serializers.SerializerMethodField()
-    full_name = serializers.SerializerMethodField()
+
+    password = serializers.CharField(write_only=True, required=True)
+    grupo_de_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'full_name', 'rut', 'email', 'tipo_de_usuario', 'is_active')
+        fields = ('id', 'password', 'nombre_completo', 'rut', 'email', 'perfil', 'sector', 'region', 'is_active', 'grupo_de_usuario')
 
     def create(self, validated_data):
         user = User(**validated_data)
-        user.set_password(validated_data['password'])
+        password = validated_data.pop('password', None)  # Usa pop para evitar KeyError y manejar el caso si falta
+        if password:
+            user.set_password(password)
         user.save()
         return user
 
-    def get_tipo_de_usuario(self, obj):
+    def get_grupo_de_usuario(self, obj):
         if obj.is_superuser:
             return 'Superusuario'
 
@@ -33,9 +36,6 @@ class UserSerializer(serializers.ModelSerializer):
             return ', '.join(group_names)
 
         return 'Registrado'
-
-    def get_full_name(self, obj):  # Método para obtener el nombre completo
-        return obj.get_full_name()
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
@@ -50,7 +50,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('email', 'is_active', 'groups')
+        fields = ('email', 'is_active', 'groups', 'perfil', 'sector', 'region')
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """
@@ -59,12 +59,12 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('nombres',
-                  'primer_apellido',
-                  'segundo_apellido',
-                  'comuna',
+        fields = ('nombre_completo',
                   'email',
-                  'institucion'
+                  'groups',
+                  'perfil',
+                  'sector',
+                  'region'
                   )
 
 
@@ -81,24 +81,10 @@ class PasswordSerializer(serializers.Serializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
-    tipo_de_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'rut', 'nombres', 'email', 'is_active', 'tipo_de_usuario']
-
-    def get_tipo_de_usuario(self, obj):
-        if obj.is_superuser:
-            return 'Superusuario'
-
-        # Obtener nombres de todos los grupos a los que pertenece el usuario
-        group_names = [group.name for group in obj.groups.all()]
-
-        # Si pertenece a algún grupo, retornar esos nombres unidos por coma
-        if group_names:
-            return ', '.join(group_names)
-
-        return 'Registrado'
+        fields = ['id', 'rut', 'nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region']
 
 
 class PermissionSerializer(serializers.ModelSerializer):
