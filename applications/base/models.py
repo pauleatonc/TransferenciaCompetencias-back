@@ -1,7 +1,7 @@
 from django.db import models
 from simple_history.models import HistoricalRecords
 
-# Create your models here.
+
 class BaseModel(models.Model):
     """Model definition for BaseModel"""
 
