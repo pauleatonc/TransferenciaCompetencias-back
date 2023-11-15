@@ -13,6 +13,7 @@ from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
+
 class Competencia(BaseModel):
     ORIGEN = (
         ('OP', 'Oficio Presidencial'),
@@ -98,6 +99,8 @@ class Competencia(BaseModel):
         verbose_name_plural = 'Competencias'
 
 
+    def __str__(self):
+        return self.nombre
 
     def clean(self):
         super().clean()
@@ -125,21 +128,33 @@ def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
     if action == 'pre_add':
         User = get_user_model()
         for pk in pk_set:
-            try:
-                usuario = User.objects.get(pk=pk)
-                if usuario.sector not in instance.sectores.all():
-                    raise ValidationError(f"El usuario {usuario.username} no pertenece al o los sectores asignados a esta competencia.")
-            except User.DoesNotExist:
-                raise ValidationError("El usuario no existe.")
+            usuario = User.objects.get(pk=pk)
+            # Asegurar que el usuario pertenece a un sector asignado a la competencia
+            if usuario.sector not in instance.sectores.all():
+                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece al o los sectores asignados a esta competencia.")
+            # Asegurar que no haya más de un usuario activo por sector
+            usuarios_activos_por_sector = User.objects.filter(
+                sector=usuario.sector,
+                is_active=True,
+                competencias_sectoriales=instance
+            ).distinct().count()
+            if usuarios_activos_por_sector > 1:
+                raise ValidationError(f"Ya existe un usuario activo en el sector {usuario.sector} para esta competencia.")
 
 @receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
 def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
     if action == 'pre_add':
         User = get_user_model()
         for pk in pk_set:
-            try:
-                usuario = User.objects.get(pk=pk)
-                if usuario.region not in instance.regiones.all():
-                    raise ValidationError(f"El usuario {usuario.username} no pertenece a la o las regiones asignadas a esta competencia.")
-            except User.DoesNotExist:
-                raise ValidationError("El usuario no existe.")
+            usuario = User.objects.get(pk=pk)
+            # Asegurar que el usuario pertenece a una región asignada a la competencia
+            if usuario.region not in instance.regiones.all():
+                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
+            # Asegurar que no haya más de un usuario activo por región
+            usuarios_activos_por_region = User.objects.filter(
+                region=usuario.region,
+                is_active=True,
+                competencias_gore=instance
+            ).distinct().count()
+            if usuarios_activos_por_region > 1:
+                raise ValidationError(f"Ya existe un usuario activo en la región {usuario.region} para esta competencia.")

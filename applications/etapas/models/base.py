@@ -42,10 +42,10 @@ class EtapaBase(models.Model):
 
     @property
     def tiempo_restante(self):
-        if self.fecha_inicio:
+        if self.fecha_inicio and self.plazo_dias is not None:
             delta = timezone.now().date() - self.fecha_inicio
             return max(self.plazo_dias - delta.days, 0)
-        return self.plazo_dias
+        return 0
 
     def save(self, *args, **kwargs):
         # Actualiza el estado antes de guardar
