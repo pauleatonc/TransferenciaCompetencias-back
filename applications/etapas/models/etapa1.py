@@ -22,16 +22,16 @@ class Etapa1(EtapaBase):
 
     @property
     def estado_usuarios_vinculados(self):
-        # Inicializar como False
-        usuarios_vinculados = False
+        # Inicializar como True. Asumimos que todos los sectores tienen usuarios asignados.
+        usuarios_vinculados = True
 
-        # Verificar que para cada sector de la competencia hay al menos un usuario asignado
+        # Verificar que cada sector de la competencia tenga al menos un usuario asignado
         for sector in self.competencia.sectores.all():
-            if self.competencia.usuarios_sectoriales.filter(sector=sector).exists():
-                usuarios_vinculados = True
+            if not self.competencia.usuarios_sectoriales.filter(sector=sector).exists():
+                usuarios_vinculados = False
                 break
 
-        # Cambiar la lógica para que devuelva 'Finalizada' si usuarios_vinculados es True
+        # Devolver 'Finalizada' si cada sector tiene al menos un usuario asignado
         return 'Finalizada' if usuarios_vinculados else 'Usuarios pendientes'
 
     def save(self, *args, **kwargs):
@@ -44,7 +44,7 @@ class Etapa1(EtapaBase):
             self.fecha_inicio = timezone.now().date()
             self.plazo_dias = self.competencia.plazo_formulario_sectorial
             self.aprobada = True
-            self.estado = 'EP'
+            self.competencia.estado = 'EP'
         else:
             self.aprobada = False
 

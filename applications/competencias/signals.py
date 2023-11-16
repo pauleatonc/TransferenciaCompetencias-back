@@ -13,7 +13,6 @@ def actualizar_etapa1_al_agregar_usuario_sectorial(sender, instance, action, pk_
     if action == 'post_add' and instance.pk:
         etapa1 = instance.etapa1_set.first()
         if etapa1:
-            print(etapa1.id)
             etapa1.save()
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
@@ -36,3 +35,23 @@ def crear_etapa1_para_competencia(sender, instance, created, **kwargs):
             nombre='Inicio de Transferencia de Competencia',
             # Puedes añadir más campos predeterminados si son necesarios
         )
+
+
+@receiver(post_save, sender=Etapa1)
+def actualizar_estado_y_fecha_competencia(sender, instance, **kwargs):
+    competencia = instance.competencia
+    actualizar = False
+
+    # Actualizar estado a 'EP' si es necesario
+    if instance.usuarios_vinculados and competencia.estado != 'EP':
+        competencia.estado = 'EP'
+        actualizar = True
+
+    # Actualizar fecha_inicio si es necesario
+    if instance.fecha_inicio and competencia.fecha_inicio != instance.fecha_inicio:
+        competencia.fecha_inicio = instance.fecha_inicio
+        actualizar = True
+
+    # Guardar cambios en la competencia si ha habido algún cambio
+    if actualizar:
+        competencia.save()
