@@ -16,7 +16,7 @@ class EtapaBase(models.Model):
 
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
     estado = models.CharField(max_length=50, choices=ESTADOS, default='no_iniciada')
-    fecha_inicio = models.DateField(null=True, blank=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
     plazo_dias = models.IntegerField(null=True, blank=True)
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
@@ -42,10 +42,23 @@ class EtapaBase(models.Model):
 
     @property
     def tiempo_restante(self):
+        """
+        Calcula el tiempo restante hasta el final del plazo.
+        Si la fecha de inicio no está establecida o el plazo no está definido, retorna 0.
+        """
         if self.fecha_inicio and self.plazo_dias is not None:
-            delta = timezone.now().date() - self.fecha_inicio
-            return max(self.plazo_dias - delta.days, 0)
-        return 0
+            tiempo_actual = timezone.now()
+            delta = tiempo_actual - self.fecha_inicio
+            dias_transcurridos = delta.days
+            segundos_restantes = max(self.plazo_dias * 24 * 3600 - delta.total_seconds(), 0)
+
+            # Convertir segundos restantes a días, horas y minutos
+            dias_restantes = segundos_restantes // (24 * 3600)
+            horas_restantes = (segundos_restantes % (24 * 3600)) // 3600
+            minutos_restantes = (segundos_restantes % 3600) // 60
+
+            return f"{dias_restantes} días, {horas_restantes} horas y {minutos_restantes} minutos"
+        return "0 días, 0 horas y 0 minutos"
 
     def save(self, *args, **kwargs):
         # Actualiza el estado antes de guardar

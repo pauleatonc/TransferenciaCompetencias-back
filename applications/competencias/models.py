@@ -6,6 +6,10 @@ from django.dispatch import receiver
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from datetime import datetime, timedelta
+
+from django.utils import timezone
+
 #
 
 from applications.base.models import BaseModel
@@ -51,8 +55,8 @@ class Competencia(BaseModel):
         verbose_name='Regiones'
     )
     origen = models.CharField(max_length=5, choices=ORIGEN, default='OP')
-    fecha_inicio = models.DateField(null=True, blank=True)
-    fecha_fin = models.DateField(null=True, blank=True)
+    fecha_inicio = models.DateTimeField(null=True, blank=True)
+    fecha_fin = models.DateTimeField(null=True, blank=True)
     estado = models.CharField(max_length=5, choices=ESTADO, default='SU')
     plazo_formulario_sectorial = models.IntegerField(
         validators=[
@@ -109,17 +113,27 @@ class Competencia(BaseModel):
         creating = not bool(self.pk)  # Verificar si es una creación
         super().save(*args, **kwargs)  # Primero guardamos para obtener un ID
 
-        # Ahora se pueden manejar las relaciones many-to-many
-        if creating:
-            if self.usuarios_subdere.filter(is_active=True).count() > 1:
-                raise ValidationError("Solo puede haber un usuario SUBDERE activo.")
-            if self.usuarios_dipres.filter(is_active=True).count() > 1:
-                raise ValidationError("Solo puede haber un usuario DIPRES activo.")
-            # ... otras validaciones many-to-many ...
-
         # Finalmente, asignar usuarios si es un nuevo objeto
         if creating and self.creado_por:
             self.usuarios_subdere.add(self.creado_por)
+
+    def tiempo_transcurrido(self):
+        """
+        Calcula el tiempo transcurrido desde fecha_inicio hasta fecha_fin.
+        Si fecha_fin no está asignada, usa el tiempo actual.
+        Devuelve un diccionario con los días, horas y minutos transcurridos.
+        """
+        if not self.fecha_inicio:
+            return {"dias": None, "horas": None, "minutos": None}
+
+        fecha_fin = self.fecha_fin if self.fecha_fin else timezone.now()
+
+        diferencia = fecha_fin - self.fecha_inicio
+        dias = diferencia.days
+        horas = diferencia.seconds // 3600
+        minutos = (diferencia.seconds % 3600) // 60
+
+        return {"dias": dias, "horas": horas, "minutos": minutos}
 
 
 # Receptor de señal para la validación de usuarios sectoriales y GORE
@@ -132,14 +146,7 @@ def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
             # Asegurar que el usuario pertenece a un sector asignado a la competencia
             if usuario.sector not in instance.sectores.all():
                 raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece al o los sectores asignados a esta competencia.")
-            # Asegurar que no haya más de un usuario activo por sector
-            usuarios_activos_por_sector = User.objects.filter(
-                sector=usuario.sector,
-                is_active=True,
-                competencias_sectoriales=instance
-            ).distinct().count()
-            if usuarios_activos_por_sector > 1:
-                raise ValidationError(f"Ya existe un usuario activo en el sector {usuario.sector} para esta competencia.")
+
 
 @receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
 def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
@@ -150,11 +157,3 @@ def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
             # Asegurar que el usuario pertenece a una región asignada a la competencia
             if usuario.region not in instance.regiones.all():
                 raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
-            # Asegurar que no haya más de un usuario activo por región
-            usuarios_activos_por_region = User.objects.filter(
-                region=usuario.region,
-                is_active=True,
-                competencias_gore=instance
-            ).distinct().count()
-            if usuarios_activos_por_region > 1:
-                raise ValidationError(f"Ya existe un usuario activo en la región {usuario.region} para esta competencia.")

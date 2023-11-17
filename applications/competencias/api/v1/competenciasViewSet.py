@@ -1,8 +1,23 @@
+from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Prefetch
+from rest_framework.decorators import action
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from applications.competencias.models import Competencia
+from applications.etapas.models import Etapa1
 from .serializers import (CompetenciaListSerializer, CompetenciaCreateSerializer,
-                          CompetenciaUpdateSerializer, CompetenciaDetailSerializer)
+                          CompetenciaUpdateSerializer, CompetenciaDetailSerializer, CompetenciaHomeListSerializer)
+from applications.users.permissions import IsSUBDEREOrSuperuser
+
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10
+
+class CustomHomePagination(PageNumberPagination):
+    page_size = 2
 
 class CompetenciaViewSet(viewsets.ModelViewSet):
     """
@@ -10,6 +25,12 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     Ofrece listado, creación, actualización, detalle y eliminación de competencias.
     """
     queryset = Competencia.objects.all()
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    pagination_class = CustomPageNumberPagination
+    search_fields = ['id', 'nombre', 'creado_por', 'sectores', 'ambito', 'regiones', 'origen', 'usuarios_subdere',
+                     'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore']
+    ordering_fields = ['estado']
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         # Selecciona el serializer adecuado en función de la acción
@@ -23,6 +44,17 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
             return CompetenciaUpdateSerializer
         return super().get_serializer_class()
 
+    def get_permissions(self):
+        """
+        Devuelve las clases de permisos de instancia para la acción solicitada.
+        """
+        if self.action == 'create':
+            permission_classes = [IsSUBDEREOrSuperuser]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+
+
     def list(self, request, *args, **kwargs):
         """
         Listado de Competencias
@@ -34,12 +66,39 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(competencias, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='lista-home')
+    def lista_home(self, request):
+        user = request.user
+        queryset = Competencia.objects.all().order_by('-created_date')
+
+        # Filtrar según el tipo de usuario
+        if user.groups.filter(name='SUBDERE').exists():
+            queryset = queryset.filter(creado_por=user)
+        elif user.groups.filter(name='GORE').exists():
+            queryset = queryset.filter(usuarios_gore=user)
+        elif user.groups.filter(name='DIPRES').exists():
+            queryset = queryset.filter(usuarios_dipres=user)
+        elif user.groups.filter(name='Usuario Sectorial').exists():
+            queryset = queryset.filter(usuarios_sectoriales=user)
+
+        queryset = queryset.prefetch_related('etapa1_set')
+
+        paginator = CustomHomePagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = CompetenciaHomeListSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        serializer = CompetenciaHomeListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
     def create(self, request, *args, **kwargs):
         """
         Crear Competencia
 
         Permite la creación de una nueva competencia.
-        Acceso solo para usuarios con permisos adecuados.
+        Acceso restringido a usuarios SUBDERE o superusuarios.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
