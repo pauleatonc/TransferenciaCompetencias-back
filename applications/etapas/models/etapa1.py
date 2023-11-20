@@ -18,7 +18,7 @@ class Etapa1(EtapaBase):
         # Asumimos que la competencia está creada si se ha creado la instancia Etapa1
         competencia_creada = self.competencia_creada
 
-        return 'Finalizada' if competencia_creada else 'No Finalizada'
+        return 'finalizada' if competencia_creada else 'pendiente'
 
     @property
     def estado_usuarios_vinculados(self):
@@ -32,21 +32,35 @@ class Etapa1(EtapaBase):
                 break
 
         # Devolver 'Finalizada' si cada sector tiene al menos un usuario asignado
-        return 'Finalizada' if usuarios_vinculados else 'Usuarios pendientes'
+        return 'finalizada' if usuarios_vinculados else 'pendiente'
 
     def save(self, *args, **kwargs):
-        # Actualizar la propiedad competencia_creada y usuarios_vinculados antes de guardar
-        self.competencia_creada = True
-        self.usuarios_vinculados = self.estado_usuarios_vinculados == 'Finalizada'
+        # Verificar si ya tiene asignados todos los usuarios de los sectores requeridos
+        sectores_asignados_completamente = all(
+            self.competencia.usuarios_sectoriales.filter(sector=sector).exists()
+            for sector in self.competencia.sectores.all()
+        )
 
-        # Verificar que todos los sectores tienen al menos un usuario asignado
-        if self.usuarios_vinculados and not self.fecha_inicio:
-            self.fecha_inicio = timezone.now().date()
-            self.plazo_dias = self.competencia.plazo_formulario_sectorial
+        # Si todos los sectores tienen al menos un usuario y aún no se ha establecido fecha_inicio
+        if sectores_asignados_completamente:
+            if not self.fecha_inicio:
+                # Establecer la fecha de inicio solo si no estaba previamente establecida
+                self.fecha_inicio = timezone.now()
+            # Independientemente de la fecha de inicio, si todos los usuarios están asignados, la etapa está aprobada
             self.aprobada = True
             self.competencia.estado = 'EP'
         else:
+            # Si no están todos los usuarios, la etapa no está aprobada y la competencia está 'Sin usuarios'
             self.aprobada = False
+            self.competencia.estado = 'SU'
+
+        # Actualizar la propiedad competencia_creada y usuarios_vinculados antes de guardar
+        self.competencia_creada = True
+        self.usuarios_vinculados = sectores_asignados_completamente
+
+        # Guardar el objeto competencia si ha habido cambios en su estado
+        if self.competencia_id and self.competencia.estado in ['EP', 'SU']:
+            self.competencia.save()
 
         super().save(*args, **kwargs)
 

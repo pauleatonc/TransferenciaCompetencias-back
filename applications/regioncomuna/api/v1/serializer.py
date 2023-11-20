@@ -33,3 +33,12 @@ class RegionComunaSerializer(serializers.ModelSerializer):
             'region',
             'comunas'
         )
+
+class RegionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Region
+        fields = (
+            'id',
+            'region',
+        )

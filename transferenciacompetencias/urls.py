@@ -34,6 +34,8 @@ urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path('', include('applications.users.urls')),
     re_path('', include('applications.regioncomuna.urls')),
+    re_path('', include('applications.sectores_gubernamentales.urls')),
+    re_path('', include('applications.competencias.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
