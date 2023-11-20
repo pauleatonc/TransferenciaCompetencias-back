@@ -14,7 +14,7 @@ User = get_user_model()
 class SectorSerializer(serializers.ModelSerializer):
     class Meta:
         model = SectorGubernamental
-        fields = ('nombre',)  # Asume que tu modelo SectorGubernamental tiene un campo 'nombre'
+        fields = ('nombre',)
 
 class RegionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -97,12 +97,14 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
     usuarios_sectoriales = UsuarioSerializer(many=True, read_only=True)
     usuarios_gore = UsuarioSerializer(many=True, read_only=True)
     tiempo_transcurrido = serializers.SerializerMethodField()
+    sectores = SectorSerializer(many=True, read_only=True)
 
     class Meta:
         model = Competencia
         fields = [
             'id',
             'nombre',
+            'sectores',
             'etapa1',
             'tiempo_transcurrido',
             'usuarios_subdere',

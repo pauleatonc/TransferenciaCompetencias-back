@@ -9,10 +9,12 @@ from django.contrib.auth import get_user_model
 
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
 @transaction.atomic
-def actualizar_etapa1_al_agregar_usuario_sectorial(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add' and instance.pk:
+def actualizar_etapa1_al_modificar_usuario_sectorial(sender, instance, action, pk_set, **kwargs):
+    if action in ['post_add', 'post_remove'] and instance.pk:
         etapa1 = instance.etapa1_set.first()
         if etapa1:
+            # Comprobar si aún cumple con las condiciones para estar aprobada
+            etapa1.usuarios_vinculados = etapa1.estado_usuarios_vinculados == 'Finalizada'
             etapa1.save()
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
