@@ -3,9 +3,10 @@ from django.utils import timezone
 
 #
 from applications.competencias.models import Competencia
+from applications.base.models import BaseModel
 
 
-class EtapaBase(models.Model):
+class EtapaBase(BaseModel):
     ESTADOS = (
         ('finalizada', 'Finalizada'),
         ('en_estudio', 'En Estudio'),
@@ -20,6 +21,8 @@ class EtapaBase(models.Model):
     plazo_dias = models.IntegerField(null=True, blank=True)
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
+    tiempo_transcurrido_registrado = models.IntegerField(default=0)
+    ultima_finalizacion = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         abstract = True
@@ -71,8 +74,31 @@ class EtapaBase(models.Model):
             return max(self.plazo_dias * 24 * 3600 - delta.total_seconds(), 0)
         return 0
 
+    def calcular_tiempo_transcurrido(self):
+        """
+        Calcula el tiempo transcurrido en segundos desde fecha_inicio hasta ahora.
+        """
+        if self.fecha_inicio:
+            tiempo_actual = timezone.now()
+            delta = tiempo_actual - self.fecha_inicio
+            return int(delta.total_seconds())
+        return 0
 
     def save(self, *args, **kwargs):
-        # Actualiza el estado antes de guardar
+        # Obtener el estado anterior si el objeto ya existe
+        estado_anterior = None
+        if self.pk:
+            instancia_concreta = self.__class__.objects.get(pk=self.pk)
+            estado_anterior = instancia_concreta.estado
+
+        # Actualizar el estado antes de guardar
         self.estado = self.actualizar_estado()
+
+        # Guardar los cambios para obtener el estado actualizado en la base de datos
         super().save(*args, **kwargs)
+
+        # Si cambia a 'finalizada' desde cualquier otro estado
+        if self.estado == 'finalizada' and estado_anterior != 'finalizada':
+            # Calcular y actualizar el tiempo transcurrido
+            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido()
+            super().save(update_fields=['tiempo_transcurrido_registrado'])
