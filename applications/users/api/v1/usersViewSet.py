@@ -30,9 +30,7 @@ class UserViewSet(viewsets.GenericViewSet):
         return get_object_or_404(self.model, pk=pk)
 
     def get_queryset(self):
-        if self.queryset is None:
-            self.queryset = self.model.objects.filter(is_active=True)
-        return self.queryset
+        return self.model.objects.all()
 
     def get_permissions(self):
         """

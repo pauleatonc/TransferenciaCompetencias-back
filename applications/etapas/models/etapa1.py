@@ -62,7 +62,7 @@ class Etapa1(EtapaBase):
         if self.competencia_id and self.competencia.estado in ['EP', 'SU']:
             self.competencia.save()
 
-        super().save(*args, **kwargs)
+        super(Etapa1, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre_etapa} para {self.competencia.nombre}"

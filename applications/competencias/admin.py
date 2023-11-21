@@ -3,13 +3,18 @@ from django.contrib.auth.models import Group
 from .models import Competencia
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from applications.etapas.models import Etapa1
+from applications.etapas.models import Etapa1, Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial
 
 
 
 class Etapa1Inline(admin.TabularInline):  # O usa admin.StackedInline si prefieres ese estilo
     model = Etapa1
+    extra = 0
+
+
+class Etapa2Inline(admin.TabularInline):  # O usa admin.StackedInline si prefieres ese estilo
+    model = Etapa2
     extra = 0
 
 
@@ -35,7 +40,7 @@ class CompetenciaAdmin(admin.ModelAdmin):
             'fields': ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')
         }),
     )
-    inlines = [Etapa1Inline, FormularioSectorialInline]  # Añade el nuevo inline aquí
+    inlines = [Etapa1Inline, Etapa2Inline, FormularioSectorialInline]  # Añade el nuevo inline aquí
 
     def get_queryset(self, request):
         # Personaliza el queryset para optimizar consultas a la base de datos si es necesario
