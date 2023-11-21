@@ -9,11 +9,15 @@ from django.core.validators import FileExtensionValidator
 from django.db.models import Q
 #
 from applications.competencias.models import Competencia
-from applications.base.functions import TWENTY_SIZE_LIMIT
+from applications.base.functions import validate_file_size_twenty
 from applications.etapas.models import EtapaBase
 
 
 class Etapa2(EtapaBase):
+    @property
+    def nombre_etapa(self):
+        return 'Levantamiento de antecedentes sectoriales'
+
     """ Campos subetapa 2"""
     usuarios_notificados = models.BooleanField(default=False)
     formulario_completo = models.BooleanField(default=False)
@@ -24,11 +28,14 @@ class Etapa2(EtapaBase):
                                            validators=[
                                                FileExtensionValidator(
                                                    ['pdf'], message='Solo se permiten archivos PDF.'),
-                                               TWENTY_SIZE_LIMIT],
-                                           verbose_name='Archivo Observación')
+                                               validate_file_size_twenty],
+                                           verbose_name='Archivo Observación', blank=True, null=True)
     observacion_enviada = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Etapa 2'
         verbose_name_plural = "Etapas 2"
 
+
+    def __str__(self):
+        return f"{self.nombre_etapa} para {self.competencia.nombre}"

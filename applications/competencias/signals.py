@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.sectores_gubernamentales.models import SectorGubernamental
-from applications.etapas.models import Etapa1
+from applications.etapas.models import Etapa1, Etapa2
 from django.contrib.auth import get_user_model
 
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
@@ -30,11 +30,14 @@ def agregar_formulario_sectorial_por_sector(sender, instance, action, pk_set, **
             )
 
 @receiver(post_save, sender=Competencia)
-def crear_etapa1_para_competencia(sender, instance, created, **kwargs):
+def crear_etapas_para_competencia(sender, instance, created, **kwargs):
     if created:
         Etapa1.objects.create(
             competencia=instance,
-            nombre='Inicio de Transferencia de Competencia',
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa2.objects.create(
+            competencia=instance,
             # Puedes añadir más campos predeterminados si son necesarios
         )
 
