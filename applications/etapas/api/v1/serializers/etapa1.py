@@ -69,7 +69,8 @@ class Etapa1Serializer(serializers.ModelSerializer):
         try:
             ultimo_registro = obj.historical.latest('history_date')
             if ultimo_registro:
-                return timezone.localtime(ultimo_registro.history_date).isoformat()
+                fecha_local = timezone.localtime(ultimo_registro.history_date)
+                return fecha_local.strftime('%d/%m/%Y - %H:%M')
             return None
         except obj.historical.model.DoesNotExist:
             return None

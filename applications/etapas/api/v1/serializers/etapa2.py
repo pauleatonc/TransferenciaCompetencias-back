@@ -12,6 +12,7 @@ User = get_user_model()
 class Etapa2Serializer(serializers.ModelSerializer):
     nombre_etapa = serializers.ReadOnlyField()
     estado = serializers.CharField(source='get_estado_display')
+    tiempo_restante = serializers.ReadOnlyField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     usuarios_notificados = serializers.SerializerMethodField()
@@ -23,6 +24,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'nombre_etapa',
             'estado',
             'fecha_inicio',
+            'tiempo_restante',
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_notificados',
@@ -44,7 +46,8 @@ class Etapa2Serializer(serializers.ModelSerializer):
         try:
             ultimo_registro = obj.historical.latest('history_date')
             if ultimo_registro:
-                return timezone.localtime(ultimo_registro.history_date).isoformat()
+                fecha_local = timezone.localtime(ultimo_registro.history_date)
+                return fecha_local.strftime('%d/%m/%Y - %H:%M')
             return None
         except obj.historical.model.DoesNotExist:
             return None
