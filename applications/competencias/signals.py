@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.sectores_gubernamentales.models import SectorGubernamental
-from applications.etapas.models import Etapa1, Etapa2
+from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
@@ -37,6 +37,18 @@ def crear_etapas_para_competencia(sender, instance, created, **kwargs):
             # Puedes añadir más campos predeterminados si son necesarios
         )
         Etapa2.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa3.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa4.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa5.objects.create(
             competencia=instance,
             # Puedes añadir más campos predeterminados si son necesarios
         )
