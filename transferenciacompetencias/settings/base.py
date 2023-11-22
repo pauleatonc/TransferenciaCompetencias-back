@@ -25,6 +25,7 @@ LOCAL_APPS = [
     'applications.sectores_gubernamentales',
     'applications.etapas',
     'applications.formularios_sectoriales',
+    'applications.formularios_gores',
 ]
 
 THIRD_PARTY_APPS = [

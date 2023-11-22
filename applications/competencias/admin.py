@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.formularios_gores.models import FormularioGORE
 
 
 
@@ -37,6 +38,11 @@ class FormularioSectorialInline(admin.TabularInline):  # O puedes usar admin.Sta
     extra = 0
     fields = ('sector', 'nombre', 'formulario_enviado')
 
+class FormularioGOREInline(admin.TabularInline):  # O puedes usar admin.StackedInline
+    model = FormularioGORE
+    extra = 0
+    fields = ('region', 'nombre', 'formulario_enviado')
+
 
 @admin.register(Competencia)
 class CompetenciaAdmin(admin.ModelAdmin):
@@ -54,7 +60,7 @@ class CompetenciaAdmin(admin.ModelAdmin):
             'fields': ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')
         }),
     )
-    inlines = [Etapa1Inline, Etapa2Inline, Etapa3Inline, Etapa4Inline, Etapa5Inline, FormularioSectorialInline]  # Añade el nuevo inline aquí
+    inlines = [Etapa1Inline, Etapa2Inline, Etapa3Inline, Etapa4Inline, Etapa5Inline, FormularioSectorialInline, FormularioGOREInline]  # Añade el nuevo inline aquí
 
     def get_queryset(self, request):
         # Personaliza el queryset para optimizar consultas a la base de datos si es necesario
