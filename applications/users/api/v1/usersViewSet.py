@@ -1,7 +1,10 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import Group, Permission
+from django_filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets
@@ -20,11 +23,18 @@ from applications.users.api.v1.serializers import (
 from applications.users.permissions import CanEditUser, IsSUBDEREOrSuperuser
 
 
+class CustomUsersNumberPagination(PageNumberPagination):
+    page_size = 10
+
 class UserViewSet(viewsets.GenericViewSet):
     model = User
     serializer_class = UserSerializer
     list_serializer_class = UserListSerializer
     queryset = None
+    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    pagination_class = CustomUsersNumberPagination
+    search_fields = ['id', 'rut', 'nombre_completo', 'email', 'perfil', 'sector', 'region']
+    ordering_fields = ['is_active']
 
     def get_object(self, pk):
         return get_object_or_404(self.model, pk=pk)
@@ -38,7 +48,7 @@ class UserViewSet(viewsets.GenericViewSet):
         """
         if self.action == 'set_password':
             permission_classes = [IsAuthenticated]  # Los usuarios deben estar autenticados para cambiar su contraseña.
-        elif self.action in ['list', 'create', 'update', 'destroy']:
+        elif self.action in ['create', 'update', 'destroy']:
             permission_classes = [IsSUBDEREOrSuperuser]  # Solo SUBDERE o superusuarios pueden realizar estas acciones.
         elif self.action == 'retrieve':
             permission_classes = [
