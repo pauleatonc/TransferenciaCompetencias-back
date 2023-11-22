@@ -3,8 +3,10 @@ from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.formularios_gores.models import FormularioGORE
 from applications.sectores_gubernamentales.models import SectorGubernamental
-from applications.etapas.models import Etapa1, Etapa2
+from applications.regioncomuna.models import Region
+from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
@@ -16,6 +18,18 @@ def actualizar_etapa1_al_modificar_usuario_sectorial(sender, instance, action, p
             # Comprobar si aún cumple con las condiciones para estar aprobada
             etapa1.usuarios_vinculados = etapa1.estado_usuarios_vinculados == 'Finalizada'
             etapa1.save()
+
+@receiver(m2m_changed, sender=Competencia.regiones.through)
+@transaction.atomic
+def agregar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        for region_pk in pk_set:
+            region = Region.objects.get(pk=region_pk)
+            FormularioGORE.objects.get_or_create(
+                competencia=instance,
+                region=region,
+                defaults={'nombre': f'Formulario Sectorial de {region.region}'}
+            )
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
 @transaction.atomic
@@ -37,6 +51,18 @@ def crear_etapas_para_competencia(sender, instance, created, **kwargs):
             # Puedes añadir más campos predeterminados si son necesarios
         )
         Etapa2.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa3.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa4.objects.create(
+            competencia=instance,
+            # Puedes añadir más campos predeterminados si son necesarios
+        )
+        Etapa5.objects.create(
             competencia=instance,
             # Puedes añadir más campos predeterminados si son necesarios
         )

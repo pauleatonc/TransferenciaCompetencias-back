@@ -6,28 +6,28 @@ from applications.base.functions import validate_file_size_twenty
 from applications.etapas.models import EtapaBase
 
 
-class Etapa2(EtapaBase):
+class Etapa4(EtapaBase):
     @property
     def nombre_etapa(self):
-        return 'Levantamiento de antecedentes sectoriales'
+        return 'Levantamiento de antecedentes GORE'
 
-    """ Campos subetapa 2"""
+    """ Campos subetapa 4"""
     usuarios_notificados = models.BooleanField(default=False)
     formulario_completo = models.BooleanField(default=False)
 
     """ Campos Revisión"""
-    comentario_observacion_etapa2 = models.TextField(max_length=500, blank=True)
-    archivo_observacion_etapa2 = models.FileField(upload_to='observaciones_etapa2',
+    comentario_observacion_etapa4 = models.TextField(max_length=500, blank=True)
+    archivo_observacion_etapa4 = models.FileField(upload_to='observaciones_etapa4',
                                            validators=[
                                                FileExtensionValidator(
                                                    ['pdf'], message='Solo se permiten archivos PDF.'),
                                                validate_file_size_twenty],
-                                           verbose_name='Archivo Observación Etapa 2', blank=True, null=True)
-    observacion_etapa2_enviada = models.BooleanField(default=False)
+                                           verbose_name='Archivo Observación Etapa 4', blank=True, null=True)
+    observacion_etapa4_enviada = models.BooleanField(default=False)
 
     class Meta:
-        verbose_name = 'Etapa 2'
-        verbose_name_plural = "Etapas 2"
+        verbose_name = 'Etapa 4'
+        verbose_name_plural = "Etapas 4"
 
 
     def __str__(self):
