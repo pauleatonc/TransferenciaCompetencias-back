@@ -53,34 +53,79 @@ class Etapa2Serializer(serializers.ModelSerializer):
             return None
 
     def get_usuarios_notificados(self, obj):
-        if obj.usuarios_notificados:
-            usuarios_sectoriales = obj.competencia.usuarios_sectoriales.all()
+        numero_sectores = obj.competencia.sectores.count()
+        usuarios_sectoriales = obj.competencia.usuarios_sectoriales.all()
+
+        if numero_sectores <= 1:
+            # Si solo hay un sector, muestra los usuarios individualmente
             return [
                 {
-                    "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email}) - {usuario.sector.nombre}",
-                    "estado": 'finalizada',
-                    "accion": 'Finalizada'
+                    "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email})",
+                    "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
+                    "accion": 'Finalizada' if obj.usuarios_notificados else 'Asignar usuario'
                 } for usuario in usuarios_sectoriales
             ]
         else:
-            return [{
-                "nombre": 'Notificar a usuarios Sectoriales',
-                "estado": 'pendiente',
-                "accion": 'Usuario(s) Pendiente(s)'
-            }]
+            # Si hay más de un sector, muestra un resumen y detalles
+            resumen = {
+                "nombre": 'Usuarios notificados' if obj.usuarios_notificados else 'Usuarios pendientes',
+                "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
+                "accion": 'Finalizada' if obj.usuarios_notificados else 'En Estudio'
+            }
+
+            detalle = [
+                {
+                    "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email}) - {usuario.sector.nombre}",
+                    "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
+                    "accion": 'Finalizada' if obj.usuarios_notificados else 'Asignar usuario'
+                } for usuario in usuarios_sectoriales
+            ]
+
+            return {
+                "usuarios_notificados": [resumen],
+                "detalle_usuarios_notificados": detalle
+            }
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
         formularios_sectoriales = obj.competencia.formulariosectorial_set.all()
         sector_usuario = user.sector if user.groups.filter(name='Usuario Sectorial').exists() else None
+        numero_formularios = formularios_sectoriales.count()
 
-        return [
-            {
-                "nombre": f"Completar formulario sectorial ({formulario.sector.nombre})",
-                "estado": self.determinar_estado_formulario(formulario, sector_usuario),
-                "accion": self.determinar_accion_formulario(formulario, sector_usuario)
-            } for formulario in formularios_sectoriales
-        ]
+        # Cuenta el número de formularios no enviados
+        formularios_no_enviados = sum(not f.formulario_enviado for f in formularios_sectoriales)
+
+        if numero_formularios <= 1:
+            # Si solo hay un formulario, muestra el detalle
+            return [
+                {
+                    "nombre": f"Completar formulario sectorial ({formulario.sector.nombre})",
+                    "estado": self.determinar_estado_formulario(formulario, sector_usuario),
+                    "accion": self.determinar_accion_formulario(formulario, sector_usuario)
+                } for formulario in formularios_sectoriales
+            ]
+        else:
+            # Determina el texto para la acción según la cantidad de formularios no enviados
+            texto_accion = 'Formulario Incompleto' if formularios_no_enviados == 1 else 'Formularios Incompletos'
+
+            resumen = {
+                "nombre": 'Formularios sectoriales',
+                "estado": 'en_revision' if formularios_no_enviados > 0 else 'finalizada',
+                "accion": texto_accion if formularios_no_enviados > 0 else 'Ver Formularios'
+            }
+
+            detalle = [
+                {
+                    "nombre": f"Completar formulario sectorial ({formulario.sector.nombre})",
+                    "estado": self.determinar_estado_formulario(formulario, sector_usuario),
+                    "accion": self.determinar_accion_formulario(formulario, sector_usuario)
+                } for formulario in formularios_sectoriales
+            ]
+
+            return {
+                "resumen_formularios_sectoriales": [resumen],
+                "detalle_formularios_sectoriales": detalle
+            }
 
     def determinar_estado_formulario(self, formulario, sector_usuario):
         if formulario.formulario_enviado:
@@ -88,6 +133,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
         return 'revision' if formulario.sector == sector_usuario else 'pendiente'
 
     def determinar_accion_formulario(self, formulario, sector_usuario):
-        if formulario.sector == sector_usuario and not formulario.formulario_enviado:
-            return 'Completar Formulario'
-        return 'Ver Formulario'
+        if formulario.formulario_enviado:
+            return 'Ver Formulario'
+        return 'Completar Formulario'
