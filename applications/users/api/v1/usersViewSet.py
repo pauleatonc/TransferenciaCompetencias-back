@@ -1,9 +1,8 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import Group, Permission
-from django_filters import OrderingFilter
-from django_filters.rest_framework import DjangoFilterBackend
 
 from rest_framework import status
+from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -26,14 +25,14 @@ from applications.users.permissions import CanEditUser, IsSUBDEREOrSuperuser
 class CustomUsersNumberPagination(PageNumberPagination):
     page_size = 10
 
-class UserViewSet(viewsets.GenericViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     model = User
     serializer_class = UserSerializer
     list_serializer_class = UserListSerializer
     queryset = None
-    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomUsersNumberPagination
-    search_fields = ['id', 'rut', 'nombre_completo', 'email', 'perfil', 'sector', 'region']
+    search_fields = ['id', 'rut', 'nombre_completo', 'email', 'perfil', 'sector__nombre', 'region__region']
     ordering_fields = ['is_active']
 
     def get_object(self, pk):
@@ -79,15 +78,22 @@ class UserViewSet(viewsets.GenericViewSet):
             'errors': password_serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         """
         Listado de usuarios
 
         Detalles del usuario solo de lectura
         """
-        users = self.get_queryset()
-        users_serializer = self.list_serializer_class(users, many=True)
-        return Response(users_serializer.data, status=status.HTTP_200_OK)
+
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def create(self, request):
         """

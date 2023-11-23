@@ -4,7 +4,7 @@ from applications.users.api.v1.usersViewSet import UserViewSet, GroupViewSet, Pe
 
 router = DefaultRouter()
 
-router.register('users', UserViewSet, basename='users')
+router.register(r'users', UserViewSet, basename='users')
 router.register(r'groups', GroupViewSet)
 router.register(r'permissions', PermissionViewSet)
 
