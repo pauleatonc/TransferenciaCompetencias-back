@@ -1,4 +1,4 @@
-from rest_framework.filters import OrderingFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Prefetch
@@ -25,10 +25,10 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     Ofrece listado, creación, actualización, detalle y eliminación de competencias.
     """
     queryset = Competencia.objects.all()
-    filter_backends = (DjangoFilterBackend, OrderingFilter)
+    filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomPageNumberPagination
-    search_fields = ['id', 'nombre', 'creado_por', 'sectores', 'ambito', 'regiones', 'origen', 'usuarios_subdere',
-                     'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore']
+    search_fields = ['id', 'nombre', 'sectores__nombre', 'ambito', 'regiones__region', 'origen', 'usuarios_subdere__nombre_completo',
+                     'usuarios_dipres__nombre_completo', 'usuarios_sectoriales__nombre_completo', 'usuarios_gore__nombre_completo']
     ordering_fields = ['estado']
     permission_classes = [IsAuthenticated]
 
@@ -62,9 +62,9 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         Devuelve una lista de todas las competencias disponibles.
         Acceso para usuarios autenticados.
         """
-        competencias = self.get_queryset()
+        competencias = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(competencias, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='lista-home')
     def lista_home(self, request):
