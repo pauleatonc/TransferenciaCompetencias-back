@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from applications.etapas.models import Etapa2
+from applications.etapas.models import Etapa2, ObservacionSectorial
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
@@ -17,6 +17,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     usuarios_notificados = serializers.SerializerMethodField()
     formulario_sectorial = serializers.SerializerMethodField()
+    observaciones_sectorial = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa2
@@ -28,7 +29,8 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_notificados',
-            'formulario_sectorial'
+            'formulario_sectorial',
+            'observaciones_sectorial'
         ]
 
     def get_ultimo_editor(self, obj):
@@ -110,7 +112,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
             resumen = {
                 "nombre": 'Formularios sectoriales',
-                "estado": 'en_revision' if formularios_no_enviados > 0 else 'finalizada',
+                "estado": 'revision' if formularios_no_enviados > 0 else 'finalizada',
                 "accion": texto_accion if formularios_no_enviados > 0 else 'Ver Formularios'
             }
 
@@ -136,3 +138,58 @@ class Etapa2Serializer(serializers.ModelSerializer):
         if formulario.formulario_enviado:
             return 'Ver Formulario'
         return 'Completar Formulario'
+
+    def get_observaciones_sectorial(self, obj):
+        user = self.context['request'].user
+        es_subdere = user.groups.filter(name='SUBDERE').exists()
+
+        # Obtener todos los formularios sectoriales para la competencia
+        formularios_sectoriales = obj.competencia.formulariosectorial_set.all()
+        # Obtener todas las observaciones para los formularios sectoriales
+        observaciones = ObservacionSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+        # Verificar si todos los formularios están completos
+        formulario_completo = Etapa2.objects.get(competencia=obj.competencia).formulario_completo
+        # Verificar si todas las observaciones han sido enviadas
+        todas_observaciones_enviadas = all(obs.observacion_enviada for obs in observaciones)
+
+        # Determinar estado y acción del resumen
+        estado_resumen = self.determinar_estado_resumen(formulario_completo, todas_observaciones_enviadas)
+        accion_resumen = self.determinar_accion_resumen(es_subdere, todas_observaciones_enviadas)
+
+        resumen = {
+            "nombre": 'Observaciones de formularios sectoriales',
+            "estado": estado_resumen,
+            "accion": accion_resumen
+        }
+
+        detalle = [
+            self.detalle_observacion(observacion, es_subdere) for observacion in observaciones
+        ]
+
+        return {
+            "resumen_observaciones_sectoriales": [resumen],
+            "detalle_observaciones_sectoriales": detalle
+        }
+
+    def determinar_estado_resumen(self, formulario_completo, todas_observaciones_enviadas):
+        if todas_observaciones_enviadas:
+            return 'finalizada'
+        return 'revision' if formulario_completo else 'pendiente'
+
+    def determinar_accion_resumen(self, es_subdere, todas_observaciones_enviadas):
+        if todas_observaciones_enviadas or not es_subdere:
+            return 'Ver Observaciones'
+        return 'Subir Observaciones'
+
+    def detalle_observacion(self, observacion, es_subdere):
+        # Ajusta según los campos y la lógica de tu modelo ObservacionFormulario
+        return {
+            "nombre": f"Observación del formulario sectorial ({observacion.formulario_sectorial.sector.nombre})",
+            "estado": self.determinar_estado_observacion(observacion, es_subdere),
+            "accion": 'Subir Observación' if es_subdere else 'Ver Observación'
+        }
+
+    def determinar_estado_observacion(self, observacion, es_subdere):
+        if observacion.observacion_enviada:
+            return 'finalizada'
+        return 'revision' if es_subdere else 'pendiente'
