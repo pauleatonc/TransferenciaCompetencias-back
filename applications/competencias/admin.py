@@ -46,7 +46,7 @@ class FormularioGOREInline(admin.TabularInline):  # O puedes usar admin.StackedI
 
 @admin.register(Competencia)
 class CompetenciaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'ambito', 'origen', 'estado', 'fecha_inicio', 'fecha_fin')
+    list_display = ('id', 'nombre', 'ambito', 'origen', 'estado', 'fecha_inicio', 'fecha_fin')
     search_fields = ('nombre', 'sectores__nombre', 'regiones__nombre')
     list_filter = ('ambito', 'origen', 'estado', 'sectores', 'regiones')
     filter_horizontal = ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')
