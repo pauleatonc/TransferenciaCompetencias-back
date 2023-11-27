@@ -1,10 +1,34 @@
+from django.db import transaction
 from django.utils import timezone
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
+from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1, Etapa2, ObservacionSectorial, Etapa3
 from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.sectores_gubernamentales.models import SectorGubernamental
+
+
+@receiver(m2m_changed, sender=Competencia.sectores.through)
+@transaction.atomic
+def agregar_formulario_sectorial_por_sector(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        # Asegúrate de que la instancia de Competencia está completamente guardada
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
+                competencia=competencia,
+                sector=sector,
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
+            )
+
+            # Si se creó un nuevo formulario, también crear una observación asociada
+            if created:
+                ObservacionSectorial.objects.create(
+                    formulario_sectorial=formulario_sectorial
+                )
 
 
 @receiver(post_save, sender=Etapa1)
