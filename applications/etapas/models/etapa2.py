@@ -5,6 +5,7 @@ from django.db import models
 from applications.base.functions import validate_file_size_twenty
 from applications.etapas.models import EtapaBase
 from applications.formularios_sectoriales.models import FormularioSectorial
+from django.utils import timezone
 
 
 class Etapa2(EtapaBase):
@@ -43,6 +44,12 @@ class ObservacionSectorial(models.Model):
         null=True
     )
     observacion_enviada = models.BooleanField(default=False)
+    fecha_envio = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.observacion_enviada and not self.fecha_envio:
+            self.fecha_envio = timezone.now()
+        super(ObservacionSectorial, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"Observación para {self.formulario_sectorial.sector.nombre}"

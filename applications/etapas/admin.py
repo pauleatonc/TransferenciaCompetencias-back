@@ -3,7 +3,7 @@ from .models import Etapa1
 
 @admin.register(Etapa1)
 class Etapa1Admin(admin.ModelAdmin):
-    list_display = ('id', 'nombre_etapa', 'estado_competencia_creada', 'competencia', 'fecha_inicio', 'plazo_dias', 'aprobada')
+    list_display = ('id', 'nombre_etapa', 'competencia', 'fecha_inicio', 'plazo_dias', 'aprobada')
     search_fields = ('competencia__nombre', 'competencia__id')
     list_filter = ('competencia', 'aprobada', 'estado')
     date_hierarchy = 'fecha_inicio'

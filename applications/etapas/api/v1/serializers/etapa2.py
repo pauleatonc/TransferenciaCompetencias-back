@@ -12,7 +12,7 @@ User = get_user_model()
 class Etapa2Serializer(serializers.ModelSerializer):
     nombre_etapa = serializers.ReadOnlyField()
     estado = serializers.CharField(source='get_estado_display')
-    tiempo_restante = serializers.ReadOnlyField()
+    calcular_tiempo_transcurrido = serializers.ReadOnlyField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     usuarios_notificados = serializers.SerializerMethodField()
@@ -25,7 +25,8 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'nombre_etapa',
             'estado',
             'fecha_inicio',
-            'tiempo_restante',
+            'plazo_dias',
+            'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_notificados',
@@ -56,7 +57,16 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
     def get_usuarios_notificados(self, obj):
         numero_sectores = obj.competencia.sectores.count()
+        user = self.context['request'].user
+        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
         usuarios_sectoriales = obj.competencia.usuarios_sectoriales.all()
+
+        # Priorizar el usuario sectorial si el usuario autenticado es un usuario sectorial
+        if es_usuario_sectorial:
+            usuarios_sectoriales = list(usuarios_sectoriales)
+            usuario_sectorial = [usuario for usuario in usuarios_sectoriales if usuario == user]
+            usuarios_sectoriales = usuario_sectorial + [usuario for usuario in usuarios_sectoriales if
+                                                        usuario not in usuario_sectorial]
 
         if numero_sectores <= 1:
             # Si solo hay un sector, muestra los usuarios individualmente
@@ -90,9 +100,17 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
+        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
         formularios_sectoriales = obj.competencia.formulariosectorial_set.all()
+        # Priorizar el formulario del sector del usuario autenticado si es un usuario sectorial
+        if es_usuario_sectorial:
+            formularios_sectoriales = list(formularios_sectoriales)
+            formulario_usuario_sectorial = [form for form in formularios_sectoriales if form.sector == user.sector]
+            formularios_sectoriales = formulario_usuario_sectorial + [form for form in formularios_sectoriales if
+                                                                      form not in formulario_usuario_sectorial]
+
         sector_usuario = user.sector if user.groups.filter(name='Usuario Sectorial').exists() else None
-        numero_formularios = formularios_sectoriales.count()
+        numero_formularios = len(formularios_sectoriales)
 
         # Cuenta el número de formularios no enviados
         formularios_no_enviados = sum(not f.formulario_enviado for f in formularios_sectoriales)
@@ -116,12 +134,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 "accion": texto_accion if formularios_no_enviados > 0 else 'Ver Formularios'
             }
 
+            # Lógica para múltiples formularios
             detalle = [
-                {
-                    "nombre": f"Completar formulario sectorial ({formulario.sector.nombre})",
-                    "estado": self.determinar_estado_formulario(formulario, sector_usuario),
-                    "accion": self.determinar_accion_formulario(formulario, sector_usuario)
-                } for formulario in formularios_sectoriales
+                self.detalle_formulario(formulario, sector_usuario, obj) for formulario in formularios_sectoriales
             ]
 
             return {
@@ -139,14 +154,32 @@ class Etapa2Serializer(serializers.ModelSerializer):
             return 'Ver Formulario'
         return 'Completar Formulario'
 
+    def detalle_formulario(self, formulario, sector_usuario, etapa_obj):
+        detalle = {
+            "nombre": f"Completar formulario sectorial ({formulario.sector.nombre})",
+            "estado": self.determinar_estado_formulario(formulario, sector_usuario),
+            "accion": self.determinar_accion_formulario(formulario, sector_usuario),
+        }
+        if formulario.formulario_enviado:
+            detalle["registro_tiempo"] = self.calcular_tiempo_registro(etapa_obj, formulario.fecha_envio)
+        return detalle
+
     def get_observaciones_sectorial(self, obj):
         user = self.context['request'].user
         es_subdere = user.groups.filter(name='SUBDERE').exists()
+        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
 
         # Obtener todos los formularios sectoriales para la competencia
         formularios_sectoriales = obj.competencia.formulariosectorial_set.all()
         # Obtener todas las observaciones para los formularios sectoriales
         observaciones = ObservacionSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+        # Priorizar la observación del sector del usuario autenticado si es un usuario sectorial
+        if es_usuario_sectorial:
+            observaciones = list(observaciones)
+            observaciones_usuario_sectorial = [obs for obs in observaciones if
+                                               obs.formulario_sectorial.sector == user.sector]
+            observaciones = observaciones_usuario_sectorial + [obs for obs in observaciones if
+                                                               obs not in observaciones_usuario_sectorial]
         # Verificar si todos los formularios están completos
         formulario_completo = Etapa2.objects.get(competencia=obj.competencia).formulario_completo
         # Verificar si todas las observaciones han sido enviadas
@@ -163,7 +196,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
         }
 
         detalle = [
-            self.detalle_observacion(observacion, es_subdere) for observacion in observaciones
+            self.detalle_observacion(observacion, es_subdere, obj) for observacion in observaciones
         ]
 
         return {
@@ -181,15 +214,28 @@ class Etapa2Serializer(serializers.ModelSerializer):
             return 'Ver Observaciones'
         return 'Subir Observaciones'
 
-    def detalle_observacion(self, observacion, es_subdere):
+    def detalle_observacion(self, observacion, es_subdere, obj):
         # Ajusta según los campos y la lógica de tu modelo ObservacionFormulario
         return {
             "nombre": f"Observación del formulario sectorial ({observacion.formulario_sectorial.sector.nombre})",
             "estado": self.determinar_estado_observacion(observacion, es_subdere),
-            "accion": 'Subir Observación' if es_subdere else 'Ver Observación'
+            "accion": 'Subir Observación' if es_subdere else 'Ver Observación',
         }
+        if observacion.observacion_enviada:
+            detalle["registro_tiempo"] = self.calcular_tiempo_registro(etapa_obj, observacion.fecha_envio)
+        return detalle
 
     def determinar_estado_observacion(self, observacion, es_subdere):
         if observacion.observacion_enviada:
             return 'finalizada'
         return 'revision' if es_subdere else 'pendiente'
+
+    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
+        if etapa_obj.fecha_inicio and fecha_envio:
+            delta = fecha_envio - etapa_obj.fecha_inicio
+            total_seconds = int(delta.total_seconds())
+            dias = total_seconds // (24 * 3600)
+            horas = (total_seconds % (24 * 3600)) // 3600
+            minutos = (total_seconds % 3600) // 60
+            return {'dias': dias, 'horas': horas, 'minutos': minutos}
+        return {'dias': 0, 'horas': 0, 'minutos': 0}
