@@ -66,11 +66,13 @@ class EtapaBase(BaseModel):
         return {'dias': 0, 'horas': 0, 'minutos': 0}
 
     def save(self, *args, **kwargs):
-        # Obtener el estado anterior si el objeto ya existe
+        # Obtener el estado anterior y el estado de 'enviada' si el objeto ya existe
         estado_anterior = None
+        enviada_anterior = None
         if self.pk:
             instancia_concreta = self.__class__.objects.get(pk=self.pk)
             estado_anterior = instancia_concreta.estado
+            enviada_anterior = instancia_concreta.enviada
 
         # Actualizar el estado antes de guardar
         self.estado = self.actualizar_estado()
@@ -78,9 +80,15 @@ class EtapaBase(BaseModel):
         # Guardar los cambios para obtener el estado actualizado en la base de datos
         super().save(*args, **kwargs)
 
-        # Si cambia a 'finalizada' desde cualquier otro estado
-        if self.estado == 'finalizada' and estado_anterior != 'finalizada':
+        # Si 'enviada' cambia de False a True
+        if self.enviada and not enviada_anterior:
             tiempo_transcurrido = self.calcular_tiempo_transcurrido()
-            self.tiempo_transcurrido_registrado = tiempo_transcurrido['dias'] * 24 * 3600 + tiempo_transcurrido[
-                'horas'] * 3600 + tiempo_transcurrido['minutos'] * 60
-            super().save(update_fields=['tiempo_transcurrido_registrado'])
+            self.tiempo_transcurrido_registrado = tiempo_transcurrido['dias'] * 24 * 3600 + tiempo_transcurrido['horas'] * 3600 + tiempo_transcurrido['minutos'] * 60
+            # Actualizar el campo sin disparar nuevamente el método save
+            EtapaBase.objects.filter(pk=self.pk).update(tiempo_transcurrido_registrado=self.tiempo_transcurrido_registrado)
+
+        # Si cambia a 'finalizada' desde cualquier otro estado (mantiene la lógica existente)
+        if self.estado == 'finalizada' and estado_anterior != 'finalizada':
+            # Actualiza 'ultima_finalizacion' con la fecha y hora actual
+            self.ultima_finalizacion = timezone.now()
+            super().save(update_fields=['ultima_finalizacion'])
