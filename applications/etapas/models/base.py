@@ -32,40 +32,17 @@ class EtapaBase(BaseModel):
         raise NotImplementedError("Subclases deben implementar este método.")
 
     def actualizar_estado(self):
+        tiempo_transcurrido = self.calcular_tiempo_transcurrido()
         if not self.fecha_inicio:
             return 'no_iniciada'
-        elif self.segundos_restantes() < 0:
-            return 'atrasada'
         elif self.aprobada:
             return 'finalizada'
         elif self.enviada:
             return 'en_revision'
+        elif tiempo_transcurrido['dias'] > self.plazo_dias:
+            return 'atrasada'
         else:
             return 'en_estudio'
-
-    @property
-    def tiempo_restante(self):
-        """
-        Calcula el tiempo restante hasta el final del plazo.
-        Si la fecha de inicio no está establecida o el plazo no está definido, retorna 0 para cada unidad de tiempo.
-        """
-        if self.fecha_inicio and self.plazo_dias is not None:
-            tiempo_actual = timezone.now()
-            delta = tiempo_actual - self.fecha_inicio
-            segundos_restantes = max(self.plazo_dias * 24 * 3600 - delta.total_seconds(), 0)
-
-            # Convertir segundos restantes a días, horas y minutos
-            dias_restantes = segundos_restantes // (24 * 3600)
-            horas_restantes = (segundos_restantes % (24 * 3600)) // 3600
-            minutos_restantes = (segundos_restantes % 3600) // 60
-
-            return {
-                'dias': int(dias_restantes),
-                'horas': int(horas_restantes),
-                'minutos': int(minutos_restantes),
-            }
-        return {'dias': 0, 'horas': 0, 'minutos': 0}
-
 
     def segundos_restantes(self):
         if self.fecha_inicio and self.plazo_dias is not None:
@@ -81,8 +58,12 @@ class EtapaBase(BaseModel):
         if self.fecha_inicio:
             tiempo_actual = timezone.now()
             delta = tiempo_actual - self.fecha_inicio
-            return int(delta.total_seconds())
-        return 0
+            total_seconds = int(delta.total_seconds())
+            dias = total_seconds // (24 * 3600)
+            horas = (total_seconds % (24 * 3600)) // 3600
+            minutos = (total_seconds % 3600) // 60
+            return {'dias': dias, 'horas': horas, 'minutos': minutos}
+        return {'dias': 0, 'horas': 0, 'minutos': 0}
 
     def save(self, *args, **kwargs):
         # Obtener el estado anterior si el objeto ya existe
@@ -99,6 +80,7 @@ class EtapaBase(BaseModel):
 
         # Si cambia a 'finalizada' desde cualquier otro estado
         if self.estado == 'finalizada' and estado_anterior != 'finalizada':
-            # Calcular y actualizar el tiempo transcurrido
-            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido()
+            tiempo_transcurrido = self.calcular_tiempo_transcurrido()
+            self.tiempo_transcurrido_registrado = tiempo_transcurrido['dias'] * 24 * 3600 + tiempo_transcurrido[
+                'horas'] * 3600 + tiempo_transcurrido['minutos'] * 60
             super().save(update_fields=['tiempo_transcurrido_registrado'])

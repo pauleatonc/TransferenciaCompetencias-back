@@ -25,7 +25,7 @@ class Etapa1Serializer(serializers.ModelSerializer):
     def get_competencia_creada(self, obj):
         return [{
             "nombre": "Competencia creada",
-            "estado": obj.estado_competencia_creada,
+            "estado": "finalizada",
             "accion": "Finalizada"
         }]
 

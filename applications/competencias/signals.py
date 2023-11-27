@@ -23,15 +23,18 @@ def actualizar_etapa1_al_modificar_usuario_sectorial(sender, instance, action, p
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
 @transaction.atomic
-def agregar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
+def agregar_formulario_regional_por_region(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add' and instance.pk:
+        # Asegúrate de que la instancia de Competencia está completamente guardada
+        competencia = Competencia.objects.get(pk=instance.pk)
         for region_pk in pk_set:
             region = Region.objects.get(pk=region_pk)
-            competencia = Competencia.nombre
+            # Aquí creas el formulario asociado a la región
+            # Ajusta FormularioRegional y los campos según tus necesidades
             FormularioGORE.objects.get_or_create(
-                competencia=instance,
+                competencia=competencia,
                 region=region,
-                defaults={'nombre': f'Formulario Sectorial de {region.region} - {competencia}'}
+                defaults={'nombre': f'Formulario GORE de {region.region} - {competencia.nombre}'}
             )
 
 
@@ -39,45 +42,38 @@ def agregar_formulario_gore_por_region(sender, instance, action, pk_set, **kwarg
 @transaction.atomic
 def agregar_formulario_sectorial_por_sector(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add' and instance.pk:
+        # Asegúrate de que la instancia de Competencia está completamente guardada
+        competencia = Competencia.objects.get(pk=instance.pk)
         for sector_pk in pk_set:
             sector = SectorGubernamental.objects.get(pk=sector_pk)
-            competencia = Competencia.nombre
             formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
-                competencia=instance,
+                competencia=competencia,
                 sector=sector,
-                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia}'}
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
             )
 
             # Si se creó un nuevo formulario, también crear una observación asociada
             if created:
                 ObservacionSectorial.objects.create(
                     formulario_sectorial=formulario_sectorial
-                    # Aquí puedes establecer otros campos por defecto si es necesario
                 )
+
 
 @receiver(post_save, sender=Competencia)
 def crear_etapas_para_competencia(sender, instance, created, **kwargs):
     if created:
-        Etapa1.objects.get_or_create(
-            competencia=instance,
-            # Puedes añadir más campos predeterminados si son necesarios
-        )
-        Etapa2.objects.get_or_create(
-            competencia=instance,
-            # Puedes añadir más campos predeterminados si son necesarios
-        )
-        Etapa3.objects.get_or_create(
-            competencia=instance,
-            # Puedes añadir más campos predeterminados si son necesarios
-        )
-        Etapa4.objects.get_or_create(
-            competencia=instance,
-            # Puedes añadir más campos predeterminados si son necesarios
-        )
-        Etapa5.objects.get_or_create(
-            competencia=instance,
-            # Puedes añadir más campos predeterminados si son necesarios
-        )
+        # Crear otras etapas
+        Etapa2.objects.get_or_create(competencia=instance)
+        Etapa3.objects.get_or_create(competencia=instance)
+        Etapa4.objects.get_or_create(competencia=instance)
+        Etapa5.objects.get_or_create(competencia=instance)
+
+
+@receiver(m2m_changed, sender=Competencia.sectores.through)
+def crear_o_actualizar_etapa1(sender, instance, action, **kwargs):
+    if action in ["post_add", "post_remove", "post_clear"]:
+        etapa1, created = Etapa1.objects.get_or_create(competencia=instance)
+        etapa1.save()
 
 
 @receiver(post_save, sender=Etapa1)
