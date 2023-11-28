@@ -12,39 +12,45 @@ from applications.sectores_gubernamentales.models import SectorGubernamental
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
 @transaction.atomic
-def agregar_formulario_sectorial_por_sector(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add' and instance.pk:
-        # Asegúrate de que la instancia de Competencia está completamente guardada
+def actualizar_formularios_sectoriales(sender, instance, action, pk_set, **kwargs):
+    if instance.pk:
         competencia = Competencia.objects.get(pk=instance.pk)
-        for sector_pk in pk_set:
-            sector = SectorGubernamental.objects.get(pk=sector_pk)
-            formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
-                competencia=competencia,
-                sector=sector,
-                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
-            )
 
-            # Si se creó un nuevo formulario, también crear una observación asociada
-            if created:
-                ObservacionSectorial.objects.create(
-                    formulario_sectorial=formulario_sectorial
+        if action == 'post_add':
+            for sector_pk in pk_set:
+                sector = SectorGubernamental.objects.get(pk=sector_pk)
+                formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
+                    competencia=competencia,
+                    sector=sector,
+                    defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
                 )
+
+                if created:
+                    ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
+
+        elif action == 'post_remove':
+            for sector_pk in pk_set:
+                sector = SectorGubernamental.objects.get(pk=sector_pk)
+                # Eliminar los formularios asociados al sector que se ha quitado
+                FormularioSectorial.objects.filter(competencia=competencia, sector=sector).delete()
 
 
 @receiver(post_save, sender=Etapa1)
-def actualizar_etapa2(sender, instance, **kwargs):
-    if instance.estado == 'finalizada':
-        # Obtener o crear la instancia de Etapa2 asociada
-        etapa2, created = Etapa2.objects.get_or_create(competencia=instance.competencia)
+def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
+    # Obtener o crear la instancia de Etapa2 asociada
+    etapa2, created = Etapa2.objects.get_or_create(competencia=instance.competencia)
 
-        # Actualizar estado y tiempo restante
+    if instance.estado == 'finalizada':
+        # Si Etapa1 se ha finalizado, actualiza Etapa2
         etapa2.usuarios_notificados = True
         if not etapa2.fecha_inicio:
             etapa2.fecha_inicio = timezone.now()
-
         etapa2.plazo_dias = instance.competencia.plazo_formulario_sectorial
+    else:
+        # Si Etapa1 no está finalizada, asegúrate de que usuarios_notificados en Etapa2 sea False
+        etapa2.usuarios_notificados = False
 
-        etapa2.save()
+    etapa2.save()
 
 
 @receiver(post_save, sender=FormularioSectorial)

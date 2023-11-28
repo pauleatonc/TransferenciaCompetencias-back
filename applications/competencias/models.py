@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.exceptions import ValidationError
+
 from django.db.models import Q
 from django.db.models.signals import pre_save, m2m_changed
 from django.dispatch import receiver
@@ -117,13 +117,6 @@ class Competencia(BaseModel):
     def clean(self):
         super().clean()
 
-    def save(self, *args, **kwargs):
-        creating = not bool(self.pk)  # Verificar si es una creación
-        super().save(*args, **kwargs)  # Primero guardamos para obtener un ID
-
-        # Finalmente, asignar usuarios si es un nuevo objeto
-        if creating and self.creado_por:
-            self.usuarios_subdere.add(self.creado_por)
 
     def tiempo_transcurrido(self):
         """
@@ -142,29 +135,6 @@ class Competencia(BaseModel):
         minutos = (diferencia.seconds % 3600) // 60
 
         return {"dias": dias, "horas": horas, "minutos": minutos}
-
-
-# Receptor de señal para la validación de usuarios sectoriales y GORE
-@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
-def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
-    if action == 'pre_add':
-        User = get_user_model()
-        for pk in pk_set:
-            usuario = User.objects.get(pk=pk)
-            # Asegurar que el usuario pertenece a un sector asignado a la competencia
-            if usuario.sector not in instance.sectores.all():
-                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece al o los sectores asignados a esta competencia.")
-
-
-@receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
-def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
-    if action == 'pre_add':
-        User = get_user_model()
-        for pk in pk_set:
-            usuario = User.objects.get(pk=pk)
-            # Asegurar que el usuario pertenece a una región asignada a la competencia
-            if usuario.region not in instance.regiones.all():
-                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
 
 
 class DocumentosComplementarios(BaseModel):

@@ -89,6 +89,7 @@ class CompetenciaUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Competencia
         fields = '__all__'
+        extra_kwargs = {'creado_por': {'read_only': True}}
 
 class CompetenciaDetailSerializer(serializers.ModelSerializer):
     etapa1 = Etapa1Serializer(source='etapa1_set', many=True)

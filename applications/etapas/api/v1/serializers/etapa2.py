@@ -1,11 +1,8 @@
-from rest_framework import serializers
-
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from rest_framework import serializers
 
 from applications.etapas.models import Etapa2, ObservacionSectorial
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
 
 User = get_user_model()
 
