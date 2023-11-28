@@ -32,7 +32,7 @@ class Competencia(BaseModel):
     ESTADO = (
         ('EP', 'En Estudio'),
         ('FIN', 'Finalizada'),
-        ('SU', 'Sin usuarios sectoriales')
+        ('SU', 'Sin usuario sectorial')
     )
 
     nombre = models.CharField(max_length=200, unique=True)
