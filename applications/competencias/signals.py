@@ -11,17 +11,6 @@ from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5, O
 from django.contrib.auth import get_user_model
 
 
-@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
-@transaction.atomic
-def actualizar_etapa1_al_modificar_usuario_sectorial(sender, instance, action, pk_set, **kwargs):
-    if action in ['post_add', 'post_remove'] and instance.pk:
-        etapa1 = instance.etapa1_set.first()
-        if etapa1:
-            # Comprobar si aún cumple con las condiciones para estar aprobada
-            etapa1.usuarios_vinculados = etapa1.estado_usuarios_vinculados == 'Finalizada'
-            etapa1.save()
-
-
 @receiver(m2m_changed, sender=Competencia.regiones.through)
 @transaction.atomic
 def agregar_formulario_regional_por_region(sender, instance, action, pk_set, **kwargs):
@@ -38,36 +27,21 @@ def agregar_formulario_regional_por_region(sender, instance, action, pk_set, **k
             )
 
 
-
-
-
 @receiver(post_save, sender=Competencia)
 def crear_etapas_para_competencia(sender, instance, created, **kwargs):
     if created:
         # Crear otras etapas
+        Etapa1.objects.get_or_create(competencia=instance)
         Etapa2.objects.get_or_create(competencia=instance)
         Etapa3.objects.get_or_create(competencia=instance)
         Etapa4.objects.get_or_create(competencia=instance)
         Etapa5.objects.get_or_create(competencia=instance)
 
 
-@receiver(m2m_changed, sender=Competencia.sectores.through)
-def crear_o_actualizar_etapa1(sender, instance, action, **kwargs):
-    if action in ["post_add", "post_remove", "post_clear"]:
-        etapa1, created = Etapa1.objects.get_or_create(competencia=instance)
-        etapa1.save()
-
-
-
 @receiver(post_save, sender=Etapa1)
 def actualizar_estado_y_fecha_competencia(sender, instance, **kwargs):
     competencia = instance.competencia
     actualizar = False
-
-    # Actualizar estado a 'EP' si es necesario
-    if instance.usuarios_vinculados and competencia.estado != 'EP':
-        competencia.estado = 'EP'
-        actualizar = True
 
     # Actualizar fecha_inicio si es necesario
     if instance.fecha_inicio and competencia.fecha_inicio != instance.fecha_inicio:
