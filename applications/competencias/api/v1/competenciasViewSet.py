@@ -92,7 +92,6 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         serializer = CompetenciaHomeListSerializer(queryset, many=True)
         return Response(serializer.data)
 
-
     def create(self, request, *args, **kwargs):
         """
         Crear Competencia
@@ -102,7 +101,11 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        competencia = serializer.save(creado_por=request.user)
+
+        # Añadir el usuario a usuarios_subdere
+        competencia.usuarios_subdere.add(request.user)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None, *args, **kwargs):

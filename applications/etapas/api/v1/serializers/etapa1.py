@@ -1,11 +1,8 @@
-from rest_framework import serializers
-from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from rest_framework import serializers
 
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
+from applications.etapas.models import Etapa1
 
 User = get_user_model()
 
@@ -35,10 +32,11 @@ class Etapa1Serializer(serializers.ModelSerializer):
         if obj.competencia.sectores.count() > 1:
             nombre = "Usuarios sectoriales vinculados a la competencia creada"
 
-        estado = obj.estado_usuarios_vinculados
+        # Utiliza el campo 'usuarios_vinculados' directamente para determinar el estado
+        estado = 'finalizada' if obj.usuarios_vinculados else 'pendiente'
         accion = "Usuario(s) pendiente(s)"
 
-        if estado == 'finalizada':
+        if obj.usuarios_vinculados:
             if user.groups.filter(name='SUBDERE').exists():
                 accion = "Editar usuarios"
             else:

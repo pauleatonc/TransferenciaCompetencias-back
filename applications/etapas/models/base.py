@@ -32,16 +32,19 @@ class EtapaBase(BaseModel):
         raise NotImplementedError("Subclases deben implementar este método.")
 
     def actualizar_estado(self):
-        tiempo_transcurrido = self.calcular_tiempo_transcurrido()
         if not self.fecha_inicio:
             return 'no_iniciada'
         elif self.aprobada:
             return 'finalizada'
         elif self.enviada:
             return 'en_revision'
-        elif tiempo_transcurrido['dias'] > self.plazo_dias:
-            return 'atrasada'
         else:
+            # Solo considerar el plazo si plazo_dias está definido
+            if self.plazo_dias is not None:
+                tiempo_transcurrido = self.calcular_tiempo_transcurrido()
+                if tiempo_transcurrido['dias'] > self.plazo_dias:
+                    return 'atrasada'
+            # Si plazo_dias es None, se considera que no está atrasada
             return 'en_estudio'
 
     def segundos_restantes(self):

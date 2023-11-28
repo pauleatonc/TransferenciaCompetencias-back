@@ -1,90 +1,37 @@
-from django.db import transaction
-from django.db.models.signals import m2m_changed, post_save
-from django.dispatch import receiver
-from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import FormularioSectorial
-from applications.formularios_gores.models import FormularioGORE
-from applications.sectores_gubernamentales.models import SectorGubernamental
-from applications.regioncomuna.models import Region
-from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5, ObservacionSectorial
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models.signals import post_save, m2m_changed
+from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 
-
-@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
-@transaction.atomic
-def actualizar_etapa1_al_modificar_usuario_sectorial(sender, instance, action, pk_set, **kwargs):
-    if action in ['post_add', 'post_remove'] and instance.pk:
-        etapa1 = instance.etapa1_set.first()
-        if etapa1:
-            # Comprobar si aún cumple con las condiciones para estar aprobada
-            etapa1.usuarios_vinculados = etapa1.estado_usuarios_vinculados == 'Finalizada'
-            etapa1.save()
-
-
-@receiver(m2m_changed, sender=Competencia.regiones.through)
-@transaction.atomic
-def agregar_formulario_regional_por_region(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add' and instance.pk:
-        # Asegúrate de que la instancia de Competencia está completamente guardada
-        competencia = Competencia.objects.get(pk=instance.pk)
-        for region_pk in pk_set:
-            region = Region.objects.get(pk=region_pk)
-            # Aquí creas el formulario asociado a la región
-            # Ajusta FormularioRegional y los campos según tus necesidades
-            FormularioGORE.objects.get_or_create(
-                competencia=competencia,
-                region=region,
-                defaults={'nombre': f'Formulario GORE de {region.region} - {competencia.nombre}'}
-            )
-
-
-@receiver(m2m_changed, sender=Competencia.sectores.through)
-@transaction.atomic
-def agregar_formulario_sectorial_por_sector(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add' and instance.pk:
-        # Asegúrate de que la instancia de Competencia está completamente guardada
-        competencia = Competencia.objects.get(pk=instance.pk)
-        for sector_pk in pk_set:
-            sector = SectorGubernamental.objects.get(pk=sector_pk)
-            formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
-                competencia=competencia,
-                sector=sector,
-                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
-            )
-
-            # Si se creó un nuevo formulario, también crear una observación asociada
-            if created:
-                ObservacionSectorial.objects.create(
-                    formulario_sectorial=formulario_sectorial
-                )
+from applications.competencias.models import Competencia
+from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 
 
 @receiver(post_save, sender=Competencia)
+@transaction.atomic
 def crear_etapas_para_competencia(sender, instance, created, **kwargs):
     if created:
-        # Crear otras etapas
+        # Crear etapas
+        Etapa1.objects.get_or_create(competencia=instance)
         Etapa2.objects.get_or_create(competencia=instance)
         Etapa3.objects.get_or_create(competencia=instance)
         Etapa4.objects.get_or_create(competencia=instance)
         Etapa5.objects.get_or_create(competencia=instance)
 
 
-@receiver(m2m_changed, sender=Competencia.sectores.through)
-def crear_o_actualizar_etapa1(sender, instance, action, **kwargs):
-    if action in ["post_add", "post_remove", "post_clear"]:
-        etapa1, created = Etapa1.objects.get_or_create(competencia=instance)
-        etapa1.save()
+@receiver(m2m_changed, sender=Competencia.usuarios_subdere.through)
+def asignar_creador_a_subdere(sender, instance, action, pk_set, **kwargs):
+    if action == "post_add" and instance.creado_por:
+        # Si el usuario creado_por no está en usuarios_subdere, añádelo
+        if not instance.usuarios_subdere.filter(id=instance.creado_por.id).exists():
+            instance.usuarios_subdere.add(instance.creado_por)
 
 
 @receiver(post_save, sender=Etapa1)
 def actualizar_estado_y_fecha_competencia(sender, instance, **kwargs):
     competencia = instance.competencia
     actualizar = False
-
-    # Actualizar estado a 'EP' si es necesario
-    if instance.usuarios_vinculados and competencia.estado != 'EP':
-        competencia.estado = 'EP'
-        actualizar = True
 
     # Actualizar fecha_inicio si es necesario
     if instance.fecha_inicio and competencia.fecha_inicio != instance.fecha_inicio:
@@ -94,3 +41,28 @@ def actualizar_estado_y_fecha_competencia(sender, instance, **kwargs):
     # Guardar cambios en la competencia si ha habido algún cambio
     if actualizar:
         competencia.save()
+
+
+# Receptor de señal para la validación de usuarios sectoriales y GORE
+@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
+@transaction.atomic
+def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
+    if action == 'pre_add':
+        User = get_user_model()
+        for pk in pk_set:
+            usuario = User.objects.get(pk=pk)
+            # Asegurar que el usuario pertenece a un sector asignado a la competencia
+            if usuario.sector not in instance.sectores.all():
+                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece al o los sectores asignados a esta competencia.")
+
+
+@receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
+@transaction.atomic
+def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
+    if action == 'pre_add':
+        User = get_user_model()
+        for pk in pk_set:
+            usuario = User.objects.get(pk=pk)
+            # Asegurar que el usuario pertenece a una región asignada a la competencia
+            if usuario.region not in instance.regiones.all():
+                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
