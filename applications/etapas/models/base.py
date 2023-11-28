@@ -11,7 +11,7 @@ class EtapaBase(BaseModel):
         ('finalizada', 'Finalizada'),
         ('en_estudio', 'En Estudio'),
         ('no_iniciada', 'Aún no puede comenzar'),
-        ('en_revision', 'En revisión'),
+        ('en_revision', 'En revisión SUBDERE'),
         ('atrasada', 'Atrasada'),
     )
 
