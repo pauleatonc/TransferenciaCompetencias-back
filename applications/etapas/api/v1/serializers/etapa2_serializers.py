@@ -6,6 +6,7 @@ from applications.etapas.models import Etapa2, ObservacionSectorial
 
 User = get_user_model()
 
+
 class Etapa2Serializer(serializers.ModelSerializer):
     nombre_etapa = serializers.ReadOnlyField()
     estado = serializers.CharField(source='get_estado_display')

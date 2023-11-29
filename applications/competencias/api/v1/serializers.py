@@ -1,12 +1,12 @@
 from rest_framework import serializers
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1
+from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
-from applications.etapas.api.v1.serializers import Etapa1Serializer, Etapa2Serializer
+from applications.etapas.api.v1.serializers import Etapa1Serializer, Etapa2Serializer, Etapa3Serializer
 
 User = get_user_model()
 
@@ -58,6 +58,7 @@ class CompetenciaListSerializer(serializers.ModelSerializer):
     def get_origen(self, obj):
         return obj.get_origen_display()
 
+
 class CompetenciaHomeListSerializer(serializers.ModelSerializer):
 
     etapas_info = serializers.SerializerMethodField()
@@ -94,6 +95,7 @@ class CompetenciaUpdateSerializer(serializers.ModelSerializer):
 class CompetenciaDetailSerializer(serializers.ModelSerializer):
     etapa1 = Etapa1Serializer(source='etapa1_set', many=True)
     etapa2 = Etapa2Serializer(source='etapa2_set', many=True)
+    etapa3 = Etapa3Serializer(source='etapa3_set', many=True)
     usuarios_subdere = UsuarioSerializer(many=True, read_only=True)
     usuarios_dipres = UsuarioSerializer(many=True, read_only=True)
     usuarios_sectoriales = UsuarioSerializer(many=True, read_only=True)
@@ -109,6 +111,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'sectores',
             'etapa1',
             'etapa2',
+            'etapa3',
             'tiempo_transcurrido',
             'usuarios_subdere',
             'usuarios_dipres',
