@@ -3,7 +3,6 @@ from django.db import models
 
 #
 from applications.base.functions import validate_file_size_twenty
-from applications.base.models import BaseModel
 from applications.etapas.models import EtapaBase
 
 
@@ -14,6 +13,7 @@ class Etapa3(EtapaBase):
 
     """ Campos subetapa 3"""
     usuario_notificado = models.BooleanField(default=False)
+    omitir_etapa = models.BooleanField(default=False)
 
     comentario_minuta_etapa3 = models.TextField(max_length=500, blank=True)
     archivo_minuta_etapa3 = models.FileField(upload_to='minutas_dipres_etapa3',
@@ -31,7 +31,4 @@ class Etapa3(EtapaBase):
 
     def __str__(self):
         return f"{self.nombre_etapa} para {self.competencia.nombre}"
-
-
-#class MinutaDipresSectorial(BaseModel):
 
