@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1
+from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
 from applications.regioncomuna.models import Region
@@ -57,6 +57,7 @@ class CompetenciaListSerializer(serializers.ModelSerializer):
 
     def get_origen(self, obj):
         return obj.get_origen_display()
+
 
 class CompetenciaHomeListSerializer(serializers.ModelSerializer):
 

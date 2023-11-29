@@ -13,6 +13,9 @@ class Etapa3Serializer(serializers.ModelSerializer):
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.ReadOnlyField()
+    usuario_notificado = serializers.SerializerMethodField()
+    minuta_sectorial = serializers.SerializerMethodField()
+    observacion_minuta_sectorial = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa3
@@ -23,6 +26,9 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
+            'usuario_notificado',
+            'minuta_sectorial',
+            'observacion_minuta_sectorial'
         ]
 
     def get_ultimo_editor(self, obj):
@@ -45,3 +51,78 @@ class Etapa3Serializer(serializers.ModelSerializer):
             return None
         except obj.historical.model.DoesNotExist:
             return None
+
+    def get_usuario_notificado(self, obj):
+        user = self.context['request'].user
+        nombre = "Asociar usuario DIPRES a la competencia"
+
+        if obj.usuario_notificado:
+            usuario = obj.get_usuario_dipres_display()  # asumiendo que tienes un método para obtener el usuario DIPRES
+            return {
+                "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email})",
+                "estado": 'finalizada',
+                "accion": 'Finalizada'
+            }
+
+        estado = 'revision' if user.groups.filter(name='SUBDERE').exists() else 'pendiente'
+        accion = 'Agregar usuario' if user.groups.filter(name='SUBDERE').exists() else 'Usuario pendiente'
+
+        return {
+            "nombre": nombre,
+            "estado": estado,
+            "accion": accion
+        }
+
+    def get_minuta_sectorial(self, obj):
+        user = self.context['request'].user
+        nombre = "Subir minuta"
+
+        if obj.minuta_etapa3_enviada:
+            return {
+                "nombre": nombre,
+                "estado": 'finalizada',
+                "accion": 'Ver minuta'
+            }
+
+        if not obj.usuario_notificado:
+            return {
+                "nombre": nombre,
+                "estado": 'pendiente',
+                "accion": 'Subir minuta'
+            }
+
+        if obj.usuario_notificado and user.groups.filter(name='DIPRES').exists():
+            return {
+                "nombre": nombre,
+                "estado": 'revision',
+                "accion": 'Subir minuta'
+            }
+
+        return None
+
+    def get_observacion_minuta_sectorial(self, obj):
+        user = self.context['request'].user
+        nombre = "Revisión SUBDERE"
+
+        if obj.observacion_minuta_sectorial_enviada:
+            return {
+                "nombre": nombre,
+                "estado": 'finalizada',
+                "accion": 'Ver Observaciones'
+            }
+
+        if not obj.observacion_minuta_sectorial_enviada:
+            return {
+                "nombre": nombre,
+                "estado": 'pendiente',
+                "accion": 'Subir Observaciones'
+            }
+
+        if obj.usuario_notificado and obj.minuta_etapa3_enviada and user.groups.filter(name='SUBDERE').exists():
+            return {
+                "nombre": nombre,
+                "estado": 'revision',
+                "accion": 'Subir Observaciones'
+            }
+
+        return None
