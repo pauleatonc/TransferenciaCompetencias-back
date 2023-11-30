@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa4
+from applications.formularios_gores.models import FormularioGORE
 
 User = get_user_model()
 
@@ -14,7 +15,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.ReadOnlyField()
     usuarios_gore_notificados = serializers.SerializerMethodField()
-    #formulario_gore_completo = serializers.SerializerMethodField()
+    formulario_gore_completo = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa4
@@ -26,7 +27,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_gore_notificados',
-            #'formulario_gore_completo',
+            'formulario_gore_completo',
         ]
 
     def get_ultimo_editor(self, obj):
@@ -89,4 +90,51 @@ class Etapa4Serializer(serializers.ModelSerializer):
         return {
             "usuarios_gore_notificados": [resumen],
             "detalle_usuarios_gore_notificados": detalle
+        }
+
+    def get_formulario_gore_completo(self, obj):
+        user = self.context['request'].user
+        es_usuario_gore = user.groups.filter(name='GORE').exists()
+        regiones = obj.competencia.regiones.all()
+        detalle = []
+
+        for region in regiones:
+            formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
+            if formulario_gore and formulario_gore.formulario_enviado:
+                detalle.append({
+                    "nombre": f"Completar formulario GORE - {region.region}",
+                    "estado": 'finalizada',
+                    "accion": 'Ver formulario'
+                })
+            elif obj.usuarios_gore_notificados:
+                estado = 'revision' if es_usuario_gore and formulario_gore and formulario_gore.region == user.region else 'pendiente'
+                accion = 'Subir Formulario' if estado == 'revision' else 'Formulario pendiente'
+                detalle.append({
+                    "nombre": f"Completar formulario GORE - {region.region}",
+                    "estado": estado,
+                    "accion": accion
+                })
+            else:
+                estado = 'pendiente'
+                accion = 'Formulario pendiente'
+                detalle.append({
+                    "nombre": f"Completar formulario sectorial - {region.region}",
+                    "estado": estado,
+                    "accion": accion
+                })
+
+        if len(regiones) <= 1:
+            return detalle
+
+        resumen_estado = 'finalizada' if obj.formulario_gore_completo else 'revision'
+        resumen_accion = 'Ver formularios' if obj.formulario_gore_completo else 'En Estudio'
+        resumen = {
+            "nombre": 'Ver formularios GORE' if obj.formulario_gore_completo else 'Completar formularios GORE',
+            "estado": resumen_estado,
+            "accion": resumen_accion
+        }
+
+        return {
+            "formularios_gore_completos": [resumen],
+            "detalle_formularios_gore": detalle
         }
