@@ -62,6 +62,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
         for sector in sectores:
             usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(sector=sector).first()
+
             if usuario_sectorial:
                 detalle.append({
                     "nombre": f"Notificar a {usuario_sectorial.nombre_completo} ({usuario_sectorial.email}) - {sector.nombre}",
@@ -90,10 +91,25 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "accion": resumen_accion
         }
 
+        detalle = self.reordenar_usuarios_notificados(detalle, user)
+
         return {
             "usuarios_notificados": [resumen],
             "detalle_usuarios_notificados": detalle
         }
+
+    def reordenar_usuarios_notificados(self, detalle, user):
+        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
+        usuario_principal = []
+        otros = []
+
+        for d in detalle:
+            if 'nombre' in d and user.nombre_completo in d['nombre']:
+                usuario_principal.append(d)
+            else:
+                otros.append(d)
+
+        return usuario_principal + otros
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
@@ -126,6 +142,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                     "accion": accion
                 })
 
+
         if len(sectores) <= 1:
             return detalle
 
@@ -137,10 +154,25 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "accion": resumen_accion
         }
 
+        detalle = self.reordenar_formularios(detalle, formulario_sectorial)
+
         return {
             "formularios_sectoriales_completos": [resumen],
             "detalle_formularios_sectoriales": detalle
         }
+
+    def reordenar_formularios(self, detalle, formulario_sectorial):
+        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
+        usuario_principal = []
+        otros = []
+
+        for d in detalle:
+            if 'nombre' in d and formulario_sectorial.sector.nombre in d['nombre']:
+                usuario_principal.append(d)
+            else:
+                otros.append(d)
+
+        return usuario_principal + otros
 
     def get_observaciones_sectorial(self, obj):
         user = self.context['request'].user
@@ -207,6 +239,14 @@ class Etapa2Serializer(serializers.ModelSerializer):
         if observacion.observacion_enviada:
             return 'finalizada'
         return 'revision' if es_subdere else 'pendiente'
+
+    def reordenar_detalles(self, detalle, user):
+        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
+        es_usuario_sectorial = [d for d in detalle if
+                                          (d.get('usuario') and d['usuario'] == user.nombre_completo) or
+                                          (d.get('sector') and d['sector'] == user.sector.id)]
+        otros = [d for d in detalle if d not in es_usuario_sectorial]
+        return es_usuario_sectorial + otros
 
     def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
         if etapa_obj.fecha_inicio and fecha_envio:
