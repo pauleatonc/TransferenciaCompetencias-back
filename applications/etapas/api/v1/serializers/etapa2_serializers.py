@@ -54,47 +54,45 @@ class Etapa2Serializer(serializers.ModelSerializer):
             return None
 
     def get_usuarios_notificados(self, obj):
-        numero_sectores = obj.competencia.sectores.count()
         user = self.context['request'].user
-        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
-        usuarios_sectoriales = obj.competencia.usuarios_sectoriales.all()
+        es_usuario_subdere = user.groups.filter(name='SUBDERE').exists()
+        sectores = obj.competencia.sectores.all()
+        detalle = []
 
-        # Priorizar el usuario sectorial si el usuario autenticado es un usuario sectorial
-        if es_usuario_sectorial:
-            usuarios_sectoriales = list(usuarios_sectoriales)
-            usuario_sectorial = [usuario for usuario in usuarios_sectoriales if usuario == user]
-            usuarios_sectoriales = usuario_sectorial + [usuario for usuario in usuarios_sectoriales if
-                                                        usuario not in usuario_sectorial]
+        for sector in sectores:
+            usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(sector=sector).first()
+            if usuario_sectorial:
+                detalle.append({
+                    "nombre": f"Notificar a {usuario_sectorial.nombre_completo} ({usuario_sectorial.email}) - {sector.nombre}",
+                    "estado": 'finalizada',
+                    "accion": 'Finalizada'
+                })
+            else:
+                accion = 'Asignar usuario' if es_usuario_subdere else 'Usuario pendiente'
+                estado = 'revision' if es_usuario_subdere else 'pendiente'
+                detalle.append({
+                    "nombre": f"Asociar usuario Sectorial a {sector.nombre}",
+                    "estado": estado,
+                    "accion": accion
+                })
 
-        if numero_sectores <= 1:
-            # Si solo hay un sector, muestra los usuarios individualmente
-            return [
-                {
-                    "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email})",
-                    "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
-                    "accion": 'Finalizada' if obj.usuarios_notificados else 'Asignar usuario'
-                } for usuario in usuarios_sectoriales
-            ]
-        else:
-            # Si hay más de un sector, muestra un resumen y detalles
-            resumen = {
-                "nombre": 'Usuarios notificados' if obj.usuarios_notificados else 'Usuarios pendientes',
-                "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
-                "accion": 'Finalizada' if obj.usuarios_notificados else 'En Estudio'
-            }
+        if len(sectores) <= 1:
+            # Si solo hay un sector, devuelve directamente el detalle
+            return detalle
 
-            detalle = [
-                {
-                    "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email}) - {usuario.sector.nombre}",
-                    "estado": 'finalizada' if obj.usuarios_notificados else 'revision',
-                    "accion": 'Finalizada' if obj.usuarios_notificados else 'Asignar usuario'
-                } for usuario in usuarios_sectoriales
-            ]
+        # Crear resumen para múltiples sectores
+        resumen_estado = 'finalizada' if obj.usuarios_notificados else 'revision' if es_usuario_subdere else 'pendiente'
+        resumen_accion = 'Finalizada' if obj.usuarios_notificados else 'Asignar usuarios' if es_usuario_subdere else 'Usuarios pendientes'
+        resumen = {
+            "nombre": 'Usuarios Sectoriales notificados' if obj.usuarios_notificados else 'Usuarios Sectoriales pendientes',
+            "estado": resumen_estado,
+            "accion": resumen_accion
+        }
 
-            return {
-                "usuarios_notificados": [resumen],
-                "detalle_usuarios_notificados": detalle
-            }
+        return {
+            "usuarios_notificados": [resumen],
+            "detalle_usuarios_notificados": detalle
+        }
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user

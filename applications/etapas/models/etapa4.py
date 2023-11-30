@@ -9,8 +9,8 @@ class Etapa4(EtapaBase):
         return 'Levantamiento de antecedentes GORE'
 
     """ Campos subetapa 4"""
-    usuarios_notificados = models.BooleanField(default=False)
-    formulario_completo = models.BooleanField(default=False)
+    usuarios_gore_notificados = models.BooleanField(default=False)
+    formulario_gore_completo = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Etapa 4'
