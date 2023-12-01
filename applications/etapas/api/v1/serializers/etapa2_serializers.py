@@ -107,50 +107,35 @@ class Etapa2Serializer(serializers.ModelSerializer):
         for sector in sectores:
             formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia,
                                                                       sector=sector).first()
-            estado, accion, tiempo_registro = self.determinar_estado_accion_y_tiempo(formulario_sectorial,
-                                                                                     es_usuario_sectorial,
-                                                                                     obj.usuarios_notificados,
-                                                                                     user.sector, obj)
-            detalle_formulario = {
-                "nombre": f"Completar formulario sectorial - {sector.nombre}",
-                "estado": estado,
-                "accion": accion
-            }
-            if tiempo_registro:
-                detalle_formulario['registro_tiempo'] = tiempo_registro
-            detalle.append(detalle_formulario)
+            if formulario_sectorial:
+                estado_revision = es_usuario_sectorial and obj.usuarios_notificados
+                estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
+                accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if es_usuario_sectorial else 'Formulario pendiente'
+                detalle_formulario = {
+                    "nombre": f"Completar formulario Sectorial - {sector.nombre}",
+                    "estado": estado,
+                    "accion": accion
+                }
+                if formulario_sectorial.formulario_enviado:
+                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj, formulario_sectorial.fecha_envio)
+                detalle.append(detalle_formulario)
 
         if len(sectores) <= 1:
             return detalle
 
-        resumen = self.crear_resumen_formularios(obj, detalle)
+        resumen_estado = 'finalizada' if obj.formulario_completo else 'revision'
+        resumen_accion = 'Ver formularios' if obj.formulario_completo else 'En Estudio'
+        resumen = {
+            "nombre": 'Ver formularios Sectoriales' if obj.formulario_completo else 'Completar formularios Sectoriales',
+            "estado": resumen_estado,
+            "accion": resumen_accion
+        }
 
         detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
-            "formularios_sectoriales_completos": [resumen],
+            "formularios_sectoriales": [resumen],
             "detalle_formularios_sectoriales": detalle
-        }
-
-    def determinar_estado_accion_y_tiempo(self, formulario, es_usuario_sectorial, usuarios_notificados, sector_usuario,
-                                          etapa_obj):
-        if formulario and formulario.formulario_enviado:
-            tiempo_registro = self.calcular_tiempo_registro(etapa_obj, formulario.fecha_envio)
-            return 'finalizada', 'Ver formulario', tiempo_registro
-        if usuarios_notificados:
-            estado = 'revision' if es_usuario_sectorial and formulario and formulario.sector == sector_usuario else 'pendiente'
-            accion = 'Subir Formulario' if estado == 'revision' else 'Formulario pendiente'
-            return estado, accion, None
-        return 'pendiente', 'Formulario pendiente', None
-
-    def crear_resumen_formularios(self, obj, detalle):
-        formularios_completos = all(d['estado'] == 'finalizada' for d in detalle)
-        estado_resumen = 'finalizada' if formularios_completos else 'revision'
-        accion_resumen = 'Ver formularios' if formularios_completos else 'En Estudio'
-        return {
-            "nombre": 'Ver formularios sectoriales' if formularios_completos else 'Completar formularios sectoriales',
-            "estado": estado_resumen,
-            "accion": accion_resumen
         }
 
     def get_observaciones_sectorial(self, obj):

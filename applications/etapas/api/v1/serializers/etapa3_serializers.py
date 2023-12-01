@@ -55,17 +55,18 @@ class Etapa3Serializer(serializers.ModelSerializer):
     def get_usuario_notificado(self, obj):
         user = self.context['request'].user
         nombre = "Asociar usuario DIPRES a la competencia"
+        es_usuario_subdere = user.groups.filter(name='SUBDERE').exists()
 
         if obj.usuario_notificado:
-            usuario = obj.get_usuario_dipres_display()  # asumiendo que tienes un método para obtener el usuario DIPRES
+            usuario_dipres = obj.competencia.usuarios_gore.first()
             return {
-                "nombre": f"Notificar a {usuario.nombre_completo} ({usuario.email})",
+                "nombre": f"Notificar a {usuario_dipres.nombre_completo} ({usuario_dipres.email})",
                 "estado": 'finalizada',
                 "accion": 'Finalizada'
             }
 
-        estado = 'revision' if user.groups.filter(name='SUBDERE').exists() else 'pendiente'
-        accion = 'Agregar usuario' if user.groups.filter(name='SUBDERE').exists() else 'Usuario pendiente'
+        estado = 'revision' if es_usuario_subdere else 'pendiente'
+        accion = 'Agregar usuario' if es_usuario_subdere else 'Usuario pendiente'
 
         return {
             "nombre": nombre,

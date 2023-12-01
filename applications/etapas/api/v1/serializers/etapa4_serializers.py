@@ -14,8 +14,8 @@ class Etapa4Serializer(serializers.ModelSerializer):
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.ReadOnlyField()
-    usuarios_gore_notificados = serializers.SerializerMethodField()
-    formulario_gore_completo = serializers.SerializerMethodField()
+    usuarios_gore = serializers.SerializerMethodField()
+    formularios_gore = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa4
@@ -26,8 +26,8 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
-            'usuarios_gore_notificados',
-            'formulario_gore_completo',
+            'usuarios_gore',
+            'formularios_gore',
         ]
 
     def get_ultimo_editor(self, obj):
@@ -51,7 +51,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
         except obj.historical.model.DoesNotExist:
             return None
 
-    def get_usuarios_gore_notificados(self, obj):
+    def get_usuarios_gore(self, obj):
         user = self.context['request'].user
         es_usuario_subdere = user.groups.filter(name='SUBDERE').exists()
         regiones = obj.competencia.regiones.all()
@@ -87,12 +87,14 @@ class Etapa4Serializer(serializers.ModelSerializer):
             "accion": resumen_accion
         }
 
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
+
         return {
             "usuarios_gore_notificados": [resumen],
             "detalle_usuarios_gore_notificados": detalle
         }
 
-    def get_formulario_gore_completo(self, obj):
+    def get_formularios_gore(self, obj):
         user = self.context['request'].user
         es_usuario_gore = user.groups.filter(name='GORE').exists()
         regiones = obj.competencia.regiones.all()
@@ -104,12 +106,15 @@ class Etapa4Serializer(serializers.ModelSerializer):
                 estado_revision = es_usuario_gore and obj.usuarios_gore_notificados
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
-                detalle.append({
-                    "nombre": f"Completar formulario sectorial ({formulario_gore.region.region})",
+                detalle_formulario = {
+                    "nombre": f"Completar formulario GORE - {region.region}",
                     "estado": estado,
                     "accion": accion
-                })
-
+                }
+                if formulario_gore.formulario_enviado:
+                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj,
+                                                                                          formulario_gore.fecha_envio)
+                detalle.append(detalle_formulario)
 
         if len(regiones) <= 1:
             return detalle
@@ -122,7 +127,34 @@ class Etapa4Serializer(serializers.ModelSerializer):
             "accion": resumen_accion
         }
 
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
+
         return {
             "formularios_gore_completos": [resumen],
             "detalle_formularios_gore": detalle
         }
+
+    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
+        if etapa_obj.fecha_inicio and fecha_envio:
+            delta = fecha_envio - etapa_obj.fecha_inicio
+            total_seconds = int(delta.total_seconds())
+            dias = total_seconds // (24 * 3600)
+            horas = (total_seconds % (24 * 3600)) // 3600
+            minutos = (total_seconds % 3600) // 60
+            return {'dias': dias, 'horas': horas, 'minutos': minutos}
+        return {'dias': 0, 'horas': 0, 'minutos': 0}
+
+    def reordenar_detalle(self, detalle, user):
+        # Identificar si el usuario actual está mencionado en cada elemento de detalle
+        usuario_principal = []
+        otros = []
+
+        nombre_region_usuario = user.region.region if user.region else None
+
+        for d in detalle:
+            if user.nombre_completo in d['nombre'] or (nombre_region_usuario and nombre_region_usuario in d['nombre']):
+                usuario_principal.append(d)
+            else:
+                otros.append(d)
+
+        return usuario_principal + otros
