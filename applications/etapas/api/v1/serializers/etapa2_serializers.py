@@ -91,25 +91,12 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "accion": resumen_accion
         }
 
-        detalle = self.reordenar_usuarios_notificados(detalle, user)
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
             "usuarios_notificados": [resumen],
             "detalle_usuarios_notificados": detalle
         }
-
-    def reordenar_usuarios_notificados(self, detalle, user):
-        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
-        usuario_principal = []
-        otros = []
-
-        for d in detalle:
-            if 'nombre' in d and user.nombre_completo in d['nombre']:
-                usuario_principal.append(d)
-            else:
-                otros.append(d)
-
-        return usuario_principal + otros
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
@@ -118,135 +105,93 @@ class Etapa2Serializer(serializers.ModelSerializer):
         detalle = []
 
         for sector in sectores:
-            formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia, sector=sector).first()
-            if formulario_sectorial and formulario_sectorial.formulario_enviado:
-                detalle.append({
-                    "nombre": f"Completar formulario sectorial - {sector.nombre}",
-                    "estado": 'finalizada',
-                    "accion": 'Ver formulario'
-                })
-            elif obj.usuarios_notificados:
-                estado = 'revision' if es_usuario_sectorial and formulario_sectorial and formulario_sectorial.sector == user.sector else 'pendiente'
-                accion = 'Subir Formulario' if estado == 'revision' else 'Formulario pendiente'
-                detalle.append({
-                    "nombre": f"Completar formulario sectorial - {sector.nombre}",
-                    "estado": estado,
-                    "accion": accion
-                })
-            else:
-                estado = 'pendiente'
-                accion = 'Formulario pendiente'
-                detalle.append({
-                    "nombre": f"Completar formulario sectorial - {sector.nombre}",
-                    "estado": estado,
-                    "accion": accion
-                })
-
+            formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia,
+                                                                      sector=sector).first()
+            estado, accion, tiempo_registro = self.determinar_estado_accion_y_tiempo(formulario_sectorial,
+                                                                                     es_usuario_sectorial,
+                                                                                     obj.usuarios_notificados,
+                                                                                     user.sector, obj)
+            detalle_formulario = {
+                "nombre": f"Completar formulario sectorial - {sector.nombre}",
+                "estado": estado,
+                "accion": accion
+            }
+            if tiempo_registro:
+                detalle_formulario['registro_tiempo'] = tiempo_registro
+            detalle.append(detalle_formulario)
 
         if len(sectores) <= 1:
             return detalle
 
-        resumen_estado = 'finalizada' if obj.formulario_completo else 'revision'
-        resumen_accion = 'Ver formularios' if obj.formulario_completo else 'En Estudio'
-        resumen = {
-            "nombre": 'Ver formularios sectoriales' if obj.formulario_completo else 'Completar formularios sectoriales',
-            "estado": resumen_estado,
-            "accion": resumen_accion
-        }
+        resumen = self.crear_resumen_formularios(obj, detalle)
 
-        detalle = self.reordenar_formularios(detalle, formulario_sectorial)
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
             "formularios_sectoriales_completos": [resumen],
             "detalle_formularios_sectoriales": detalle
         }
 
-    def reordenar_formularios(self, detalle, formulario_sectorial):
-        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
-        usuario_principal = []
-        otros = []
+    def determinar_estado_accion_y_tiempo(self, formulario, es_usuario_sectorial, usuarios_notificados, sector_usuario,
+                                          etapa_obj):
+        if formulario and formulario.formulario_enviado:
+            tiempo_registro = self.calcular_tiempo_registro(etapa_obj, formulario.fecha_envio)
+            return 'finalizada', 'Ver formulario', tiempo_registro
+        if usuarios_notificados:
+            estado = 'revision' if es_usuario_sectorial and formulario and formulario.sector == sector_usuario else 'pendiente'
+            accion = 'Subir Formulario' if estado == 'revision' else 'Formulario pendiente'
+            return estado, accion, None
+        return 'pendiente', 'Formulario pendiente', None
 
-        for d in detalle:
-            if 'nombre' in d and formulario_sectorial.sector.nombre in d['nombre']:
-                usuario_principal.append(d)
-            else:
-                otros.append(d)
-
-        return usuario_principal + otros
+    def crear_resumen_formularios(self, obj, detalle):
+        formularios_completos = all(d['estado'] == 'finalizada' for d in detalle)
+        estado_resumen = 'finalizada' if formularios_completos else 'revision'
+        accion_resumen = 'Ver formularios' if formularios_completos else 'En Estudio'
+        return {
+            "nombre": 'Ver formularios sectoriales' if formularios_completos else 'Completar formularios sectoriales',
+            "estado": estado_resumen,
+            "accion": accion_resumen
+        }
 
     def get_observaciones_sectorial(self, obj):
         user = self.context['request'].user
         es_subdere = user.groups.filter(name='SUBDERE').exists()
-        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
-
-        # Obtener todos los formularios sectoriales para la competencia
-        formularios_sectoriales = obj.competencia.formulariosectorial_set.all()
-        # Obtener todas las observaciones para los formularios sectoriales
+        formularios_sectoriales = FormularioSectorial.objects.filter(competencia=obj.competencia)
         observaciones = ObservacionSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
-        # Priorizar la observación del sector del usuario autenticado si es un usuario sectorial
-        if es_usuario_sectorial:
-            observaciones = list(observaciones)
-            observaciones_usuario_sectorial = [obs for obs in observaciones if
-                                               obs.formulario_sectorial.sector == user.sector]
-            observaciones = observaciones_usuario_sectorial + [obs for obs in observaciones if
-                                                               obs not in observaciones_usuario_sectorial]
-        # Verificar si todos los formularios están completos
-        formulario_completo = Etapa2.objects.get(competencia=obj.competencia).formulario_completo
+
+        detalle = []
+        for formulario in formularios_sectoriales:
+            observacion = observaciones.filter(formulario_sectorial=formulario).first()
+            if observacion:
+                estado_revision = es_subdere and obj.formulario_completo
+                estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
+                accion = 'Ver Observación' if observacion.observacion_enviada else 'Subir Observación' if es_subdere else 'Observación pendiente'
+                detalle.append({
+                    "nombre": f"Observación del formulario sectorial ({formulario.sector.nombre})",
+                    "estado": estado,
+                    "accion": accion
+                })
+
+        # Si solo hay una observación, devuelve directamente el detalle
+        if len(detalle) <= 1:
+            return detalle
+
         # Verificar si todas las observaciones han sido enviadas
-        todas_observaciones_enviadas = all(obs.observacion_enviada for obs in observaciones)
-
-        # Determinar estado y acción del resumen
-        estado_resumen = self.determinar_estado_resumen(formulario_completo, todas_observaciones_enviadas)
-        accion_resumen = self.determinar_accion_resumen(es_subdere, todas_observaciones_enviadas)
-
+        todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
+        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
+        accion_resumen = 'Ver Observaciones' if todas_observaciones_enviadas else 'En Estudio'
         resumen = {
             "nombre": 'Observaciones de formularios sectoriales',
             "estado": estado_resumen,
             "accion": accion_resumen
         }
 
-        detalle = [
-            self.detalle_observacion(observacion, es_subdere, obj) for observacion in observaciones
-        ]
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
             "resumen_observaciones_sectoriales": [resumen],
             "detalle_observaciones_sectoriales": detalle
         }
-
-    def determinar_estado_resumen(self, formulario_completo, todas_observaciones_enviadas):
-        if todas_observaciones_enviadas:
-            return 'finalizada'
-        return 'revision' if formulario_completo else 'pendiente'
-
-    def determinar_accion_resumen(self, es_subdere, todas_observaciones_enviadas):
-        if todas_observaciones_enviadas or not es_subdere:
-            return 'Ver Observaciones'
-        return 'Subir Observaciones'
-
-    def detalle_observacion(self, observacion, es_subdere, obj):
-        # Ajusta según los campos y la lógica de tu modelo ObservacionFormulario
-        return {
-            "nombre": f"Observación del formulario sectorial ({observacion.formulario_sectorial.sector.nombre})",
-            "estado": self.determinar_estado_observacion(observacion, es_subdere),
-            "accion": 'Subir Observación' if es_subdere else 'Ver Observación',
-        }
-        if observacion.observacion_enviada:
-            detalle["registro_tiempo"] = self.calcular_tiempo_registro(etapa_obj, observacion.fecha_envio)
-        return detalle
-
-    def determinar_estado_observacion(self, observacion, es_subdere):
-        if observacion.observacion_enviada:
-            return 'finalizada'
-        return 'revision' if es_subdere else 'pendiente'
-
-    def reordenar_detalles(self, detalle, user):
-        # Reordenar para poner al usuario autenticado o su formulario en primer lugar
-        es_usuario_sectorial = [d for d in detalle if
-                                          (d.get('usuario') and d['usuario'] == user.nombre_completo) or
-                                          (d.get('sector') and d['sector'] == user.sector.id)]
-        otros = [d for d in detalle if d not in es_usuario_sectorial]
-        return es_usuario_sectorial + otros
 
     def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
         if etapa_obj.fecha_inicio and fecha_envio:
@@ -257,3 +202,18 @@ class Etapa2Serializer(serializers.ModelSerializer):
             minutos = (total_seconds % 3600) // 60
             return {'dias': dias, 'horas': horas, 'minutos': minutos}
         return {'dias': 0, 'horas': 0, 'minutos': 0}
+
+    def reordenar_detalle(self, detalle, user):
+        # Identificar si el usuario actual está mencionado en cada elemento de detalle
+        usuario_principal = []
+        otros = []
+
+        nombre_sector_usuario = user.sector.nombre if user.sector else None
+
+        for d in detalle:
+            if user.nombre_completo in d['nombre'] or (nombre_sector_usuario and nombre_sector_usuario in d['nombre']):
+                usuario_principal.append(d)
+            else:
+                otros.append(d)
+
+        return usuario_principal + otros
