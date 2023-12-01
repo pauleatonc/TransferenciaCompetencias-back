@@ -100,28 +100,16 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
         for region in regiones:
             formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
-            if formulario_gore and formulario_gore.formulario_enviado:
+            if formulario_gore:
+                estado_revision = es_usuario_gore and obj.usuarios_gore_notificados
+                estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
+                accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
                 detalle.append({
-                    "nombre": f"Completar formulario GORE - {region.region}",
-                    "estado": 'finalizada',
-                    "accion": 'Ver formulario'
-                })
-            elif obj.usuarios_gore_notificados:
-                estado = 'revision' if es_usuario_gore and formulario_gore and formulario_gore.region == user.region else 'pendiente'
-                accion = 'Subir Formulario' if estado == 'revision' else 'Formulario pendiente'
-                detalle.append({
-                    "nombre": f"Completar formulario GORE - {region.region}",
+                    "nombre": f"Completar formulario sectorial ({formulario_gore.region.region})",
                     "estado": estado,
                     "accion": accion
                 })
-            else:
-                estado = 'pendiente'
-                accion = 'Formulario pendiente'
-                detalle.append({
-                    "nombre": f"Completar formulario sectorial - {region.region}",
-                    "estado": estado,
-                    "accion": accion
-                })
+
 
         if len(regiones) <= 1:
             return detalle
