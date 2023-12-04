@@ -7,7 +7,7 @@ from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 from applications.etapas.api.v1.serializers import Etapa1Serializer, Etapa2Serializer, Etapa3Serializer, \
-    Etapa4Serializer
+    Etapa4Serializer, Etapa5Serializer
 
 User = get_user_model()
 
@@ -69,17 +69,7 @@ class CompetenciaHomeListSerializer(serializers.ModelSerializer):
         fields = ['id', 'nombre', 'etapas_info', 'tiempo_transcurrido']
 
     def get_etapas_info(self, obj):
-        etapas_info = {}
-        for i in range(1, 6):  # Asumiendo que tienes etapas de 1 a 5
-            etapa_model = globals().get(f'Etapa{i}')
-            if etapa_model:
-                etapa = etapa_model.objects.filter(competencia=obj).first()
-                if etapa:
-                    etapas_info[f'Etapa{i}'] = {
-                        'nombre': etapa.nombre_etapa,
-                        'estado': etapa.estado
-                    }
-        return etapas_info
+        return obtener_informacion_etapas(obj)
 
 
 class CompetenciaCreateSerializer(serializers.ModelSerializer):
@@ -93,30 +83,47 @@ class CompetenciaUpdateSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {'creado_por': {'read_only': True}}
 
+
+def obtener_informacion_etapas(competencia):
+    etapas_info = {}
+    for i in range(1, 6):  # Asumiendo que tienes etapas de 1 a 5
+        etapa_model = globals().get(f'Etapa{i}')
+        if etapa_model:
+            etapa = etapa_model.objects.filter(competencia=competencia).first()
+            if etapa:
+                etapas_info[f'Etapa{i}'] = {
+                    'nombre': etapa.nombre_etapa,
+                    'estado': etapa.get_estado_display()
+                }
+    return etapas_info
+
+
 class CompetenciaDetailSerializer(serializers.ModelSerializer):
     etapa1 = Etapa1Serializer(source='etapa1_set', many=True)
     etapa2 = Etapa2Serializer(source='etapa2_set', many=True)
     etapa3 = Etapa3Serializer(source='etapa3_set', many=True)
     etapa4 = Etapa4Serializer(source='etapa4_set', many=True)
-    #etapa5 = Etapa5Serializer(source='etapa5_set', many=True)
+    etapa5 = Etapa5Serializer(source='etapa5_set', many=True)
     usuarios_subdere = UsuarioSerializer(many=True, read_only=True)
     usuarios_dipres = UsuarioSerializer(many=True, read_only=True)
     usuarios_sectoriales = UsuarioSerializer(many=True, read_only=True)
     usuarios_gore = UsuarioSerializer(many=True, read_only=True)
     tiempo_transcurrido = serializers.SerializerMethodField()
     sectores = SectorSerializer(many=True, read_only=True)
+    resumen_competencia = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
         fields = [
             'id',
             'nombre',
+            'resumen_competencia',
             'sectores',
             'etapa1',
             'etapa2',
             'etapa3',
             'etapa4',
-            #'etapa5',
+            'etapa5',
             'tiempo_transcurrido',
             'usuarios_subdere',
             'usuarios_dipres',
@@ -127,3 +134,13 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
 
     def get_tiempo_transcurrido(self, obj):
         return obj.tiempo_transcurrido()
+
+    def get_resumen_competencia(self, obj):
+        etapas_info = obtener_informacion_etapas(obj)
+        return {
+            'id': obj.id,
+            'nombre': obj.nombre,
+            'etapas_info': etapas_info,
+            'tiempo_transcurrido': obj.tiempo_transcurrido()
+        }
+

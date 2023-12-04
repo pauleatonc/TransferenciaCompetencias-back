@@ -2,12 +2,12 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
-from applications.etapas.models import Etapa3
+from applications.etapas.models import Etapa5
 
 User = get_user_model()
 
 
-class Etapa3Serializer(serializers.ModelSerializer):
+class Etapa5Serializer(serializers.ModelSerializer):
     nombre_etapa = serializers.ReadOnlyField()
     estado = serializers.CharField(source='get_estado_display')
     ultimo_editor = serializers.SerializerMethodField()
@@ -18,7 +18,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
     observacion_minuta_sectorial = serializers.SerializerMethodField()
 
     class Meta:
-        model = Etapa3
+        model = Etapa5
         fields = [
             'nombre_etapa',
             'estado',
@@ -54,7 +54,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
 
     def get_minuta_sectorial(self, obj):
         return self.obtener_estado_accion_generico(
-            condicion=obj.minuta_etapa3_enviada,
+            condicion=obj.minuta_etapa5_enviada,
             usuario_grupo='DIPRES',
             nombre_accion='Subir minuta',
             nombre_pendiente='Subir minuta',
@@ -63,7 +63,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
 
     def get_observacion_minuta_sectorial(self, obj):
         return self.obtener_estado_accion_generico(
-            condicion=obj.observacion_minuta_sectorial_enviada,
+            condicion=obj.observacion_minuta_gore_enviada,
             usuario_grupo='SUBDERE',
             nombre_accion='Revisión SUBDERE',
             nombre_pendiente='Subir Observaciones',
