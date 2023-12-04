@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
@@ -66,3 +67,17 @@ def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
             # Asegurar que el usuario pertenece a una región asignada a la competencia
             if usuario.region not in instance.regiones.all():
                 raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
+
+
+@receiver(post_save, sender=Etapa5)
+def actualizar_fecha_fin_y_estado_competencia(sender, instance, **kwargs):
+    # Verifica si etapa5 ha sido aprobada
+    if instance.aprobada:
+        competencia = instance.competencia
+
+        # Actualizar fecha_fin y estado de la competencia
+        competencia.fecha_fin = timezone.now()
+        competencia.estado = 'FIN'
+
+        # Guarda los cambios en la competencia
+        competencia.save()

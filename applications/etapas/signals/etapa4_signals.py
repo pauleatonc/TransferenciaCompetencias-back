@@ -25,8 +25,11 @@ def actualizar_etapa4_al_modificar_usuarios_gore(sender, instance, action, pk_se
 
             etapa4.usuarios_notificados = todos_los_usuarios_asignados
 
-            # Fijar fecha_inicio si etapa3 está aprobada
-            if todos_los_usuarios_asignados and etapa3 and etapa3.aprobada:
+            # Verificar si etapa3 está aprobada o si se debe omitir la etapa
+            etapa3_condicion = etapa3.aprobada or etapa3.omitir_etapa if etapa3 else False
+
+            # Fijar fecha_inicio si se cumplen las condiciones
+            if todos_los_usuarios_asignados and etapa3_condicion:
                 etapa4.fecha_inicio = timezone.now()
 
             etapa4.save()
@@ -34,7 +37,7 @@ def actualizar_etapa4_al_modificar_usuarios_gore(sender, instance, action, pk_se
 
 @receiver(post_save, sender=Etapa3)
 def establecer_fecha_inicio_etapa4_al_aprobar_etapa3(sender, instance, created, **kwargs):
-    if not created and instance.aprobada:
+    if not created and (instance.aprobada or instance.omitir_etapa):
         etapa4 = Etapa4.objects.filter(competencia=instance.competencia).first()
 
         if etapa4 and etapa4.usuarios_notificados and not etapa4.fecha_inicio:

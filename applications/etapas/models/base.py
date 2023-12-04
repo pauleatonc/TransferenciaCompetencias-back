@@ -13,6 +13,7 @@ class EtapaBase(BaseModel):
         ('no_iniciada', 'Aún no puede comenzar'),
         ('en_revision', 'En revisión SUBDERE'),
         ('atrasada', 'Atrasada'),
+        ('omitida', 'Omitida')
     )
 
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
