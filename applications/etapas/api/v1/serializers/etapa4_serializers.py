@@ -96,7 +96,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
     def get_formularios_gore(self, obj):
         user = self.context['request'].user
-        es_usuario_gore = user.groups.filter(name='GORE').exists()
+        es_usuario_gore = obj.competencia.usuarios_gore.filter(id=user.id).exists()
         regiones = obj.competencia.regiones.all()
         detalle = []
 

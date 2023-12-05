@@ -81,9 +81,15 @@ class Etapa5Serializer(serializers.ModelSerializer):
                 }
         return None
 
-    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente, siempre_pendiente=False):
+    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente,
+                                       siempre_pendiente=False):
         user = self.context['request'].user
         es_grupo_usuario = user.groups.filter(name=usuario_grupo).exists()
+
+        # Para usuarios DIPRES, verificar si están en la lista de usuarios_dipres de la Competencia
+        if usuario_grupo == 'DIPRES':
+            es_grupo_usuario = es_grupo_usuario and self.instance.competencia.usuarios_dipres.filter(
+                id=user.id).exists()
 
         if condicion:
             return {
