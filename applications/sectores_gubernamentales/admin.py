@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SectorGubernamental
+from .models import SectorGubernamental, Ministerio
 from import_export.admin import ImportExportMixin
 from import_export.resources import ModelResource
 
@@ -9,6 +9,16 @@ class SectorGubernamentalResource(ModelResource):
         model = SectorGubernamental
 
 
+class MinisterioResource(ModelResource):
+    class Meta:
+        model = Ministerio
+
+
 @admin.register(SectorGubernamental)
-class RegionAdmin(ImportExportMixin, admin.ModelAdmin):
+class SectorGubernamentalAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_class = SectorGubernamentalResource
+
+
+@admin.register(Ministerio)
+class MinisterioAdmin(ImportExportMixin, admin.ModelAdmin):
+    resource_class = MinisterioResource
