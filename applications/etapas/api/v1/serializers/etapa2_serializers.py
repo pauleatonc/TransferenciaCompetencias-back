@@ -40,7 +40,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 return {
                     'nombre_completo': record.history_user.nombre_completo,
                     'perfil': record.history_user.perfil
-                    # Asegúrate de que el campo 'profile' exista en tu modelo de User
                 }
         return None
 
@@ -100,7 +99,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
-        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
+        es_usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(id=user.id).exists()
         sectores = obj.competencia.sectores.all()
         detalle = []
 

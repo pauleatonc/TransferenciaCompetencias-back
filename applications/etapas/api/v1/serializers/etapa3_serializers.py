@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa3
+from applications.competencias.models import Competencia
 
 User = get_user_model()
 
@@ -81,9 +82,15 @@ class Etapa3Serializer(serializers.ModelSerializer):
                 }
         return None
 
-    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente, siempre_pendiente=False):
+    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente,
+                                       siempre_pendiente=False):
         user = self.context['request'].user
         es_grupo_usuario = user.groups.filter(name=usuario_grupo).exists()
+
+        # Para usuarios DIPRES, verificar si están en la lista de usuarios_dipres de la Competencia
+        if usuario_grupo == 'DIPRES':
+            es_grupo_usuario = es_grupo_usuario and self.instance.competencia.usuarios_dipres.filter(
+                id=user.id).exists()
 
         if condicion:
             return {
