@@ -7,7 +7,7 @@ class Paso1Inline(admin.TabularInline):
 
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'get_competencia_nombre', 'formulario_enviado', 'get_paso1_info')
+    list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado', 'get_paso1_info')
     list_filter = ('formulario_enviado', 'competencia')
     search_fields = ('nombre', 'competencia__nombre')
     ordering = ('nombre',)
@@ -24,10 +24,8 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         return queryset.select_related('competencia')
 
     def get_paso1_info(self, obj):
-        paso1 = obj.pasos.first()  # Ajusta según la relación real
+        paso1 = obj.pasos.first()  # Asumiendo que 'pasos' es el related_name de la relación
         if paso1:
-            # Aquí puedes personalizar lo que deseas mostrar de Paso1
-            return f"{paso1.forma_juridica_organismo}, {paso1.mision_institucional}"
+            # Código para obtener la información de Paso1
+            ...
         return "Información no disponible"
-
-    get_paso1_info.short_description = 'Información de Paso 1'
