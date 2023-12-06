@@ -65,17 +65,6 @@ class Paso1(PasoBase):
     posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=500, blank=True)
     organo_actual_competencia = models.TextField(max_length=500, blank=True)
 
-    def clean(self):
-        super().clean()
-        num_archivos = self.marcojuridico_set.count()
-        if num_archivos < 1 or num_archivos > 5:
-            from django.core.exceptions import ValidationError
-            raise ValidationError("Debes subir entre 1 y 5 archivos para el marco jurídico.")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
-
 class MarcoJuridico(BaseModel):
     paso1 = models.ForeignKey(Paso1, on_delete=models.CASCADE, related_name='marcojuridico_set')
     documento = models.FileField(upload_to='formulario_sectorial',

@@ -1,9 +1,11 @@
 from django.contrib import admin
-from .models import FormularioSectorial, Paso1
+from .models import FormularioSectorial, Paso1, MarcoJuridico, OrganigramaRegional
+
 
 class Paso1Inline(admin.TabularInline):
     model = Paso1
     extra = 0
+
 
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
@@ -12,6 +14,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'competencia__nombre')
     ordering = ('nombre',)
     raw_id_fields = ('competencia',)
+    inlines = [Paso1Inline,]
 
     def get_competencia_nombre(self, obj):
         return obj.competencia.nombre
@@ -26,6 +29,5 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     def get_paso1_info(self, obj):
         paso1 = obj.pasos.first()  # Asumiendo que 'pasos' es el related_name de la relación
         if paso1:
-            # Código para obtener la información de Paso1
-            ...
+            return f"ID: {paso1.id}, Completada: {paso1.completada}, Ambito: {paso1.ambito}"
         return "Información no disponible"

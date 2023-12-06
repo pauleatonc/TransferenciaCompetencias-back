@@ -6,7 +6,7 @@ from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1, Etapa2, ObservacionSectorial, Etapa3
-from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso1
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
@@ -26,13 +26,23 @@ def actualizar_formularios_sectoriales(sender, instance, action, pk_set, **kwarg
                 )
 
                 if created:
+                    # Crear ObservacionSectorial y Paso1
                     ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
+                    Paso1.objects.create(formulario_sectorial=formulario_sectorial)
 
         elif action == 'post_remove':
             for sector_pk in pk_set:
                 sector = SectorGubernamental.objects.get(pk=sector_pk)
-                # Eliminar los formularios asociados al sector que se ha quitado
-                FormularioSectorial.objects.filter(competencia=competencia, sector=sector).delete()
+                # Obtener el formulario_sectorial antes de eliminarlo
+                formulario_sectorial = FormularioSectorial.objects.filter(competencia=competencia, sector=sector).first()
+
+                if formulario_sectorial:
+                    # Eliminar ObservacionSectorial y Pasos asociados
+                    ObservacionSectorial.objects.filter(formulario_sectorial=formulario_sectorial).delete()
+                    Paso1.objects.filter(formulario_sectorial=formulario_sectorial).delete()
+
+                # Finalmente, eliminar el formulario_sectorial
+                formulario_sectorial.delete()
 
 
 @receiver(post_save, sender=Etapa1)
