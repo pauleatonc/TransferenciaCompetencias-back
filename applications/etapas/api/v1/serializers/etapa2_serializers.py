@@ -40,7 +40,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 return {
                     'nombre_completo': record.history_user.nombre_completo,
                     'perfil': record.history_user.perfil
-                    # Asegúrate de que el campo 'profile' exista en tu modelo de User
                 }
         return None
 
