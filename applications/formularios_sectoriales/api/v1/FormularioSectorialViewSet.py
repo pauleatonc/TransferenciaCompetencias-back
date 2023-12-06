@@ -6,11 +6,10 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso1
 from applications.etapas.models import Etapa1
-from .serializers import FormularioSectorialDetailSerializer
+from .serializers import FormularioSectorialDetailSerializer, Paso1Serializer
 from applications.users.permissions import IsSUBDEREOrSuperuser
-
 
 
 class FormularioSectorialViewSet(viewsets.ModelViewSet):
@@ -48,3 +47,25 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         competencia = self.get_object()
         serializer = self.get_serializer(competencia)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='paso-1')
+    def paso_1(self, request, pk=None):
+        # Obtén el objeto FormularioSectorial basado en el pk proporcionado
+        formulario_sectorial = self.get_object()
+
+        # Obtén el objeto Paso1 asociado con este FormularioSectorial
+        paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
+
+        if paso1_obj:
+            paso1_serializer = Paso1Serializer(paso1_obj)
+            response_data = {
+                'formulario_sectorial': FormularioSectorialDetailSerializer(formulario_sectorial).data,
+                'paso1': paso1_serializer.data
+            }
+        else:
+            response_data = {
+                'formulario_sectorial': FormularioSectorialDetailSerializer(formulario_sectorial).data,
+                'paso1': None
+            }
+
+        return Response(response_data)

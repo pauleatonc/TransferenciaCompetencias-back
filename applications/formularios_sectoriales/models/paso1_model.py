@@ -20,24 +20,35 @@ class Paso1(PasoBase):
     def nombre_paso(self):
         return 'Descripción de la Institución'
 
-    def contar_campos_obligatorios_completados(self):
-        campos_obligatorios = ['forma_juridica_organismo',
-                               'mision_institucional',
-                               'identificacion_competencia',
-                               'fuentes_normativas',
-                               'territorio_competencia',
-                               'enfoque_territorial_competencia',
-                               'ambito',
-                               'posibilidad_ejercicio_por_gobierno_regional',
-                               'organo_actual_competencia'
-                               ]
-        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo)])
+    @property
+    def numero_paso(self):
+        return 1
 
-        tiene_archivos_campojuridico = self.marcojuridico_set.exists()
-        if tiene_archivos_campojuridico:
+    @property
+    def campos_obligatorios_completados(self):
+        return self.avance()[0] == self.avance()[1]
+
+    def avance(self):
+        # Lista de todos los campos obligatorios
+        campos_obligatorios = [
+            'forma_juridica_organismo', 'mision_institucional',
+            'identificacion_competencia', 'fuentes_normativas',
+            'territorio_competencia', 'enfoque_territorial_competencia',
+            'ambito', 'posibilidad_ejercicio_por_gobierno_regional',
+            'organo_actual_competencia'
+        ]
+        total_campos = len(campos_obligatorios)
+
+        # Verifica si los campos obligatorios están llenos
+        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
+
+        # Verifica si hay archivos en el set de MarcoJuridico
+        if self.marcojuridico_set.exists():
             completados += 1
+            total_campos += 1
 
-        return completados
+        return f"{completados}/{total_campos}"
+
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)
