@@ -38,7 +38,6 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
             'id',
             'competencia_nombre',
             'sector_nombre',
-            'nombre',
             'plazo_dias',
             'calcular_tiempo_transcurrido',
             'ultimo_editor',

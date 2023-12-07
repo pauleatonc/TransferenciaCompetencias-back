@@ -1,8 +1,10 @@
+import os
 from django.core.validators import FileExtensionValidator
 
 from .base_model import PasoBase
 from django.db import models
 
+from ..functions import organigrama_regional_path
 from ...base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
 from ...regioncomuna.models import Region
@@ -20,24 +22,37 @@ class Paso1(PasoBase):
     def nombre_paso(self):
         return 'Descripción de la Institución'
 
-    def contar_campos_obligatorios_completados(self):
-        campos_obligatorios = ['forma_juridica_organismo',
-                               'mision_institucional',
-                               'identificacion_competencia',
-                               'fuentes_normativas',
-                               'territorio_competencia',
-                               'enfoque_territorial_competencia',
-                               'ambito',
-                               'posibilidad_ejercicio_por_gobierno_regional',
-                               'organo_actual_competencia'
-                               ]
-        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo)])
+    @property
+    def numero_paso(self):
+        return 1
 
-        tiene_archivos_campojuridico = self.marcojuridico_set.exists()
-        if tiene_archivos_campojuridico:
-            completados += 1
+    @property
+    def campos_obligatorios_completados(self):
+        return self.avance()[0] == self.avance()[1]
 
-        return completados
+    def avance(self):
+        # Lista de todos los campos obligatorios
+        campos_obligatorios = [
+            'forma_juridica_organismo', 'mision_institucional',
+            'identificacion_competencia', 'organigrama_nacional', 'fuentes_normativas',
+            'territorio_competencia', 'enfoque_territorial_competencia',
+            'ambito', 'posibilidad_ejercicio_por_gobierno_regional',
+            'organo_actual_competencia'
+        ]
+        total_campos = len(campos_obligatorios)
+
+        # Verifica si los campos obligatorios están llenos
+        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
+
+        # Verifica si hay archivos válidos en el set de MarcoJuridico
+        marco_juridico_completados = sum(
+            [1 for marco in self.marcojuridico_set.all() if marco.documento and marco.documento.name])
+        total_campos += self.marcojuridico_set.count()
+
+        completados += marco_juridico_completados
+
+        return f"{completados}/{total_campos}"
+
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)
@@ -78,9 +93,13 @@ class MarcoJuridico(BaseModel):
 class OrganigramaRegional(BaseModel):
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='organigramas_regionales')
     paso1 = models.ForeignKey(Paso1, on_delete=models.CASCADE, related_name='organigramaregional_set')
-    documento = models.FileField(upload_to='formulario_sectorial',
-                                 validators=[
-                                     FileExtensionValidator(
-                                         ['pdf'], message='Solo se permiten archivos PDF.'),
-                                     validate_file_size_twenty],
-                                 verbose_name='Organigrama Regional', blank=True, null=True)
+    documento = models.FileField(
+        upload_to = organigrama_regional_path,
+        validators = [
+            FileExtensionValidator(['pdf'], message='Solo se permiten archivos PDF.'),
+            validate_file_size_twenty
+        ],
+        verbose_name='Organigrama Regional',
+        blank=True,
+        null=True
+    )
