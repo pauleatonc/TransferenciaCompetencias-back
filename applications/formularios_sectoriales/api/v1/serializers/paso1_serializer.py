@@ -49,9 +49,9 @@ class Paso1Serializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
-    ficha_descripcion_organizacional = serializers.SerializerMethodField()
-    organizacion_institucional = serializers.SerializerMethodField()
-    marco_regulatorio_y_funcional_competencia = serializers.SerializerMethodField()
+    p_1_1_ficha_descripcion_organizacional = serializers.SerializerMethodField()
+    p_1_2_organizacion_institucional = serializers.SerializerMethodField()
+    p_1_3_marco_regulatorio_y_funcional_competencia = serializers.SerializerMethodField()
 
     class Meta:
         model = Paso1
@@ -61,12 +61,12 @@ class Paso1Serializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
-            'ficha_descripcion_organizacional',
-            'organizacion_institucional',
-            'marco_regulatorio_y_funcional_competencia'
+            'p_1_1_ficha_descripcion_organizacional',
+            'p_1_2_organizacion_institucional',
+            'p_1_3_marco_regulatorio_y_funcional_competencia'
         ]
 
-    def get_ficha_descripcion_organizacional(self, obj):
+    def get_p_1_1_ficha_descripcion_organizacional(self, obj):
         return {
             'denominacion_organismo': self.get_denominacion_organismo(obj),
             'forma_juridica_organismo': obj.forma_juridica_organismo,
@@ -76,14 +76,14 @@ class Paso1Serializer(serializers.ModelSerializer):
             'informacion_adicional_marco_juridico': obj.informacion_adicional_marco_juridico
         }
 
-    def get_organizacion_institucional(self, obj):
+    def get_p_1_2_organizacion_institucional(self, obj):
         return {
             'organigrama_nacional': obj.organigrama_nacional.url if obj.organigrama_nacional and obj.organigrama_nacional.name else None,
             'organigrama_regional': OrganigramaRegionalSerializer(obj.organigramaregional_set.all(), many=True).data,
             'descripcion_archivo_organigrama_regional': obj.descripcion_archivo_organigrama_regional,
         }
 
-    def get_marco_regulatorio_y_funcional_competencia(self, obj):
+    def get_p_1_3_marco_regulatorio_y_funcional_competencia(self, obj):
         return {
             'identificacion_competencia': obj.identificacion_competencia,
             'fuentes_normativas': obj.fuentes_normativas,
