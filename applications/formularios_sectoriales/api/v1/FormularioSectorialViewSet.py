@@ -71,7 +71,6 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
                 }
             return Response(response_data)
 
-            # Agregar lógica para POST, PUT y PATCH
         elif request.method in ['POST', 'PUT', 'PATCH']:
             formulario_sectorial = self.get_object()
 
