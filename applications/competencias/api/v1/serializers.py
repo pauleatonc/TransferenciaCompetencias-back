@@ -77,6 +77,7 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
         model = Competencia
         fields = '__all__'
 
+
 class CompetenciaUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Competencia

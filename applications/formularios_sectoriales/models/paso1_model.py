@@ -80,6 +80,7 @@ class Paso1(PasoBase):
     posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=500, blank=True)
     organo_actual_competencia = models.TextField(max_length=500, blank=True)
 
+
 class MarcoJuridico(BaseModel):
     paso1 = models.ForeignKey(Paso1, on_delete=models.CASCADE, related_name='marcojuridico_set')
     documento = models.FileField(upload_to='formulario_sectorial',
