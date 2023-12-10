@@ -44,6 +44,35 @@ class OrganigramaRegionalSerializer(serializers.ModelSerializer):
         return obj.documento.url if obj.documento and obj.documento.name else None
 
 
+class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
+    denominacion_organismo = serializers.SerializerMethodField()
+    marco_juridico = MarcoJuridicoSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Paso1
+        fields = [
+            'denominacion_organismo',
+            'forma_juridica_organismo',
+            'marco_juridico',
+            'descripcion_archivo_marco_juridico',
+            'mision_institucional',
+            'informacion_adicional_marco_juridico'
+        ]
+
+    def get_denominacion_organismo(self, obj):
+        if obj.formulario_sectorial:
+            return obj.formulario_sectorial.sector.nombre
+        return None
+
+    def validate_marco_juridico(self, value):
+        """
+        Mínimo 1 archivo, máximo 5 archivos, peso máximo 20MB, formato PDF
+        """
+        if not (1 <= len(value) <= 5):
+            raise serializers.ValidationError("Mínimo 1 archivo, máximo 5 archivos.")
+        return value
+
+
 class Paso1Serializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
@@ -67,14 +96,8 @@ class Paso1Serializer(serializers.ModelSerializer):
         ]
 
     def get_p_1_1_ficha_descripcion_organizacional(self, obj):
-        return {
-            'denominacion_organismo': self.get_denominacion_organismo(obj),
-            'forma_juridica_organismo': obj.forma_juridica_organismo,
-            'marco_juridico': MarcoJuridicoSerializer(obj.marcojuridico_set.all(), many=True).data,
-            'descripcion_archivo_marco_juridico': obj.descripcion_archivo_marco_juridico,
-            'mision_institucional': obj.mision_institucional,
-            'informacion_adicional_marco_juridico': obj.informacion_adicional_marco_juridico
-        }
+        serializer = FichaDescripcionOrganizacionalSerializer(obj)
+        return serializer.data
 
     def get_p_1_2_organizacion_institucional(self, obj):
         return {
@@ -97,15 +120,34 @@ class Paso1Serializer(serializers.ModelSerializer):
     def avance(self, obj):
         return obj.avance()
 
-    def get_denominacion_organismo(self, obj):
-        if obj.formulario_sectorial:
-            return obj.formulario_sectorial.sector.nombre
-        return None
+    def to_internal_value(self, data):
+        ficha_data = data.pop('p_1_1_ficha_descripcion_organizacional', None)
+        internal_value = super().to_internal_value(data)
 
-    def validate_marco_juridico(self, value):
-        """
-        Mínimo 1 archivo, máximo 5 archivos, peso máximo 20MB, formato PDF
-        """
-        if not (1 <= len(value) <= 5):
-            raise serializers.ValidationError("Mínimo 1 archivo, máximo 5 archivos.")
-        return value
+        if ficha_data is not None:
+            ficha_serializer = FichaDescripcionOrganizacionalSerializer(data=ficha_data)
+            if ficha_serializer.is_valid():
+                internal_value.update({
+                    'p_1_1_ficha_descripcion_organizacional': ficha_serializer.validated_data
+                })
+            else:
+                raise serializers.ValidationError(ficha_serializer.errors)
+
+        return internal_value
+
+    def update(self, instance, validated_data):
+        print("Datos Validados:", validated_data)
+        ficha_data = validated_data.pop('p_1_1_ficha_descripcion_organizacional', {})
+
+        # Actualiza los campos individuales de la ficha
+        if ficha_data:
+            print("Actualizando Ficha Descripción Organizacional:", ficha_data)
+            for attr, value in ficha_data.items():
+                setattr(instance, attr, value)
+
+        # Guarda los cambios en el modelo Paso1
+        instance.save()
+
+        return instance
+
+
