@@ -7,6 +7,16 @@ class Paso1Inline(admin.TabularInline):
     extra = 0
 
 
+class MarcoJuridicoInLine(admin.TabularInline):
+    model = MarcoJuridico
+    extra = 0
+
+
+class OrganigramaRegionalInLine(admin.TabularInline):
+    model = OrganigramaRegional
+    extra = 0
+
+
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado', 'get_paso1_info')
@@ -29,5 +39,9 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     def get_paso1_info(self, obj):
         paso1 = obj.pasos.first()  # Asumiendo que 'pasos' es el related_name de la relación
         if paso1:
-            return f"ID: {paso1.id}, Completada: {paso1.completada}, Ambito: {paso1.ambito}"
+            return f"ID: {paso1.id}, Completada: {paso1.completada}"
         return "Información no disponible"
+
+@admin.register(Paso1)
+class Paso1Admin(admin.ModelAdmin):
+    inlines = [MarcoJuridicoInLine, OrganigramaRegionalInLine]

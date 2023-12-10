@@ -13,17 +13,25 @@ User = get_user_model()
 
 
 class MarcoJuridicoSerializer(serializers.ModelSerializer):
+    documento = serializers.FileField(write_only=True, required=False)
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
         model = MarcoJuridico
-        fields = [
-            'documento_url'
-        ]
+        fields = ['documento', 'documento_url']
 
     def get_documento_url(self, obj):
-        return obj.documento.url if obj.documento and obj.documento.name else None
+        if obj.documento and hasattr(obj.documento, 'url'):
+            return obj.documento.url
+        return None
 
+    def create(self, validated_data):
+        return MarcoJuridico.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.documento = validated_data.get('documento', instance.documento)
+        instance.save()
+        return instance
 
 
 class OrganigramaRegionalSerializer(serializers.ModelSerializer):
@@ -34,19 +42,30 @@ class OrganigramaRegionalSerializer(serializers.ModelSerializer):
         model = OrganigramaRegional
         fields = [
             'region',
+            'documento',
             'documento_url'
         ]
 
     def get_region(self, obj):
+        # Asegurándote de que 'obj' sea un objeto OrganigramaRegional
         return obj.region.region if obj.region else None
 
     def get_documento_url(self, obj):
-        return obj.documento.url if obj.documento and obj.documento.name else None
+        if obj.documento and hasattr(obj.documento, 'url'):
+            return obj.documento.url
+        return None
+    def create(self, validated_data):
+        return OrganigramaRegional.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        instance.documento = validated_data.get('documento', instance.documento)
+        instance.save()
+        return instance
 
 
 class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
     denominacion_organismo = serializers.SerializerMethodField()
-    marco_juridico = MarcoJuridicoSerializer(many=True, read_only=True)
+    marco_juridico = MarcoJuridicoSerializer(source='marcojuridico_set', many=True)
 
     class Meta:
         model = Paso1
@@ -71,6 +90,31 @@ class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
         if not (1 <= len(value) <= 5):
             raise serializers.ValidationError("Mínimo 1 archivo, máximo 5 archivos.")
         return value
+
+
+class FichaOrganizacionInstitucionalSerializer(serializers.ModelSerializer):
+    organigrama_regional = OrganigramaRegionalSerializer(source='organigramaregional_set', many=True)
+    class Meta:
+        model = Paso1
+        fields = [
+            'organigrama_nacional',
+            'organigrama_regional',
+            'descripcion_archivo_organigrama_regional'
+        ]
+
+
+class FichaMarcoRegulatorioFuncionalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Paso1
+        fields = [
+            'identificacion_competencia',
+            'fuentes_normativas',
+            'territorio_competencia',
+            'enfoque_territorial_competencia',
+            'ambito',
+            'posibilidad_ejercicio_por_gobierno_regional',
+            'organo_actual_competencia'
+        ]
 
 
 class Paso1Serializer(serializers.ModelSerializer):
@@ -100,22 +144,12 @@ class Paso1Serializer(serializers.ModelSerializer):
         return serializer.data
 
     def get_p_1_2_organizacion_institucional(self, obj):
-        return {
-            'organigrama_nacional': obj.organigrama_nacional.url if obj.organigrama_nacional and obj.organigrama_nacional.name else None,
-            'organigrama_regional': OrganigramaRegionalSerializer(obj.organigramaregional_set.all(), many=True).data,
-            'descripcion_archivo_organigrama_regional': obj.descripcion_archivo_organigrama_regional,
-        }
+        serializer = FichaOrganizacionInstitucionalSerializer(obj)
+        return serializer.data
 
     def get_p_1_3_marco_regulatorio_y_funcional_competencia(self, obj):
-        return {
-            'identificacion_competencia': obj.identificacion_competencia,
-            'fuentes_normativas': obj.fuentes_normativas,
-            'territorio_competencia': obj.territorio_competencia,
-            'enfoque_territorial_competencia': obj.enfoque_territorial_competencia,
-            'ambito': obj.ambito,
-            'posibilidad_ejercicio_por_gobierno_regional': obj.posibilidad_ejercicio_por_gobierno_regional,
-            'organo_actual_competencia': obj.organo_actual_competencia,
-        }
+        serializer = FichaMarcoRegulatorioFuncionalSerializer(obj)
+        return serializer.data
 
     def avance(self, obj):
         return obj.avance()
@@ -136,12 +170,10 @@ class Paso1Serializer(serializers.ModelSerializer):
         return internal_value
 
     def update(self, instance, validated_data):
-        print("Datos Validados:", validated_data)
         ficha_data = validated_data.pop('p_1_1_ficha_descripcion_organizacional', {})
 
         # Actualiza los campos individuales de la ficha
         if ficha_data:
-            print("Actualizando Ficha Descripción Organizacional:", ficha_data)
             for attr, value in ficha_data.items():
                 setattr(instance, attr, value)
 

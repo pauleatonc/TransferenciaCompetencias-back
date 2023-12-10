@@ -51,8 +51,6 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get', 'post', 'put', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
         formulario_sectorial = self.get_object()
-        print("Método de Solicitud:", request.method)
-        print("Datos de Solicitud:", request.data)
 
         if request.method in ['POST', 'PUT', 'PATCH']:
             paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
