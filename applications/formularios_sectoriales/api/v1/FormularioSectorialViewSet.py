@@ -6,9 +6,9 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from applications.formularios_sectoriales.models import FormularioSectorial, Paso1
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
 from applications.etapas.models import Etapa1
-from .serializers import FormularioSectorialDetailSerializer, Paso1Serializer
+from .serializers import FormularioSectorialDetailSerializer, Paso1Serializer, MarcoJuridicoSerializer, OrganigramaRegionalSerializer
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
 
@@ -48,11 +48,39 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(competencia)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get', 'post', 'put', 'patch'], url_path='paso-1')
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
+        """
+        API Paso 1 - Descripción de la Institución de Formulario Sectorial
+
+        Con GET devuelve el detalle de todos los campos.
+
+        Mediante PATCH se pueden editar los siguientes campos:
+
+        "p_1_1_ficha_descripcion_organizacional": {
+            "denominacion_organismo": "",
+            "forma_juridica_organismo": "",
+            "descripcion_archivo_marco_juridico": "",
+            "mision_institucional": "",
+            "informacion_adicional_marco_juridico": ""
+        },
+        "p_1_2_organizacion_institucional": {
+            "organigrama_nacional": "",
+            "descripcion_archivo_organigrama_regional": ""
+        },
+        "p_1_3_marco_regulatorio_y_funcional_competencia": {
+            "identificacion_competencia": "",
+            "fuentes_normativas": "",
+            "territorio_competencia": "",
+            "enfoque_territorial_competencia": "",
+            "ambito": "",
+            "posibilidad_ejercicio_por_gobierno_regional": "",
+            "organo_actual_competencia": ""
+        }
+        """
         formulario_sectorial = self.get_object()
 
-        if request.method in ['POST', 'PUT', 'PATCH']:
+        if request.method in ['PATCH']:
             paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
             partial = request.method == 'PATCH'  # True si la solicitud es PATCH
 
@@ -80,3 +108,54 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
                     'paso1': None
                 }
             return Response(response_data)
+
+    @action(detail=True, methods=['post'], url_path='cargar-marco-juridico')
+    def cargar_marco_juridico(self, request, pk=None):
+        """
+        API para cargar Marco Jurídico en el paso 1.1 Ficha de descripción organizacional
+
+        Es necesario enviar el ID del Formulario Sectorial
+        """
+        # Obtener o crear un objeto Paso1 asociado al FormularioSectorial
+        paso1, created = Paso1.objects.get_or_create(formulario_sectorial_id=pk)
+
+        # Construir el serializador con 'paso1' incluido
+        marco_juridico_data = request.data.copy()
+        marco_juridico_data['paso1'] = paso1.id
+
+        marco_juridico_serializer = MarcoJuridicoSerializer(data=marco_juridico_data)
+
+        if marco_juridico_serializer.is_valid():
+            marco_juridico_serializer.save()
+            return Response(marco_juridico_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(marco_juridico_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='cargar-organigrama-regional')
+    def cargar_organigrama_regional(self, request, pk=None):
+        """
+        API para cargar organigrama regional en el paso 1.2 Organización Institucional
+
+        Para asociarlo a la region correcta se debe incluir el id de la región junto al 'documento' en la petición.
+        """
+        # Obtener la instancia de FormularioSectorial
+        formulario_sectorial = self.get_object()
+
+        # Verificar si la región está asociada a la competencia correspondiente
+        region_id = request.data.get('region')
+        if not region_id or not formulario_sectorial.competencia.regiones.filter(id=region_id).exists():
+            return Response({'error': 'La región especificada no está asociada a esta competencia.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener o crear un objeto Paso1 asociado al FormularioSectorial
+        paso1, created = Paso1.objects.get_or_create(formulario_sectorial=formulario_sectorial)
+
+        # Obtener o crear un objeto OrganigramaRegional asociado a la región y Paso1
+        organigrama, created = OrganigramaRegional.objects.get_or_create(region_id=region_id, paso1=paso1)
+
+        # Construir el serializador con el objeto OrganigramaRegional y los datos de la solicitud
+        organigrama_serializer = OrganigramaRegionalSerializer(organigrama, data=request.data)
+
+        if organigrama_serializer.is_valid():
+            organigrama_serializer.save()
+            return Response(organigrama_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(organigrama_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

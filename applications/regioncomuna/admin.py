@@ -16,9 +16,11 @@ class ComunaResource(ModelResource):
 
 @admin.register(Region)
 class RegionAdmin(ImportExportMixin, admin.ModelAdmin):
+    list_display = ('id', 'region')
     resource_class = RegionResource
 
 
 @admin.register(Comuna)
 class ComunaAdmin(ImportExportMixin, admin.ModelAdmin):
+    list_display = ('id', 'comuna')
     resource_class = ComunaResource
