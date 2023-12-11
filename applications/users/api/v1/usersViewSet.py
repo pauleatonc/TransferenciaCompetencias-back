@@ -130,23 +130,28 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
 
-    def update(self, request, pk=None):
+    def update(self, request, *args, **kwargs):
         """
         Edición de atributos de administración de usuarios
 
 
-        Permite editar solo los campos is_active y groups.
+        Permite editar todos los campos del usuario.
+        Para los campos perfil, sector y region considerar lo siguiente:
+                'perfil': elegir entre los perfiles ('SUBDERE', 'DIPRES', 'Usuario Sectorial', 'GORE' o 'Usuario Observador')
+                'sector': clave primaria del sector,
+                'region': clave primaria de la región
         """
+        pk = kwargs.get('pk')  # Obtiene el id del usuario
         user = self.get_object(pk)
+        partial = kwargs.pop('partial', False)  # Determina si la solicitud es PATCH
 
-
-        # Continuar con la lógica de actualización
-        user_serializer = UpdateUserSerializer(user, data=request.data)
+        user_serializer = UpdateUserSerializer(user, data=request.data, partial=partial)
         if user_serializer.is_valid():
             user_serializer.save()
             return Response({
                 'message': 'Usuario actualizado correctamente'
             }, status=status.HTTP_200_OK)
+
         return Response({
             'message': 'Hay errores en la actualización',
             'errors': user_serializer.errors
@@ -159,11 +164,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
         Permite editar solo los campos:
-                'nombre completo',
-                'perfil',
-                'sector',
-                'region',
-                'email',
+                'perfil': elegir entre los perfiles ('SUBDERE', 'DIPRES', 'Usuario Sectorial', 'GORE' o 'Usuario Observador')
+                'sector': clave primaria del sector,
+                'region': clave primaria de la región
         """
         instance = request.user
         serializer = UserProfileUpdateSerializer(instance, data=request.data, partial=True)

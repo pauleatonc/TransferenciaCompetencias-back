@@ -50,14 +50,24 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get', 'post', 'put', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
+        formulario_sectorial = self.get_object()
 
-        if request.method == 'GET':
-        # Obtén el objeto FormularioSectorial basado en el pk proporcionado
-            formulario_sectorial = self.get_object()
-
-            # Obtén el objeto Paso1 asociado con este FormularioSectorial
+        if request.method in ['POST', 'PUT', 'PATCH']:
             paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
+            partial = request.method == 'PATCH'  # True si la solicitud es PATCH
 
+            if paso1_obj is None:
+                paso1_serializer = Paso1Serializer(data=request.data)
+            else:
+                paso1_serializer = Paso1Serializer(paso1_obj, data=request.data, partial=partial)
+
+            if paso1_serializer.is_valid():
+                paso1_serializer.save()
+                return Response(paso1_serializer.data, status=status.HTTP_200_OK)
+            return Response(paso1_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        else:  # GET
+            paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
             if paso1_obj:
                 paso1_serializer = Paso1Serializer(paso1_obj)
                 response_data = {
@@ -70,18 +80,3 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
                     'paso1': None
                 }
             return Response(response_data)
-
-        elif request.method in ['POST', 'PUT', 'PATCH']:
-            formulario_sectorial = self.get_object()
-
-            # Obtén o crea el objeto Paso1
-            paso1_obj, created = Paso1.objects.get_or_create(formulario_sectorial=formulario_sectorial)
-
-            # Serializa y guarda/actualiza los datos
-            serializer = Paso1Serializer(paso1_obj, data=request.data, partial=(request.method == 'PATCH'))
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            else:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
