@@ -65,7 +65,7 @@ class OrganigramaRegionalSerializer(serializers.ModelSerializer):
 
 class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
     denominacion_organismo = serializers.SerializerMethodField()
-    marco_juridico = MarcoJuridicoSerializer(source='marcojuridico_set', many=True)
+    marco_juridico = MarcoJuridicoSerializer(source='marcojuridico_set', many=True, required=False)
 
     class Meta:
         model = Paso1
@@ -93,7 +93,7 @@ class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
 
 
 class FichaOrganizacionInstitucionalSerializer(serializers.ModelSerializer):
-    organigrama_regional = OrganigramaRegionalSerializer(source='organigramaregional_set', many=True)
+    organigrama_regional = OrganigramaRegionalSerializer(source='organigramaregional_set', many=True, required=False)
     class Meta:
         model = Paso1
         fields = [
@@ -155,31 +155,56 @@ class Paso1Serializer(serializers.ModelSerializer):
         return obj.avance()
 
     def to_internal_value(self, data):
-        ficha_data = data.pop('p_1_1_ficha_descripcion_organizacional', None)
+        # Función para procesar y validar un campo
+        def process_field(field_data, serializer_class):
+            if field_data is not None:
+                serializer = serializer_class(data=field_data)
+                if serializer.is_valid():
+                    return serializer.validated_data
+                else:
+                    raise serializers.ValidationError(serializer.errors)
+
+        # Deserializar campos
+        ficha_desc_org_data = data.pop('p_1_1_ficha_descripcion_organizacional', None)
+        ficha_org_inst_data = data.pop('p_1_2_organizacion_institucional', None)
+        ficha_marco_reg_func_data = data.pop('p_1_3_marco_regulatorio_y_funcional_competencia', None)
+
         internal_value = super().to_internal_value(data)
 
-        if ficha_data is not None:
-            ficha_serializer = FichaDescripcionOrganizacionalSerializer(data=ficha_data)
-            if ficha_serializer.is_valid():
-                internal_value.update({
-                    'p_1_1_ficha_descripcion_organizacional': ficha_serializer.validated_data
-                })
-            else:
-                raise serializers.ValidationError(ficha_serializer.errors)
+        # Procesar cada campo
+        internal_value['p_1_1_ficha_descripcion_organizacional'] = process_field(
+            ficha_desc_org_data, FichaDescripcionOrganizacionalSerializer)
+
+        internal_value['p_1_2_organizacion_institucional'] = process_field(
+            ficha_org_inst_data, FichaOrganizacionInstitucionalSerializer)
+
+        internal_value['p_1_3_marco_regulatorio_y_funcional_competencia'] = process_field(
+            ficha_marco_reg_func_data, FichaMarcoRegulatorioFuncionalSerializer)
 
         return internal_value
 
     def update(self, instance, validated_data):
-        ficha_data = validated_data.pop('p_1_1_ficha_descripcion_organizacional', {})
-
-        # Actualiza los campos individuales de la ficha
-        if ficha_data:
-            for attr, value in ficha_data.items():
+        # Función para actualizar los atributos de la instancia
+        def update_instance_attributes(data):
+            for attr, value in data.items():
                 setattr(instance, attr, value)
 
-        # Guarda los cambios en el modelo Paso1
+        # Diccionario de claves y métodos
+        update_keys = {
+            'p_1_1_ficha_descripcion_organizacional': update_instance_attributes,
+            'p_1_2_organizacion_institucional': update_instance_attributes,
+            'p_1_3_marco_regulatorio_y_funcional_competencia': update_instance_attributes
+        }
+
+        # Iterar sobre las claves y actualizar la instancia
+        for key, update_method in update_keys.items():
+            data = validated_data.pop(key, {})
+            update_method(data)
+
+        # Guardar los cambios en el modelo Paso1
         instance.save()
 
         return instance
+
 
 
