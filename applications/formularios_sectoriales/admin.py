@@ -44,4 +44,8 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
 
 @admin.register(Paso1)
 class Paso1Admin(admin.ModelAdmin):
+    list_display = ('id', 'get_nombre_paso')
     inlines = [MarcoJuridicoInLine, OrganigramaRegionalInLine]
+
+    def get_nombre_paso(self, obj):
+        return obj.nombre_paso

@@ -15,20 +15,40 @@ User = get_user_model()
 class MarcoJuridicoSerializer(serializers.ModelSerializer):
     documento = serializers.FileField(write_only=True, required=False)
     documento_url = serializers.SerializerMethodField()
+    paso1 = serializers.PrimaryKeyRelatedField(queryset=Paso1.objects.all(), write_only=True)
 
     class Meta:
         model = MarcoJuridico
-        fields = ['documento', 'documento_url']
+        fields = ['documento', 'documento_url', 'paso1']
 
     def get_documento_url(self, obj):
         if obj.documento and hasattr(obj.documento, 'url'):
             return obj.documento.url
         return None
 
+    def validate(self, data):
+        """
+        Validar que la cantidad de archivos (incluyendo los ya existentes) no exceda el máximo permitido.
+        Esta validación asume que se pasa el ID de Paso1 y se cuentan los archivos ya asociados.
+        """
+        paso1 = data.get('paso1')
+        if paso1:
+            total_files = MarcoJuridico.objects.filter(paso1=paso1).count()
+            if total_files >= 5:
+                raise serializers.ValidationError("No se pueden asociar más de 5 archivos.")
+        return data
+
     def create(self, validated_data):
+        """
+        Crear un nuevo objeto MarcoJuridico.
+        """
+        # Aquí puedes manejar la lógica para crear un nuevo archivo
         return MarcoJuridico.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
+        """
+        Actualizar un objeto MarcoJuridico existente.
+        """
         instance.documento = validated_data.get('documento', instance.documento)
         instance.save()
         return instance
@@ -82,14 +102,6 @@ class FichaDescripcionOrganizacionalSerializer(serializers.ModelSerializer):
         if obj.formulario_sectorial:
             return obj.formulario_sectorial.sector.nombre
         return None
-
-    def validate_marco_juridico(self, value):
-        """
-        Mínimo 1 archivo, máximo 5 archivos, peso máximo 20MB, formato PDF
-        """
-        if not (1 <= len(value) <= 5):
-            raise serializers.ValidationError("Mínimo 1 archivo, máximo 5 archivos.")
-        return value
 
 
 class FichaOrganizacionInstitucionalSerializer(serializers.ModelSerializer):

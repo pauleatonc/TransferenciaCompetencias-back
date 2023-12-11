@@ -1,2 +1,2 @@
 from .base_serializer import FormularioSectorialDetailSerializer
-from .paso1_serializer import Paso1Serializer
+from .paso1_serializer import Paso1Serializer, MarcoJuridicoSerializer, OrganigramaRegionalSerializer
