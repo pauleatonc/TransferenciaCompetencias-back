@@ -107,6 +107,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
                 detalle_formulario = {
+                    'id': formulario_gore.id,
                     "nombre": f"Completar formulario GORE - {region.region}",
                     "estado": estado,
                     "accion": accion

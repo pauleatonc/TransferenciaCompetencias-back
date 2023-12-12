@@ -111,6 +111,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if es_usuario_sectorial else 'Formulario pendiente'
                 detalle_formulario = {
+                    "id": formulario_sectorial.id,
                     "nombre": f"Completar formulario Sectorial - {sector.nombre}",
                     "estado": estado,
                     "accion": accion
@@ -151,6 +152,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Observación' if observacion.observacion_enviada else 'Subir Observación' if es_subdere else 'Observación pendiente'
                 detalle.append({
+                    "id": observacion.id,
                     "nombre": f"Observación del formulario sectorial ({formulario.sector.nombre})",
                     "estado": estado,
                     "accion": accion
