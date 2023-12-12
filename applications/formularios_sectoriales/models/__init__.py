@@ -1,3 +1,4 @@
 from .base_model import FormularioSectorial
-from .paso1_model import Paso1, MarcoJuridico, OrganigramaRegional
-from .paso3_model import Paso3, CoberturaAnual
+from .paso1_model import *
+from .paso2_model import *
+from .paso3_model import *

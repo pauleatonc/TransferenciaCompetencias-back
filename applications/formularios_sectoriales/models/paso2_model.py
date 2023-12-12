@@ -1,7 +1,7 @@
 import os
 from django.core.validators import FileExtensionValidator
 
-from .base_model import PasoBase
+from .base_model import PasoBase, FormularioSectorial
 from django.db import models
 
 from ..functions import organigrama_regional_path
@@ -10,7 +10,7 @@ from applications.base.functions import validate_file_size_twenty
 from ...regioncomuna.models import Region
 
 
-class Paso1(PasoBase):
+class Paso2(PasoBase):
 
     @property
     def nombre_paso(self):
@@ -47,34 +47,67 @@ class Paso1(PasoBase):
 
         return f"{completados}/{total_campos}"
 
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+
 
 class OrganismosIntervinientes(BaseModel):
-    organismo = models.TextField(max_length=500, blank=True)
+
+    ORGANISMO = (
+        ('MIN', 'Ministerio o Servicio Público'),
+        ('GORE', 'Gobierno Regional'),
+        ('DPR', 'Delegación Presidencial Regional'),
+        ('OTRO', 'Otro')
+    )
+
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='orgnismosintervinientes')
+    organismo = models.CharField(max_length=5, choices=ORGANISMO, blank=True)
+    sector_ministerio_servicio = models.CharField(max_length=500, blank=True)
+    descripcion = models.CharField(max_length=500, blank=True)
 
 
 class UnidadesIntervinientes(BaseModel):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='unidadesintervinientes')
     organismo = models.ForeignKey(OrganismosIntervinientes, on_delete=models.CASCADE, related_name='unidadesintervinientes_set')
+    nombre_unidad = models.TextField(max_length=500, blank=True)
     descripcion_unidad = models.TextField(max_length=500, blank=True)
 
 
 class EtapasEjercicioCompetencia(BaseModel):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='etapasejerciciocompetencia')
     nombre_etapa = models.TextField(max_length=500, blank=True)
     descripcion_etapa = models.TextField(max_length=500, blank=True)
 
 
 class ProcedimientosEtapas(BaseModel):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='procedimientosetapas')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
-    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, on_delete=models.CASCADE, related_name='ProcedimientosEtapas_set')
+    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, related_name='ProcedimientosEtapas_set')
 
 
 class PlataformasySoftwares(BaseModel):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='plataformasysoftwares')
     nombre_plataforma = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     costo_adquisicion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    costo_mantencion_anual = models.DecimalField(blank=True)
+    costo_mantencion_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     descripcion_costos = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     funcion_plataforma = models.TextField(max_length=500, blank=True)
-    etapas = models.ManyToManyField(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
-                                                     related_name='PlataformasySoftwares_set')
+    etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set')
     capacitacion_plataforma = models.BooleanField(blank=True)
+
+
+class FlujogramaCompetencia(BaseModel):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='flujogramacompetencia')
+    flujograma_competencia = models.FileField(upload_to='formulario_sectorial',
+                                            validators=[
+                                                FileExtensionValidator(
+                                                    ['pdf'], message='Solo se permiten archivos PDF.'),
+                                                validate_file_size_twenty],
+                                            verbose_name='Flujograma de ejercicio de la Competencia', blank=True, null=True)
+    descripcion_cualitativa = models.TextField(max_length=500, blank=True)
