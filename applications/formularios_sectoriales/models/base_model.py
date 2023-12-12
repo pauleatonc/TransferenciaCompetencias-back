@@ -23,8 +23,7 @@ class FormularioSectorial(BaseModel):
 
 
 class PasoBase(BaseModel):
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='pasos')
-    completada = models.BooleanField(default=False)
+    completado = models.BooleanField(default=False)
 
     class Meta:
         abstract = True
