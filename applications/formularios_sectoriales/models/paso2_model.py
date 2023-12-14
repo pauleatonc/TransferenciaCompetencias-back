@@ -38,12 +38,7 @@ class Paso2(PasoBase):
         # Verifica si los campos obligatorios están llenos
         completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
 
-        # Verifica si hay archivos válidos en el set de MarcoJuridico
-        marco_juridico_completados = sum(
-            [1 for marco in self.marcojuridico_set.all() if marco.documento and marco.documento.name])
-        total_campos += self.marcojuridico_set.count()
-
-        completados += marco_juridico_completados
+        # Verifica si hay archivos válidos en el set
 
         return f"{completados}/{total_campos}"
 
@@ -59,7 +54,7 @@ class OrganismosIntervinientes(BaseModel):
         ('OTRO', 'Otro')
     )
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='orgnismosintervinientes')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_2_1_organismos_intervinientes')
     organismo = models.CharField(max_length=5, choices=ORGANISMO, blank=True)
     sector_ministerio_servicio = models.CharField(max_length=500, blank=True)
     descripcion = models.CharField(max_length=500, blank=True)
@@ -67,7 +62,7 @@ class OrganismosIntervinientes(BaseModel):
 
 class UnidadesIntervinientes(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='unidadesintervinientes')
+                                             related_name='p_2_2_unidades_intervinientes')
     organismo = models.ForeignKey(OrganismosIntervinientes, on_delete=models.CASCADE, related_name='unidadesintervinientes_set')
     nombre_unidad = models.TextField(max_length=500, blank=True)
     descripcion_unidad = models.TextField(max_length=500, blank=True)
@@ -75,21 +70,23 @@ class UnidadesIntervinientes(BaseModel):
 
 class EtapasEjercicioCompetencia(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='etapasejerciciocompetencia')
+                                             related_name='p_2_3_etapas_ejercicio_competencia')
     nombre_etapa = models.TextField(max_length=500, blank=True)
     descripcion_etapa = models.TextField(max_length=500, blank=True)
 
 
 class ProcedimientosEtapas(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='procedimientosetapas')
+                                             related_name='procedimientos_etapas')
+    etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
+                                             related_name='ProcedimientosEtapas_set')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
-    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, related_name='ProcedimientosEtapas_set')
+    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes)
 
 
 class PlataformasySoftwares(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='plataformasysoftwares')
+                                             related_name='p_2_4_plataformas_y_softwares')
     nombre_plataforma = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     costo_adquisicion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -98,12 +95,12 @@ class PlataformasySoftwares(BaseModel):
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     funcion_plataforma = models.TextField(max_length=500, blank=True)
     etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set')
-    capacitacion_plataforma = models.BooleanField(blank=True)
+    capacitacion_plataforma = models.BooleanField(blank=True, default=False)
 
 
 class FlujogramaCompetencia(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='flujogramacompetencia')
+                                             related_name='p_2_5_flujograma_competencia')
     flujograma_competencia = models.FileField(upload_to='formulario_sectorial',
                                             validators=[
                                                 FileExtensionValidator(

@@ -37,7 +37,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'rut'
 
     is_staff = models.BooleanField('Usuario administrador', default=False)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, null=True)
 
     historical_date = HistoricalRecords(user_model='users.User', inherit=True)
 

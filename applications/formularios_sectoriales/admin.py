@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import FormularioSectorial, Paso1, MarcoJuridico, OrganigramaRegional, Paso3, CoberturaAnual
+from .models import *
 from ..etapas.models import ObservacionSectorial
 
 
@@ -23,6 +23,11 @@ class ObservacionSectorialInLine(admin.TabularInline):
     extra = 0
 
 
+class Paso2Inline(admin.TabularInline):
+    model = Paso2
+    extra = 0
+
+
 class Paso3Inline(admin.TabularInline):
     model = Paso3
     extra = 0
@@ -33,6 +38,31 @@ class CoberturaAnualInLine(admin.TabularInline):
     extra = 0
 
 
+class OrganismosIntervinientesInLine(admin.TabularInline):
+    model = OrganismosIntervinientes
+    extra = 0
+
+
+class UnidadesIntervinientesInLine(admin.TabularInline):
+    model = UnidadesIntervinientes
+    extra = 0
+
+
+class EtapasEjercicioCompetenciaInLine(admin.TabularInline):
+    model = EtapasEjercicioCompetencia
+    extra = 0
+
+
+class PlataformasySoftwaresInLine(admin.TabularInline):
+    model = PlataformasySoftwares
+    extra = 0
+
+
+class FlujogramaCompetenciaInLine(admin.TabularInline):
+    model = FlujogramaCompetencia
+    extra = 0
+
+
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado', 'get_paso1_info')
@@ -40,7 +70,18 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'competencia__nombre')
     ordering = ('nombre',)
     raw_id_fields = ('competencia',)
-    inlines = [Paso1Inline, Paso3Inline, ObservacionSectorialInLine, CoberturaAnualInLine]
+    inlines = [
+        Paso1Inline,
+        Paso2Inline,
+        Paso3Inline,
+        ObservacionSectorialInLine,
+        CoberturaAnualInLine,
+        OrganismosIntervinientesInLine,
+        UnidadesIntervinientesInLine,
+        EtapasEjercicioCompetenciaInLine,
+        PlataformasySoftwaresInLine,
+        FlujogramaCompetenciaInLine
+    ]
 
     def get_competencia_nombre(self, obj):
         return obj.competencia.nombre
@@ -57,6 +98,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         if paso1:
             return f"ID: {paso1.id}, Completado: {paso1.completado}"
         return "Información no disponible"
+
 
 @admin.register(Paso1)
 class Paso1Admin(admin.ModelAdmin):

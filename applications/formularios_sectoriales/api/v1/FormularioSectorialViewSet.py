@@ -6,9 +6,20 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
+from applications.formularios_sectoriales.models import (
+    FormularioSectorial,
+    Paso1,
+    OrganigramaRegional,
+    Paso2
+)
 from applications.etapas.models import Etapa1
-from .serializers import FormularioSectorialDetailSerializer, Paso1Serializer, MarcoJuridicoSerializer, OrganigramaRegionalSerializer
+from .serializers import (
+    FormularioSectorialDetailSerializer,
+    Paso1Serializer,
+    MarcoJuridicoSerializer,
+    OrganigramaRegionalSerializer,
+    Paso2Serializer
+)
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
 
@@ -159,3 +170,17 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
             organigrama_serializer.save()
             return Response(organigrama_serializer.data, status=status.HTTP_201_CREATED)
         return Response(organigrama_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
+    def paso_2(self, request, pk=None):
+        formulario_sectorial = self.get_object()
+
+        if request.method == 'PATCH':
+            serializer = Paso2Serializer(formulario_sectorial, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:  # GET
+            serializer = Paso2Serializer(formulario_sectorial)
+            return Response(serializer.data)
