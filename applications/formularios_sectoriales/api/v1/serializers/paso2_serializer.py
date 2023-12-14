@@ -1,7 +1,14 @@
 from rest_framework import serializers
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import FormularioSectorial, OrganismosIntervinientes, \
-    UnidadesIntervinientes
+from applications.formularios_sectoriales.models import (
+    FormularioSectorial,
+    OrganismosIntervinientes,
+    UnidadesIntervinientes,
+    EtapasEjercicioCompetencia,
+    ProcedimientosEtapas,
+    PlataformasySoftwares,
+    FlujogramaCompetencia
+)
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -29,19 +36,6 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
     def get_organismo_display(self, obj):
         return obj.get_organismo_display()
 
-    def create(self, validated_data):
-        # Lógica para crear una nueva instancia
-        print("Creando OrganismoInterviniente con datos:", validated_data)
-        return OrganismosIntervinientes.objects.create(**validated_data)
-
-    def update(self, instance, validated_data):
-        print("Actualizando OrganismoInterviniente, instancia:", instance, "con datos:", validated_data)
-        # Actualizar los campos de la instancia existente
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
-
 
 class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
 
@@ -51,6 +45,58 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
             'id',
             'nombre_unidad',
             'descripcion_unidad'
+        ]
+
+
+class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EtapasEjercicioCompetencia
+        fields = [
+            'id',
+            'nombre_etapa',
+            'descripcion_etapa'
+        ]
+
+
+class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ProcedimientosEtapas
+        fields = [
+            'id',
+            'etapa',
+            'descripcion_procedimiento',
+            'unidades_intervinientes'
+        ]
+
+
+class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = PlataformasySoftwares
+        fields = [
+            'id',
+            'nombre_plataforma',
+            'descripcion_tecnica',
+            'costo_adquisicion',
+            'costo_mantencion_anual',
+            'descripcion_costos',
+            'descripcion_tecnica',
+            'funcion_plataforma',
+            'etapas',
+            'capacitacion_plataforma'
+        ]
+
+
+class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FlujogramaCompetencia
+        fields = [
+            'id',
+            'flujograma_competencia',
+            'descripcion_cualitativa'
         ]
 
 
@@ -76,16 +122,22 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso2Serializer(serializers.ModelSerializer):
 
-    encabezado = Paso2EncabezadoSerializer(source='paso2', required=False)
+    encabezado = Paso2EncabezadoSerializer(many=True, read_only=False)
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
+    p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
+    p_2_4_plataformas_y_softwares = PlataformasySoftwaresSerializer(many=True, read_only=False)
+    p_2_5_flujograma_competencia = FlujogramaCompetenciaSerializer(many=True, read_only=False)
 
     class Meta:
         model = FormularioSectorial
         fields = [
             'encabezado',
             'p_2_1_organismos_intervinientes',
-            'p_2_2_unidades_intervinientes'
+            'p_2_2_unidades_intervinientes',
+            'p_2_3_etapas_ejercicio_competencia',
+            'p_2_4_plataformas_y_softwares',
+            'p_2_5_flujograma_competencia'
         ]
 
     def process_nested_field(self, field_name, data):
@@ -108,8 +160,21 @@ class Paso2Serializer(serializers.ModelSerializer):
                 'p_2_1_organismos_intervinientes', data)
 
         if 'p_2_2_unidades_intervinientes' in data:
-            internal_value['p_2_2_unidades_intervinientes'] = self.process_nested_field('p_2_2_unidades_intervinientes',
-                                                                                        data)
+            internal_value['p_2_2_unidades_intervinientes'] = self.process_nested_field(
+                'p_2_2_unidades_intervinientes', data)
+
+        if 'p_2_3_etapas_ejercicio_competencia' in data:
+            internal_value['p_2_3_etapas_ejercicio_competencia'] = self.process_nested_field(
+                    'p_2_3_etapas_ejercicio_competencia', data)
+
+        if 'p_2_4_plataformas_y_softwares' in data:
+            internal_value['p_2_4_plataformas_y_softwares'] = self.process_nested_field(
+                    'p_2_4_plataformas_y_softwares', data)
+
+        if 'p_2_5_flujograma_competencia' in data:
+            internal_value['p_2_5_flujograma_competencia'] = self.process_nested_field(
+                    'p_2_5_flujograma_competencia', data)
+
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
@@ -127,6 +192,9 @@ class Paso2Serializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         organismos_data = validated_data.pop('p_2_1_organismos_intervinientes', None)
         unidades_data = validated_data.pop('p_2_2_unidades_intervinientes', None)
+        etapas_data = validated_data.pop('p_2_3_etapas_ejercicio_competencia', None)
+        plataformas_data = validated_data.pop('p_2_4_plataformas_y_softwares', None)
+        flujograma_data = validated_data.pop('p_2_5_flujograma_competencia', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -141,6 +209,13 @@ class Paso2Serializer(serializers.ModelSerializer):
         if unidades_data is not None:
             self.update_or_create_nested_instances(UnidadesIntervinientes, unidades_data, instance)
 
-        # Repetir para otros modelos relacionados
+        if etapas_data is not None:
+            self.update_or_create_nested_instances(EtapasEjercicioCompetencia, etapas_data, instance)
+
+        if plataformas_data is not None:
+            self.update_or_create_nested_instances(PlataformasySoftwares, plataformas_data, instance)
+
+        if flujograma_data is not None:
+            self.update_or_create_nested_instances(FlujogramaCompetencia, flujograma_data, instance)
 
         return instance

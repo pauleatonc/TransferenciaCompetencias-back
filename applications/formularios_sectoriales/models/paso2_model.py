@@ -42,7 +42,7 @@ class Paso2(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='encabezado')
 
 
 class OrganismosIntervinientes(BaseModel):
