@@ -29,3 +29,21 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 
         # Crear instancia de FlujogramaCompetencia
         FlujogramaCompetencia.objects.create(formulario_sectorial=instance)
+
+
+@receiver(post_save, sender=OrganismosIntervinientes)
+def create_related_unidad(sender, instance, created, **kwargs):
+    if created:
+        UnidadesIntervinientes.objects.create(
+            organismo=instance,
+            formulario_sectorial=instance.formulario_sectorial
+        )
+
+
+@receiver(post_save, sender=EtapasEjercicioCompetencia)
+def create_related_procedimiento(sender, instance, created, **kwargs):
+    if created:
+        ProcedimientosEtapas.objects.create(
+            etapa=instance,
+            formulario_sectorial=instance.formulario_sectorial
+        )

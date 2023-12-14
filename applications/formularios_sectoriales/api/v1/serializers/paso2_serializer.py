@@ -38,24 +38,15 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
+    organismo = OrganismosIntervinientesSerializer(read_only=True)
 
     class Meta:
         model = UnidadesIntervinientes
         fields = [
             'id',
             'nombre_unidad',
-            'descripcion_unidad'
-        ]
-
-
-class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = EtapasEjercicioCompetencia
-        fields = [
-            'id',
-            'nombre_etapa',
-            'descripcion_etapa'
+            'descripcion_unidad',
+            'organismo'
         ]
 
 
@@ -68,6 +59,19 @@ class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
             'etapa',
             'descripcion_procedimiento',
             'unidades_intervinientes'
+        ]
+
+
+class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
+    procedimientos = ProcedimientosEtapasSerializer(many=True, read_only=False)
+
+    class Meta:
+        model = EtapasEjercicioCompetencia
+        fields = [
+            'id',
+            'nombre_etapa',
+            'descripcion_etapa',
+            'procedimientos'
         ]
 
 
@@ -128,6 +132,8 @@ class Paso2Serializer(serializers.ModelSerializer):
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
     p_2_4_plataformas_y_softwares = PlataformasySoftwaresSerializer(many=True, read_only=False)
     p_2_5_flujograma_competencia = FlujogramaCompetenciaSerializer(many=True, read_only=False)
+    listado_unidades = serializers.SerializerMethodField()
+    listado_etapas = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
@@ -137,8 +143,18 @@ class Paso2Serializer(serializers.ModelSerializer):
             'p_2_2_unidades_intervinientes',
             'p_2_3_etapas_ejercicio_competencia',
             'p_2_4_plataformas_y_softwares',
-            'p_2_5_flujograma_competencia'
+            'p_2_5_flujograma_competencia',
+            'listado_unidades',
+            'listado_etapas',
         ]
+
+    def get_listado_unidades(self, obj):
+        unidades = UnidadesIntervinientes.objects.filter(formulario_sectorial=obj)
+        return [{'id': unidad.id, 'nombre_unidad': unidad.nombre_unidad} for unidad in unidades]
+
+    def get_listado_etapas(self, obj):
+        etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
+        return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
     def process_nested_field(self, field_name, data):
         nested_data = data.get(field_name)

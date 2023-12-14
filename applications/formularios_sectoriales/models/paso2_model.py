@@ -79,7 +79,7 @@ class ProcedimientosEtapas(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='procedimientos_etapas')
     etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
-                                             related_name='ProcedimientosEtapas_set')
+                                             related_name='procedimientos')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
     unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes)
 
