@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class FormularioSectorial(BaseModel):
-    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='formulario_sectorial_set')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='formularios_sectoriales')
     nombre = models.CharField(max_length=200, unique=True)
     formulario_enviado = models.BooleanField(default=False)
