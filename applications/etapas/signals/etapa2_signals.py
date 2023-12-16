@@ -6,43 +6,30 @@ from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1, Etapa2, ObservacionSectorial, Etapa3
-from applications.formularios_sectoriales.models import FormularioSectorial, Paso1
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
+from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
-@receiver(m2m_changed, sender=Competencia.sectores.through)
+@receiver(m2m_changed, sender=Competencia.regiones.through)
 @transaction.atomic
-def actualizar_formularios_sectoriales(sender, instance, action, pk_set, **kwargs):
-    if instance.pk:
-        competencia = Competencia.objects.get(pk=instance.pk)
+def crear_organigramas_regionales(sender, instance, action, pk_set, **kwargs):
+    if instance.pk and action == 'post_add':
+        for sector in instance.sectores.all():
+            formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
+                competencia=instance,
+                sector=sector,
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {instance.nombre}'}
+            )
 
-        if action == 'post_add':
-            for sector_pk in pk_set:
-                sector = SectorGubernamental.objects.get(pk=sector_pk)
-                formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
-                    competencia=competencia,
-                    sector=sector,
-                    defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
-                )
-
-                if created:
-                    # Crear ObservacionSectorial y Paso1
-                    ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
-                    Paso1.objects.create(formulario_sectorial=formulario_sectorial)
-
-        elif action == 'post_remove':
-            for sector_pk in pk_set:
-                sector = SectorGubernamental.objects.get(pk=sector_pk)
-                # Obtener el formulario_sectorial antes de eliminarlo
-                formulario_sectorial = FormularioSectorial.objects.filter(competencia=competencia, sector=sector).first()
-
-                if formulario_sectorial:
-                    # Eliminar ObservacionSectorial y Pasos asociados
-                    ObservacionSectorial.objects.filter(formulario_sectorial=formulario_sectorial).delete()
-                    Paso1.objects.filter(formulario_sectorial=formulario_sectorial).delete()
-
-                # Finalmente, eliminar el formulario_sectorial
-                formulario_sectorial.delete()
+            if created:
+                # Crear ObservacionSectorial y Paso1
+                ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
+                Paso1.objects.create(formulario_sectorial=formulario_sectorial)
+                # Crear OrganigramaRegional para cada región asociada a la competencia
+                for region_pk in pk_set:
+                    region = Region.objects.get(pk=region_pk)
+                    OrganigramaRegional.objects.create(formulario_sectorial=formulario_sectorial, region=region)
 
 
 @receiver(post_save, sender=Etapa1)
