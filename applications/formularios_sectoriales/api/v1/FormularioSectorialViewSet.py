@@ -18,7 +18,7 @@ from .serializers import (
     Paso1Serializer,
     MarcoJuridicoSerializer,
     OrganigramaRegionalSerializer,
-    Paso2Serializer
+    Paso2Serializer, Paso2Serializer2
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
@@ -91,85 +91,15 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         """
         formulario_sectorial = self.get_object()
 
-        if request.method in ['PATCH']:
-            paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
-            partial = request.method == 'PATCH'  # True si la solicitud es PATCH
-
-            if paso1_obj is None:
-                paso1_serializer = Paso1Serializer(data=request.data)
-            else:
-                paso1_serializer = Paso1Serializer(paso1_obj, data=request.data, partial=partial)
-
-            if paso1_serializer.is_valid():
-                paso1_serializer.save()
-                return Response(paso1_serializer.data, status=status.HTTP_200_OK)
-            return Response(paso1_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        if request.method == 'PATCH':
+            serializer = Paso1Serializer(formulario_sectorial, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:  # GET
-            paso1_obj = Paso1.objects.filter(formulario_sectorial=formulario_sectorial).first()
-            if paso1_obj:
-                paso1_serializer = Paso1Serializer(paso1_obj)
-                response_data = {
-                    'formulario_sectorial': FormularioSectorialDetailSerializer(formulario_sectorial).data,
-                    'paso1': paso1_serializer.data
-                }
-            else:
-                response_data = {
-                    'formulario_sectorial': FormularioSectorialDetailSerializer(formulario_sectorial).data,
-                    'paso1': None
-                }
-            return Response(response_data)
-
-    @action(detail=True, methods=['post'], url_path='cargar-marco-juridico')
-    def cargar_marco_juridico(self, request, pk=None):
-        """
-        API para cargar Marco Jurídico en el paso 1.1 Ficha de descripción organizacional
-
-        Es necesario enviar el ID del Formulario Sectorial
-        """
-        # Obtener o crear un objeto Paso1 asociado al FormularioSectorial
-        paso1, created = Paso1.objects.get_or_create(formulario_sectorial_id=pk)
-
-        # Construir el serializador con 'paso1' incluido
-        marco_juridico_data = request.data.copy()
-        marco_juridico_data['paso1'] = paso1.id
-
-        marco_juridico_serializer = MarcoJuridicoSerializer(data=marco_juridico_data)
-
-        if marco_juridico_serializer.is_valid():
-            marco_juridico_serializer.save()
-            return Response(marco_juridico_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(marco_juridico_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['post'], url_path='cargar-organigrama-regional')
-    def cargar_organigrama_regional(self, request, pk=None):
-        """
-        API para cargar organigrama regional en el paso 1.2 Organización Institucional
-
-        Para asociarlo a la region correcta se debe incluir el id de la región junto al 'documento' en la petición.
-        """
-        # Obtener la instancia de FormularioSectorial
-        formulario_sectorial = self.get_object()
-
-        # Verificar si la región está asociada a la competencia correspondiente
-        region_id = request.data.get('region')
-        if not region_id or not formulario_sectorial.competencia.regiones.filter(id=region_id).exists():
-            return Response({'error': 'La región especificada no está asociada a esta competencia.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Obtener o crear un objeto Paso1 asociado al FormularioSectorial
-        paso1, created = Paso1.objects.get_or_create(formulario_sectorial=formulario_sectorial)
-
-        # Obtener o crear un objeto OrganigramaRegional asociado a la región y Paso1
-        organigrama, created = OrganigramaRegional.objects.get_or_create(region_id=region_id, paso1=paso1)
-
-        # Construir el serializador con el objeto OrganigramaRegional y los datos de la solicitud
-        organigrama_serializer = OrganigramaRegionalSerializer(organigrama, data=request.data)
-
-        if organigrama_serializer.is_valid():
-            organigrama_serializer.save()
-            return Response(organigrama_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(organigrama_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            serializer = Paso1Serializer(formulario_sectorial)
+            return Response(serializer.data)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
     def paso_2(self, request, pk=None):
@@ -184,3 +114,5 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         else:  # GET
             serializer = Paso2Serializer(formulario_sectorial)
             return Response(serializer.data)
+
+

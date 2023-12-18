@@ -65,22 +65,24 @@ class FlujogramaCompetenciaInLine(admin.TabularInline):
 
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado', 'get_paso1_info')
+    list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado')
     list_filter = ('formulario_enviado', 'competencia')
     search_fields = ('nombre', 'competencia__nombre')
     ordering = ('nombre',)
     raw_id_fields = ('competencia',)
     inlines = [
         Paso1Inline,
+        MarcoJuridicoInLine,
+        OrganigramaRegionalInLine,
         Paso2Inline,
-        Paso3Inline,
         ObservacionSectorialInLine,
         CoberturaAnualInLine,
         OrganismosIntervinientesInLine,
         UnidadesIntervinientesInLine,
         EtapasEjercicioCompetenciaInLine,
         PlataformasySoftwaresInLine,
-        FlujogramaCompetenciaInLine
+        FlujogramaCompetenciaInLine,
+        Paso3Inline,
     ]
 
     def get_competencia_nombre(self, obj):
@@ -93,17 +95,13 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         # Usa select_related para optimizar la consulta de base de datos
         return queryset.select_related('competencia')
 
-    def get_paso1_info(self, obj):
-        paso1 = obj.paso1.first()
-        if paso1:
-            return f"ID: {paso1.id}, Completado: {paso1.completado}"
-        return "Información no disponible"
-
 
 @admin.register(Paso1)
 class Paso1Admin(admin.ModelAdmin):
-    list_display = ('id', 'get_nombre_paso')
-    inlines = [MarcoJuridicoInLine, OrganigramaRegionalInLine]
+    list_display = ('nombre_paso', 'numero_paso', 'formulario_sectorial_display')
+    search_fields = ('nombre_paso', 'numero_paso')
 
-    def get_nombre_paso(self, obj):
-        return obj.nombre_paso
+    def formulario_sectorial_display(self, obj):
+        return obj.formulario_sectorial
+
+    formulario_sectorial_display.short_description = 'Formulario Sectorial Asociado'
