@@ -45,15 +45,11 @@ class Paso1(PasoBase):
         completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
 
         # Verifica si hay archivos válidos en el set de MarcoJuridico
-        marco_juridico_completados = sum(
-            [1 for marco in self.marcojuridico_set.all() if marco.documento and marco.documento.name])
-        total_campos += self.marcojuridico_set.count()
 
-        completados += marco_juridico_completados
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE)
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)
@@ -83,7 +79,7 @@ class Paso1(PasoBase):
 
 
 class MarcoJuridico(BaseModel):
-    paso1 = models.ForeignKey(Paso1, on_delete=models.CASCADE, related_name='marcojuridico_set')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='marcojuridico_set')
     documento = models.FileField(upload_to='formulario_sectorial',
                                  validators=[
                                      FileExtensionValidator(
@@ -94,7 +90,7 @@ class MarcoJuridico(BaseModel):
 
 class OrganigramaRegional(BaseModel):
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='organigramas_regionales')
-    paso1 = models.ForeignKey(Paso1, on_delete=models.CASCADE, related_name='organigramaregional_set')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='organigramaregional_set')
     documento = models.FileField(
         upload_to = organigrama_regional_path,
         validators = [

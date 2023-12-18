@@ -15,15 +15,6 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
             sector_ministerio_servicio=instance.sector
         )
 
-        # Crear instancia de UnidadesIntervinientes
-        UnidadesIntervinientes.objects.create(
-            formulario_sectorial=instance,
-            organismo=organismo_interviniente
-        )
-
-        # Crear instancia de EtapasEjercicioCompetencia
-        EtapasEjercicioCompetencia.objects.create(formulario_sectorial=instance)
-
         # Crear instancia de PlataformasySoftwares
         PlataformasySoftwares.objects.create(formulario_sectorial=instance)
 

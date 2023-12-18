@@ -1,3 +1,4 @@
+from drf_writable_nested import WritableNestedModelSerializer
 from rest_framework import serializers
 from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import (
@@ -235,3 +236,26 @@ class Paso2Serializer(serializers.ModelSerializer):
             self.update_or_create_nested_instances(FlujogramaCompetencia, flujograma_data, instance)
 
         return instance
+
+
+class EtapasEjercicioCompetenciaSerializer2(WritableNestedModelSerializer):
+    procedimientos = ProcedimientosEtapasSerializer(many=True)
+
+    class Meta:
+        model = EtapasEjercicioCompetencia
+        fields = [
+            'id',
+            'nombre_etapa',
+            'descripcion_etapa',
+            'procedimientos'
+        ]
+
+class Paso2Serializer2(WritableNestedModelSerializer):
+    etapas = EtapasEjercicioCompetenciaSerializer2(many=True, source='p_2_3_etapas_ejercicio_competencia')
+
+    class Meta:
+        model = FormularioSectorial
+        fields = [
+            'id',
+            'etapas'
+        ]
