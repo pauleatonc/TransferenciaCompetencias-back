@@ -31,9 +31,7 @@ def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
         serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            print("Datos después de la serialización:", serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        print("Errores de serialización:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:  # GET
         serializer = serializer_class(formulario_sectorial)
@@ -127,6 +125,5 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         formulario_sectorial = self.get_object()
 
         return manejar_formularios_pasos(request, formulario_sectorial, Paso4Serializer)
-
 
 

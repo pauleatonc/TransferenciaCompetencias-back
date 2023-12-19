@@ -49,7 +49,7 @@ class Paso1(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE)
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)
@@ -79,7 +79,7 @@ class Paso1(PasoBase):
 
 
 class MarcoJuridico(BaseModel):
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='marcojuridico_set')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='marcojuridico')
     documento = models.FileField(upload_to='formulario_sectorial',
                                  validators=[
                                      FileExtensionValidator(
@@ -90,7 +90,7 @@ class MarcoJuridico(BaseModel):
 
 class OrganigramaRegional(BaseModel):
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='organigramas_regionales')
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='organigramaregional_set')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='organigramaregional')
     documento = models.FileField(
         upload_to = organigrama_regional_path,
         validators = [
