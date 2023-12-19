@@ -65,8 +65,8 @@ class ItemSubtitulo(models.Model):
 
 class CostosDirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='costos_directos')
-    etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_directos')
+                                             related_name='p_5_1_a_costos_directos')
+    etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_directos', blank=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos')
     total_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     es_transversal = models.BooleanField(default=False, blank=True)
@@ -75,7 +75,7 @@ class CostosDirectos(BaseModel):
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='costos_indirectos')
+                                             related_name='p_5_1_b_costos_indirectos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos')
     total_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -85,6 +85,8 @@ class CostosIndirectos(BaseModel):
 
 class ResumenCostosPorSubtitulo(BaseModel):
     """Modelo para almacenar el resumen de costos por subtitulo."""
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
+                                             related_name='p_5_1_c_resumen_costos_por_subtitulo')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='resumen_costos')
     total_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     descripcion = models.TextField(max_length=300, blank=True)
@@ -118,14 +120,14 @@ class CostoAnio(BaseModel):
 
 
 class EvolucionGastoAsociado(BaseModel):
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='evolucion_gasto_asociado')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_5_2_evolucion_gasto_asociado')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='evolucion_gasto_asociado')
     costo_anio = models.ManyToManyField(CostoAnio, related_name='evolucion_gasto_asociado')
     descripcion = models.TextField(max_length=500, blank=True)
 
 
 class VariacionPromedio(BaseModel):
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='variacion_promedio')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_5_2_variacion_promedio')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='variacion_promedio')
     gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

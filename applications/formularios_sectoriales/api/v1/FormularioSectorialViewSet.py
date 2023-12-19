@@ -21,6 +21,7 @@ from .serializers import (
     Paso2Serializer,
     Paso3Serializer,
     Paso4Serializer,
+    Paso5Serializer,
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
@@ -126,4 +127,8 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
 
         return manejar_formularios_pasos(request, formulario_sectorial, Paso4Serializer)
 
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
+    def paso_5(self, request, pk=None):
+        formulario_sectorial = self.get_object()
 
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)

@@ -6,8 +6,15 @@ from applications.formularios_sectoriales.models import (
     CostosDirectos,
     CostosIndirectos,
     ResumenCostosPorSubtitulo,
-    Paso5, EvolucionGastoAsociado, VariacionPromedio, CostoAnio
+    Paso5, EvolucionGastoAsociado, VariacionPromedio, CostoAnio, FormularioSectorial
 )
+
+
+@receiver(post_save, sender=FormularioSectorial)
+def crear_instancias_relacionadas(sender, instance, created, **kwargs):
+    if created:
+        # Crear instancia de Paso5
+        Paso5.objects.create(formulario_sectorial=instance)
 
 
 @receiver(post_save, sender=CostosDirectos)
@@ -19,9 +26,10 @@ def actualizar_resumen_costos(sender, instance, **kwargs):
     Actualiza el resumen de costos por subtitulo cuando un CostosDirectos o CostosIndirectos
     es creado, actualizado o eliminado.
     """
+    # Aquí, instance es un objeto CostosDirectos o CostosIndirectos
     if hasattr(instance, 'item_subtitulo'):
-        for item in instance.item_subtitulo.all():
-            ResumenCostosPorSubtitulo.actualizar_resumen(item.subtitulo_id)
+        subtitulo_id = instance.item_subtitulo.subtitulo_id
+        ResumenCostosPorSubtitulo.actualizar_resumen(subtitulo_id)
 
 
 def actualizar_total_costos(model_cls, campo_costo_total, instance):
