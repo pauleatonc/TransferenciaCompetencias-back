@@ -52,7 +52,6 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProcedimientosEtapas
         fields = [
@@ -75,56 +74,25 @@ class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
             'procedimientos'
         ]
 
-    def process_nested_field(self, field_name, data):
-        nested_data = data.get(field_name)
-        internal_nested_data = []
-        for item in nested_data:
-            item_id = item.get('id')  # Extraer el ID
-            item_data = self.fields[field_name].child.to_internal_value(item)
-            item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-            internal_nested_data.append(item_data)
-        return internal_nested_data
-
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        # Procesar campos anidados utilizando la función auxiliar
+        # Manejar campos anidados manualmente
         if 'procedimientos' in data:
-            internal_value['procedimientos'] = self.process_nested_field(
-                'procedimientos', data)
+            procedimientos = data.get('procedimientos')
+            internal_procedimientos = []
+            for item in procedimientos:
+                procedimiento_id = item.get('id')  # Extraer el ID
+                procedimiento_data = self.fields['procedimientos'].child.to_internal_value(item)
+                procedimiento_data['id'] = procedimiento_id  # Asegurarse de que el ID se incluya
+                internal_procedimientos.append(procedimiento_data)
+            internal_value['procedimientos'] = internal_procedimientos
 
         return internal_value
 
-    def update_or_create_nested_instances(self, model, nested_data, instance):
-        for data in nested_data:
-            item_id = data.pop('id', None)
-            if item_id is not None:
-                obj, created = model.objects.update_or_create(
-                    id=item_id,
-                    formulario_sectorial=instance,
-                    defaults=data
-                )
-            else:
-                model.objects.create(formulario_sectorial=instance, **data)
-
-    def update(self, instance, validated_data):
-        procedimientos_data = validated_data.pop('procedimientos', None)
-
-        # Actualizar los atributos de FormularioSectorial
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        # Actualizar o crear Procedimientos
-        if procedimientos_data is not None:
-            self.update_or_create_nested_instances(ProcedimientosEtapas, procedimientos_data, instance)
-
-        return instance
-
 
 class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PlataformasySoftwares
         fields = [
@@ -142,7 +110,6 @@ class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
 
 
 class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = FlujogramaCompetencia
         fields = [
@@ -173,7 +140,6 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-
     encabezado = Paso2EncabezadoSerializer(many=True, read_only=False)
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
@@ -233,11 +199,11 @@ class Paso2Serializer(serializers.ModelSerializer):
 
         if 'p_2_4_plataformas_y_softwares' in data:
             internal_value['p_2_4_plataformas_y_softwares'] = self.process_nested_field(
-                    'p_2_4_plataformas_y_softwares', data)
+                'p_2_4_plataformas_y_softwares', data)
 
         if 'p_2_5_flujograma_competencia' in data:
             internal_value['p_2_5_flujograma_competencia'] = self.process_nested_field(
-                    'p_2_5_flujograma_competencia', data)
+                'p_2_5_flujograma_competencia', data)
 
         return internal_value
 
