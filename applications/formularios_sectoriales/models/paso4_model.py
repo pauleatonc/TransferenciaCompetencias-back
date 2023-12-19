@@ -26,11 +26,23 @@ class Paso4(PasoBase):
         return self.avance()[0] == self.avance()[1]
 
     def avance(self):
-        # Verifica si hay al menos una instancia de IndicadorDesempeno
-        tiene_indicadores = self.formulario_sectorial.indicador_desempeno.exists()
+        # Campos obligatorios en IndicadorDesempeno
+        campos_obligatorios_indicador = [
+            'indicador', 'formula_calculo', 'descripcion_indicador',
+            'medios_calculo', 'verificador_asociado'
+        ]
 
-        # Devuelve '1/1' si hay indicadores, de lo contrario '0/1'
-        return "1/1" if tiene_indicadores else "0/1"
+        # Obtiene todas las instancias de IndicadorDesempeno asociadas
+        indicadores = self.formulario_sectorial.indicador_desempeno.all()
+
+        # Comprueba que todos los indicadores tienen todos los campos obligatorios completos
+        todos_indicadores_completos = all(
+            all(getattr(indicador, campo) for campo in campos_obligatorios_indicador)
+            for indicador in indicadores
+        )
+
+        # Devuelve '1/1' si todos los indicadores están completos, de lo contrario '0/1'
+        return "1/1" if todos_indicadores_completos else "0/1"
 
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
 
