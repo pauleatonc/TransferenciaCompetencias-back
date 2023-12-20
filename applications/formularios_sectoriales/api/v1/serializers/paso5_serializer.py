@@ -42,39 +42,56 @@ class ItemSubtituloSerializer(serializers.ModelSerializer):
 
 
 class CostosDirectosSerializer(serializers.ModelSerializer):
+    nombre_item_subtitulo = serializers.SerializerMethodField()
+
     class Meta:
         model = CostosDirectos
         fields = [
             'id',
             'etapa',
             'item_subtitulo',
+            'nombre_item_subtitulo',
             'total_anual',
             'es_transversal',
             'descripcion',
         ]
 
+    def get_nombre_item_subtitulo(self, obj):
+        return obj.item_subtitulo.nombre_item if obj.item_subtitulo else None
+
 class CostosIndirectosSerializer(serializers.ModelSerializer):
+    nombre_item_subtitulo = serializers.SerializerMethodField()
     class Meta:
         model = CostosIndirectos
         fields = [
             'id',
             'etapa',
             'item_subtitulo',
+            'nombre_item_subtitulo',
             'total_anual',
             'es_transversal',
             'descripcion',
         ]
 
+    def get_nombre_item_subtitulo(self, obj):
+        return obj.item_subtitulo.nombre_item if obj.item_subtitulo else None
+
 
 class  ResumenCostosPorSubtituloSerializer(serializers.ModelSerializer):
+    nombre_subtitulo = serializers.SerializerMethodField()
     class Meta:
         model = ResumenCostosPorSubtitulo
         fields = [
             'id',
             'subtitulo',
+            'nombre_subtitulo',
             'total_anual',
             'descripcion',
         ]
+
+    def get_nombre_subtitulo(self, obj):
+        return obj.subtitulo.nombre_item if obj.subtitulo else None
+
 
 class CostoAnioSerializer(serializers.ModelSerializer):
     class  Meta:
@@ -140,6 +157,10 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'total_costos_directos',
+            'total_costos_indirectos',
+            'costos_totales',
+            'glosas_especificas',
         ]
 
     def avance(self, obj):

@@ -1,9 +1,10 @@
 import os
 from django.core.validators import FileExtensionValidator
+from django.db.models import Sum
 
 from . import EtapasEjercicioCompetencia
 from .base_model import PasoBase, FormularioSectorial
-from django.db import models
+from django.db import models, transaction
 
 from ..functions import organigrama_regional_path
 from ...base.models import BaseModel
@@ -57,10 +58,18 @@ class Paso5(PasoBase):
 class Subtitulos(models.Model):
     subtitulo = models.CharField(max_length=10, unique=True)
 
+    @property
+    def nombre_item(self):
+        return self.subtitulo
+
 
 class ItemSubtitulo(models.Model):
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='items')
     item = models.CharField(max_length=100, unique=True)
+
+    @property
+    def nombre_item(self):
+        return self.item
 
 
 class CostosDirectos(BaseModel):
@@ -72,6 +81,50 @@ class CostosDirectos(BaseModel):
     es_transversal = models.BooleanField(default=False, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.actualizar_resumen_costos()
+        self.crear_o_actualizar_resumen()
+        ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
+
+    def delete(self, *args, **kwargs):
+        subtitulo_id = self.item_subtitulo.subtitulo_id
+        formulario_sectorial_id = self.formulario_sectorial_id
+        super().delete(*args, **kwargs)
+        self.actualizar_resumen_costos()
+        CostosDirectos.verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
+
+    def actualizar_resumen_costos(self):
+        total = CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
+        paso.total_costos_directos = total
+        paso.save()
+
+    def crear_o_actualizar_resumen(self):
+        subtitulo_id = self.item_subtitulo.subtitulo_id
+        total_directos = CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
+                                                       formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
+            Sum('total_anual'))['total_anual__sum'] or 0
+
+        if total_directos > 0:
+            resumen, created = ResumenCostosPorSubtitulo.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            resumen.total_anual = total_directos
+            resumen.save()
+        else:
+            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
+                                                     formulario_sectorial_id=self.formulario_sectorial_id).delete()
+
+    @staticmethod
+    def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
+        if not CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
+                                             formulario_sectorial_id=formulario_sectorial_id).exists():
+            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
+                                                     formulario_sectorial_id=formulario_sectorial_id).delete()
+
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -82,6 +135,50 @@ class CostosIndirectos(BaseModel):
     es_transversal = models.BooleanField(default=False, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.actualizar_resumen_costos()
+        self.crear_o_actualizar_resumen()
+        ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
+
+    def delete(self, *args, **kwargs):
+        subtitulo_id = self.item_subtitulo.subtitulo_id
+        formulario_sectorial_id = self.formulario_sectorial_id
+        super().delete(*args, **kwargs)
+        self.actualizar_resumen_costos()
+        CostosIndirectos.verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
+
+    def actualizar_resumen_costos(self):
+        total = CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
+        paso.total_costos_indirectos = total
+        paso.save()
+
+    def crear_o_actualizar_resumen(self):
+        subtitulo_id = self.item_subtitulo.subtitulo_id
+        total_directos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
+                                                       formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
+            Sum('total_anual'))['total_anual__sum'] or 0
+
+        if total_directos > 0:
+            resumen, created = ResumenCostosPorSubtitulo.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            resumen.total_anual = total_directos
+            resumen.save()
+        else:
+            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
+                                                     formulario_sectorial_id=self.formulario_sectorial_id).delete()
+
+    @staticmethod
+    def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
+        if not CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
+                                             formulario_sectorial_id=formulario_sectorial_id).exists():
+            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
+                                                     formulario_sectorial_id=formulario_sectorial_id).delete()
+
 
 class ResumenCostosPorSubtitulo(BaseModel):
     """Modelo para almacenar el resumen de costos por subtitulo."""
@@ -91,15 +188,46 @@ class ResumenCostosPorSubtitulo(BaseModel):
     total_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     descripcion = models.TextField(max_length=300, blank=True)
 
-    def __str__(self):
-        return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.actualizar_resumen_costos(self.formulario_sectorial_id)
 
     @classmethod
-    def actualizar_resumen(cls, subtitulo_id, formulario_sectorial_id):
-        obj, created = cls.objects.update_or_create(
-            subtitulo_id=subtitulo_id,
+    def actualizar_resumen_costos(cls, formulario_sectorial_id):
+        total = cls.objects.filter(formulario_sectorial_id=formulario_sectorial_id).aggregate(Sum('total_anual'))[
+                    'total_anual__sum'] or 0
+        paso = Paso5.objects.get(formulario_sectorial_id=formulario_sectorial_id)
+        paso.costos_totales = total
+        paso.save()
+
+    @classmethod
+    def actualizar_total_anual(cls, subtitulo_id, formulario_sectorial_id):
+        total_directos = CostosDirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
             formulario_sectorial_id=formulario_sectorial_id
-        )
+        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+        total_indirectos = CostosIndirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+        total = total_directos + total_indirectos
+
+        if total > 0:
+            resumen, created = cls.objects.get_or_create(
+                subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id,
+                defaults={'total_anual': total}
+            )
+            if not created:
+                resumen.total_anual = total
+                resumen.save()
+        else:
+            cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
+
+    def __str__(self):
+        return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
 
 class CostoAnio(BaseModel):
