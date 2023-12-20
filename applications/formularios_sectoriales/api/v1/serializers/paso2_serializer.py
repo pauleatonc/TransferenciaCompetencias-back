@@ -52,7 +52,6 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProcedimientosEtapas
         fields = [
@@ -64,7 +63,7 @@ class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
 
 
 class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
-    procedimientos = ProcedimientosEtapasSerializer(many=True, read_only=False)
+    procedimientos = ProcedimientosEtapasSerializer(many=True)
 
     class Meta:
         model = EtapasEjercicioCompetencia
@@ -75,9 +74,25 @@ class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
             'procedimientos'
         ]
 
+    def to_internal_value(self, data):
+        # Maneja primero los campos no anidados
+        internal_value = super().to_internal_value(data)
+
+        # Manejar campos anidados manualmente
+        if 'procedimientos' in data:
+            procedimientos = data.get('procedimientos')
+            internal_procedimientos = []
+            for item in procedimientos:
+                procedimiento_id = item.get('id')  # Extraer el ID
+                procedimiento_data = self.fields['procedimientos'].child.to_internal_value(item)
+                procedimiento_data['id'] = procedimiento_id  # Asegurarse de que el ID se incluya
+                internal_procedimientos.append(procedimiento_data)
+            internal_value['procedimientos'] = internal_procedimientos
+
+        return internal_value
+
 
 class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PlataformasySoftwares
         fields = [
@@ -95,7 +110,6 @@ class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
 
 
 class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = FlujogramaCompetencia
         fields = [
@@ -126,7 +140,6 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-
     encabezado = Paso2EncabezadoSerializer(many=True, read_only=False)
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
@@ -169,7 +182,7 @@ class Paso2Serializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
-        internal_value = super(Paso2Serializer, self).to_internal_value(data)
+        internal_value = super().to_internal_value(data)
 
         # Procesar campos anidados utilizando la función auxiliar
         if 'p_2_1_organismos_intervinientes' in data:
@@ -182,15 +195,15 @@ class Paso2Serializer(serializers.ModelSerializer):
 
         if 'p_2_3_etapas_ejercicio_competencia' in data:
             internal_value['p_2_3_etapas_ejercicio_competencia'] = self.process_nested_field(
-                    'p_2_3_etapas_ejercicio_competencia', data)
+                'p_2_3_etapas_ejercicio_competencia', data)
 
         if 'p_2_4_plataformas_y_softwares' in data:
             internal_value['p_2_4_plataformas_y_softwares'] = self.process_nested_field(
-                    'p_2_4_plataformas_y_softwares', data)
+                'p_2_4_plataformas_y_softwares', data)
 
         if 'p_2_5_flujograma_competencia' in data:
             internal_value['p_2_5_flujograma_competencia'] = self.process_nested_field(
-                    'p_2_5_flujograma_competencia', data)
+                'p_2_5_flujograma_competencia', data)
 
         return internal_value
 
@@ -227,7 +240,32 @@ class Paso2Serializer(serializers.ModelSerializer):
             self.update_or_create_nested_instances(UnidadesIntervinientes, unidades_data, instance)
 
         if etapas_data is not None:
-            self.update_or_create_nested_instances(EtapasEjercicioCompetencia, etapas_data, instance)
+            for etapa_data in etapas_data:
+                etapa_id = etapa_data.pop('id', None)
+                procedimientos_data = etapa_data.pop('procedimientos', [])
+
+                etapa_instance, _ = EtapasEjercicioCompetencia.objects.update_or_create(
+                    id=etapa_id,
+                    defaults=etapa_data,
+                    formulario_sectorial=instance
+                )
+
+                for proc_data in procedimientos_data:
+                    proc_id = proc_data.pop('id', None)
+                    unidades = proc_data.pop('unidades_intervinientes', [])
+
+                    proc_instance, _ = ProcedimientosEtapas.objects.update_or_create(
+                        id=proc_id,
+                        defaults={
+                            **proc_data,
+                            'etapa': etapa_instance,
+                            'formulario_sectorial': instance  # Asignar formulario_sectorial a ProcedimientosEtapas
+                        }
+                    )
+
+                    # Actualiza las unidades intervinientes si es necesario
+                    if unidades:
+                        proc_instance.unidades_intervinientes.set(unidades)
 
         if plataformas_data is not None:
             self.update_or_create_nested_instances(PlataformasySoftwares, plataformas_data, instance)
@@ -236,26 +274,3 @@ class Paso2Serializer(serializers.ModelSerializer):
             self.update_or_create_nested_instances(FlujogramaCompetencia, flujograma_data, instance)
 
         return instance
-
-
-class EtapasEjercicioCompetenciaSerializer2(WritableNestedModelSerializer):
-    procedimientos = ProcedimientosEtapasSerializer(many=True)
-
-    class Meta:
-        model = EtapasEjercicioCompetencia
-        fields = [
-            'id',
-            'nombre_etapa',
-            'descripcion_etapa',
-            'procedimientos'
-        ]
-
-class Paso2Serializer2(WritableNestedModelSerializer):
-    etapas = EtapasEjercicioCompetenciaSerializer2(many=True, source='p_2_3_etapas_ejercicio_competencia')
-
-    class Meta:
-        model = FormularioSectorial
-        fields = [
-            'id',
-            'etapas'
-        ]

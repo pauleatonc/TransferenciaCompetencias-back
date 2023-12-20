@@ -21,6 +21,7 @@ from .serializers import (
     Paso2Serializer,
     Paso3Serializer,
     Paso4Serializer,
+    Paso5Serializer,
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
@@ -31,9 +32,7 @@ def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
         serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            print("Datos después de la serialización:", serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        print("Errores de serialización:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:  # GET
         serializer = serializer_class(formulario_sectorial)
@@ -128,5 +127,8 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
 
         return manejar_formularios_pasos(request, formulario_sectorial, Paso4Serializer)
 
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
+    def paso_5(self, request, pk=None):
+        formulario_sectorial = self.get_object()
 
-
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)

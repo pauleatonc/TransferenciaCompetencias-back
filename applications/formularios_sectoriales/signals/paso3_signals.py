@@ -3,8 +3,14 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import FormularioSectorial, CoberturaAnual, ResumenCostosPorSubtitulo, \
-    EvolucionGastoAsociado, VariacionPromedio, CostoAnio
+from applications.formularios_sectoriales.models import FormularioSectorial, CoberturaAnual, Paso3
+
+
+@receiver(post_save, sender=FormularioSectorial)
+def crear_instancias_relacionadas(sender, instance, created, **kwargs):
+    if created:
+        # Crear instancia de Paso3
+        Paso3.objects.create(formulario_sectorial=instance)
 
 
 @receiver(post_save, sender=FormularioSectorial)
