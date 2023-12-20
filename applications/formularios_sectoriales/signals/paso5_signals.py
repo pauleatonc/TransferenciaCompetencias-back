@@ -8,6 +8,7 @@ from applications.formularios_sectoriales.models import (
     ResumenCostosPorSubtitulo,
     Paso5, EvolucionGastoAsociado, VariacionPromedio, CostoAnio, FormularioSectorial
 )
+from django.utils import timezone
 
 
 @receiver(post_save, sender=FormularioSectorial)
@@ -26,10 +27,13 @@ def actualizar_resumen_costos(sender, instance, **kwargs):
     Actualiza el resumen de costos por subtitulo cuando un CostosDirectos o CostosIndirectos
     es creado, actualizado o eliminado.
     """
-    # Aquí, instance es un objeto CostosDirectos o CostosIndirectos
+    # Asumiendo que cada instancia de CostosDirectos o CostosIndirectos
+    # está relacionada con exactamente un ItemSubtitulo
     if hasattr(instance, 'item_subtitulo'):
+        formulario_sectorial_id = instance.formulario_sectorial_id
         subtitulo_id = instance.item_subtitulo.subtitulo_id
-        ResumenCostosPorSubtitulo.actualizar_resumen(subtitulo_id)
+        ResumenCostosPorSubtitulo.actualizar_resumen(subtitulo_id, formulario_sectorial_id)
+
 
 
 def actualizar_total_costos(model_cls, campo_costo_total, instance):
@@ -49,13 +53,13 @@ def actualizar_total_costos(model_cls, campo_costo_total, instance):
 @receiver(post_save, sender=CostosDirectos)
 @receiver(post_delete, sender=CostosDirectos)
 def actualizar_total_costos_directos(sender, instance, **kwargs):
-    actualizar_total_costos(CostosDirectos, 'total_costos_directos', instance)
+    actualizar_total_costos(Paso5, 'total_costos_directos')
 
 
 @receiver(post_save, sender=CostosIndirectos)
 @receiver(post_delete, sender=CostosIndirectos)
 def actualizar_total_costos_indirectos(sender, instance, **kwargs):
-    actualizar_total_costos(CostosIndirectos, 'total_costos_indirectos', instance)
+    actualizar_total_costos(Paso5, 'total_costos_indirectos')
 
 
 def actualizar_costos_totales(formulario_sectorial_id):
@@ -80,32 +84,38 @@ def actualizar_total_costos(sender, instance, **kwargs):
     Llama a actualizar_costos_totales cada vez que se crea, actualiza o elimina
     una instancia de CostosDirectos o CostosIndirectos.
     """
-    if instance.formulario_sectorial:
-        actualizar_costos_totales(instance.formulario_sectorial_id)
+    # Asegúrate de que 'instance' es una instancia del modelo correcto
+    if isinstance(instance, (CostosDirectos, CostosIndirectos)):
+        formulario_sectorial_id = instance.formulario_sectorial_id
+        actualizar_costos_totales(formulario_sectorial_id)
+    else:
+        # Maneja el caso en el que 'instance' no es lo que esperabas
+        print(f"Tipo de instancia inesperado: {type(instance)}")
+
 
 
 @receiver(post_save, sender=ResumenCostosPorSubtitulo)
 def crear_o_actualizar_gasto_y_variacion(sender, instance, created, **kwargs):
     # Crear o actualizar EvolucionGastoAsociado
     EvolucionGastoAsociado.objects.get_or_create(
-        formulario_sectorial=instance.subtitulo.formulario_sectorial,
+        formulario_sectorial=instance.formulario_sectorial,
         subtitulo=instance.subtitulo
     )
 
     # Crear o actualizar VariacionPromedio
     VariacionPromedio.objects.get_or_create(
-        formulario_sectorial=instance.subtitulo.formulario_sectorial,
+        formulario_sectorial=instance.formulario_sectorial,
         subtitulo=instance.subtitulo
     )
 
 
-@receiver(post_save, sender=EvolucionGastoAsociado)
+@receiver(post_save, sender=FormularioSectorial)
 def crear_costos_anio(sender, instance, created, **kwargs):
     if created:
-        año_inicio = instance.formulario_sectorial.fecha_inicio.year if instance.formulario_sectorial.fecha_inicio else timezone.now().year
-        año_inicial = año_inicio - 5
+        año_actual = timezone.now().year
+        año_inicial = año_actual - 5
 
-        for año in range(año_inicial, año_inicio):
+        for año in range(año_inicial, año_actual):
             CostoAnio.objects.get_or_create(
                 anio=año,
                 defaults={'costo': 0}  # O el valor predeterminado que desees

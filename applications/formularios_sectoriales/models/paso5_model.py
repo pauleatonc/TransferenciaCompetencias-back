@@ -95,23 +95,11 @@ class ResumenCostosPorSubtitulo(BaseModel):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
     @classmethod
-    def actualizar_resumen(cls, subtitulo_id):
-        """Actualiza el resumen de costos para un subtitulo específico."""
-        total_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id
-        ).aggregate(total=models.Sum('total_anual'))['total'] or 0
-
-        total_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id
-        ).aggregate(total=models.Sum('total_anual'))['total'] or 0
-
-        total = total_directos + total_indirectos
-
+    def actualizar_resumen(cls, subtitulo_id, formulario_sectorial_id):
         obj, created = cls.objects.update_or_create(
             subtitulo_id=subtitulo_id,
-            defaults={'total_anual': total}
+            formulario_sectorial_id=formulario_sectorial_id
         )
-        return obj
 
 
 class CostoAnio(BaseModel):
