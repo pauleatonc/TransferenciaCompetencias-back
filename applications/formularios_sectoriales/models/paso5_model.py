@@ -7,7 +7,10 @@ from .base_model import PasoBase, FormularioSectorial
 from django.db import models, transaction
 
 from ..functions import organigrama_regional_path
-from ...base.models import BaseModel
+from applications.base.models import BaseModel
+from applications.formularios_sectoriales.functions import (
+    verificar_y_eliminar_resumen
+)
 from applications.base.functions import validate_file_size_twenty
 from ...regioncomuna.models import Region
 
@@ -92,7 +95,7 @@ class CostosDirectos(BaseModel):
         formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        CostosDirectos.verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id)
+        verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id, CostosDirectos, CostosIndirectos, ResumenCostosPorSubtitulo)
         ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
@@ -118,25 +121,6 @@ class CostosDirectos(BaseModel):
             ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
                                                      formulario_sectorial_id=self.formulario_sectorial_id).delete()
 
-    @staticmethod
-    def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
-        existen_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).exists()
-
-        existen_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).exists()
-
-        # Solo eliminar el resumen si no hay registros ni en CostosDirectos ni en CostosIndirectos
-        if not existen_directos and not existen_indirectos:
-            ResumenCostosPorSubtitulo.objects.filter(
-                subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id
-            ).delete()
-
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_b_costos_indirectos')
@@ -157,7 +141,7 @@ class CostosIndirectos(BaseModel):
         formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        CostosIndirectos.verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id)
+        verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id, CostosDirectos, CostosIndirectos, ResumenCostosPorSubtitulo)
         ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
