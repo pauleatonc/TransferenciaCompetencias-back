@@ -202,15 +202,9 @@ class ResumenCostosPorSubtitulo(BaseModel):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
 
-class CostoAnio(BaseModel):
-    anio = models.IntegerField()
-    costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-
 class EvolucionGastoAsociado(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_5_2_evolucion_gasto_asociado')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='evolucion_gasto_asociado')
-    costo_anio = models.ManyToManyField(CostoAnio, related_name='evolucion_gasto_asociado')
     descripcion = models.TextField(max_length=500, blank=True)
 
     @classmethod
@@ -236,6 +230,12 @@ class EvolucionGastoAsociado(BaseModel):
                 evolucion.save()
         else:
             cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
+
+
+class CostoAnio(BaseModel):
+    evolucion_gasto = models.ForeignKey(EvolucionGastoAsociado, on_delete=models.CASCADE, related_name='costo_anio')
+    anio = models.IntegerField()
+    costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
 
 class VariacionPromedio(BaseModel):

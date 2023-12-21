@@ -45,6 +45,20 @@ def post_delete_costos_directos(sender, instance, **kwargs):
 def post_delete_costos_indirectos(sender, instance, **kwargs):
     actualizar_resumenes_y_evoluciones(instance, CostosIndirectos)
 
+
 @receiver(post_delete, sender=ResumenCostosPorSubtitulo)
 def post_delete_resumen_costos(sender, instance, **kwargs):
     ResumenCostosPorSubtitulo.actualizar_resumen_costos(instance)
+
+
+@receiver(post_save, sender=EvolucionGastoAsociado)
+def crear_costos_anios(sender, instance, created, **kwargs):
+    if created:
+        año_actual = timezone.now().year
+        año_inicial = año_actual - 5
+
+        for año in range(año_inicial, año_actual):
+            CostoAnio.objects.get_or_create(
+                evolucion_gasto=instance,
+                anio=año
+            )

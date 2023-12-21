@@ -104,6 +104,7 @@ class CostoAnioSerializer(serializers.ModelSerializer):
 
 
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
+    costo_anio = CostoAnioSerializer(many=True)
     class Meta:
         model = EvolucionGastoAsociado
         fields = [
