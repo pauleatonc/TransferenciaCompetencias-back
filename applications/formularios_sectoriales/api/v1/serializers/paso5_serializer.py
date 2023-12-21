@@ -220,40 +220,39 @@ class Paso5Serializer(serializers.ModelSerializer):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        # Procesar campos anidados utilizando la función auxiliar
-        if 'p_5_1_a_costos_directos' in data:
-            internal_value['p_5_1_a_costos_directos'] = self.process_nested_field(
-                'p_5_1_a_costos_directos', data)
-
-        if 'p_5_1_b_costos_indirectos' in data:
-            internal_value['p_5_1_b_costos_indirectos'] = self.process_nested_field(
-                'p_5_1_b_costos_indirectos', data)
-
-        if  'p_5_1_c_resumen_costos_por_subtitulo' in data:
-            internal_value['p_5_1_c_resumen_costos_por_subtitulo'] = self.process_nested_field(
-                'p_5_1_c_resumen_costos_por_subtitulo', data)
-
-        if 'p_5_2_evolucion_gasto_asociado' in data:
-            internal_value['p_5_2_evolucion_gasto_asociado'] = self.process_nested_field(
-                'p_5_2_evolucion_gasto_asociado', data)
-
-        if 'p_5_2_variacion_promedio' in data:
-            internal_value['p_5_2_variacion_promedio'] = self.process_nested_field(
-                'p_5_2_variacion_promedio', data)
+        # Procesar campos anidados
+        for field_name in ['p_5_1_a_costos_directos', 'p_5_1_b_costos_indirectos', 'p_5_1_c_resumen_costos_por_subtitulo', 'p_5_2_evolucion_gasto_asociado', 'p_5_2_variacion_promedio']:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
 
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
+            delete_flag = data.pop('DELETE', False)
+
             if item_id is not None:
-                obj, created = model.objects.update_or_create(
-                    id=item_id,
-                    formulario_sectorial=instance,
-                    defaults=data
-                )
-            else:
-                model.objects.create(formulario_sectorial=instance, **data)
+                if delete_flag:
+                    model.objects.filter(id=item_id).delete()
+                else:
+                    obj, created = model.objects.update_or_create(
+                        id=item_id,
+                        formulario_sectorial=instance,
+                        defaults=data
+                    )
+            elif not delete_flag:
+                obj = model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
         costos_directos_data = validated_data.pop('p_5_1_a_costos_directos', None)

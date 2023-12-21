@@ -120,11 +120,22 @@ class CostosDirectos(BaseModel):
 
     @staticmethod
     def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
-        if not CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
-                                             formulario_sectorial_id=formulario_sectorial_id).exists():
-            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
-                                                     formulario_sectorial_id=formulario_sectorial_id).delete()
+        existen_directos = CostosDirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).exists()
 
+        existen_indirectos = CostosIndirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).exists()
+
+        # Solo eliminar el resumen si no hay registros ni en CostosDirectos ni en CostosIndirectos
+        if not existen_directos and not existen_indirectos:
+            ResumenCostosPorSubtitulo.objects.filter(
+                subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id
+            ).delete()
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -174,10 +185,22 @@ class CostosIndirectos(BaseModel):
 
     @staticmethod
     def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
-        if not CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
-                                             formulario_sectorial_id=formulario_sectorial_id).exists():
-            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
-                                                     formulario_sectorial_id=formulario_sectorial_id).delete()
+        existen_directos = CostosDirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).exists()
+
+        existen_indirectos = CostosIndirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).exists()
+
+        # Solo eliminar el resumen si no hay registros ni en CostosDirectos ni en CostosIndirectos
+        if not existen_directos and not existen_indirectos:
+            ResumenCostosPorSubtitulo.objects.filter(
+                subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id
+            ).delete()
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
