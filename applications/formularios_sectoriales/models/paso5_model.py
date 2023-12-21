@@ -87,7 +87,7 @@ class CostosDirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        self.crear_o_actualizar_resumen()
+        self.crear_o_actualizar_resumen_evolucion_variacion()
         ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
 
     def delete(self, *args, **kwargs):
@@ -95,7 +95,6 @@ class CostosDirectos(BaseModel):
         formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id, CostosDirectos, CostosIndirectos, ResumenCostosPorSubtitulo)
         ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
@@ -104,22 +103,35 @@ class CostosDirectos(BaseModel):
         paso.total_costos_directos = total
         paso.save()
 
-    def crear_o_actualizar_resumen(self):
+    def crear_o_actualizar_resumen_evolucion_variacion(self):
         subtitulo_id = self.item_subtitulo.subtitulo_id
         total_directos = CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
                                                        formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
             Sum('total_anual'))['total_anual__sum'] or 0
 
         if total_directos > 0:
+            # Crear ResumenCostosPorSubtitulo si no existe ya. Si existe, actualizar el total_anual.
             resumen, created = ResumenCostosPorSubtitulo.objects.get_or_create(
                 formulario_sectorial_id=self.formulario_sectorial_id,
                 subtitulo_id=subtitulo_id
             )
             resumen.total_anual = total_directos
             resumen.save()
-        else:
-            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
-                                                     formulario_sectorial_id=self.formulario_sectorial_id).delete()
+
+            # Crear Evolucion por Subtitulo
+            evolucion, created = EvolucionGastoAsociado.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            evolucion.save()
+
+            # Crear Variacion por Subtitulo
+            variacion, created = VariacionPromedio.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            variacion.save()
+
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -133,7 +145,7 @@ class CostosIndirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        self.crear_o_actualizar_resumen()
+        self.crear_o_actualizar_resumen_evolucion_variacion()
         ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
 
     def delete(self, *args, **kwargs):
@@ -141,7 +153,6 @@ class CostosIndirectos(BaseModel):
         formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id, CostosDirectos, CostosIndirectos, ResumenCostosPorSubtitulo)
         ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
@@ -150,41 +161,34 @@ class CostosIndirectos(BaseModel):
         paso.total_costos_indirectos = total
         paso.save()
 
-    def crear_o_actualizar_resumen(self):
+    def crear_o_actualizar_resumen_evolucion_variacion(self):
         subtitulo_id = self.item_subtitulo.subtitulo_id
         total_directos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
                                                        formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
             Sum('total_anual'))['total_anual__sum'] or 0
 
         if total_directos > 0:
+            # Crear ResumenCostosPorSubtitulo si no existe ya. Si existe, actualizar el total_anual.
             resumen, created = ResumenCostosPorSubtitulo.objects.get_or_create(
                 formulario_sectorial_id=self.formulario_sectorial_id,
                 subtitulo_id=subtitulo_id
             )
             resumen.total_anual = total_directos
             resumen.save()
-        else:
-            ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
-                                                     formulario_sectorial_id=self.formulario_sectorial_id).delete()
 
-    @staticmethod
-    def verificar_y_eliminar_resumen(subtitulo_id, formulario_sectorial_id):
-        existen_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).exists()
+            # Crear Evolucion por Subtitulo
+            evolucion, created = EvolucionGastoAsociado.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            evolucion.save()
 
-        existen_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).exists()
-
-        # Solo eliminar el resumen si no hay registros ni en CostosDirectos ni en CostosIndirectos
-        if not existen_directos and not existen_indirectos:
-            ResumenCostosPorSubtitulo.objects.filter(
-                subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id
-            ).delete()
+            # Crear Variacion por Subtitulo
+            variacion, created = VariacionPromedio.objects.get_or_create(
+                formulario_sectorial_id=self.formulario_sectorial_id,
+                subtitulo_id=subtitulo_id
+            )
+            variacion.save()
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
@@ -247,6 +251,30 @@ class EvolucionGastoAsociado(BaseModel):
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='evolucion_gasto_asociado')
     costo_anio = models.ManyToManyField(CostoAnio, related_name='evolucion_gasto_asociado')
     descripcion = models.TextField(max_length=500, blank=True)
+
+    @classmethod
+    def actualizar_evolucion_por_subtitulo(cls, subtitulo_id, formulario_sectorial_id):
+        total_directos = CostosDirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+        total_indirectos = CostosIndirectos.objects.filter(
+            item_subtitulo__subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id
+        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+        total = total_directos + total_indirectos
+
+        if total > 0:
+            evolucion, created = cls.objects.get_or_create(
+                subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id,
+            )
+            if not created:
+                evolucion.save()
+        else:
+            cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
 
 
 class VariacionPromedio(BaseModel):
