@@ -18,9 +18,25 @@ from .serializers import (
     Paso1Serializer,
     MarcoJuridicoSerializer,
     OrganigramaRegionalSerializer,
-    Paso2Serializer, Paso2Serializer2
+    Paso2Serializer,
+    Paso3Serializer,
+    Paso4Serializer,
+    Paso5Serializer,
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
+
+
+def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
+    if request.method == 'PATCH':
+        print("Datos recibidos para PATCH:", request.data)
+        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:  # GET
+        serializer = serializer_class(formulario_sectorial)
+        return Response(serializer.data)
 
 
 class FormularioSectorialViewSet(viewsets.ModelViewSet):
@@ -59,6 +75,7 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(competencia)
         return Response(serializer.data)
 
+
     @action(detail=True, methods=['get', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
         """
@@ -90,29 +107,28 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         }
         """
         formulario_sectorial = self.get_object()
-
-        if request.method == 'PATCH':
-            serializer = Paso1Serializer(formulario_sectorial, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:  # GET
-            serializer = Paso1Serializer(formulario_sectorial)
-            return Response(serializer.data)
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso1Serializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
     def paso_2(self, request, pk=None):
         formulario_sectorial = self.get_object()
 
-        if request.method == 'PATCH':
-            serializer = Paso2Serializer(formulario_sectorial, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:  # GET
-            serializer = Paso2Serializer(formulario_sectorial)
-            return Response(serializer.data)
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso2Serializer)
 
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-3')
+    def paso_3(self, request, pk=None):
+        formulario_sectorial = self.get_object()
 
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso3Serializer)
+
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-4')
+    def paso_4(self, request, pk=None):
+        formulario_sectorial = self.get_object()
+
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso4Serializer)
+
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
+    def paso_5(self, request, pk=None):
+        formulario_sectorial = self.get_object()
+
+        return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)

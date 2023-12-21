@@ -3,36 +3,39 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import FormularioSectorial, CoberturaAnual
+from applications.formularios_sectoriales.models import FormularioSectorial, CoberturaAnual, Paso3
+
+
+@receiver(post_save, sender=FormularioSectorial)
+def crear_instancias_relacionadas(sender, instance, created, **kwargs):
+    if created:
+        # Crear instancia de Paso3
+        Paso3.objects.create(formulario_sectorial=instance)
 
 
 @receiver(post_save, sender=FormularioSectorial)
 def crear_coberturas_anuales(sender, instance, created, **kwargs):
     if created:
-        competencia = instance.competencia
-        if competencia.fecha_inicio:
-            año_actual = timezone.now().year
-            año_inicio = competencia.fecha_inicio.year
-            año_inicial = min(año_inicio, año_actual)
+        año_actual = timezone.now().year
+        año_inicial = año_actual - 5
 
-            for año in range(año_inicial - 4, año_inicial + 1):
-                CoberturaAnual.objects.get_or_create(
-                    formulario_sectorial=instance,
-                    anio=año
-                )
+        for año in range(año_inicial, año_actual):
+            CoberturaAnual.objects.get_or_create(
+                formulario_sectorial=instance,
+                anio=año
+            )
+
 
 @receiver(post_save, sender=Competencia)
 def actualizar_coberturas_anuales(sender, instance, **kwargs):
-    if instance.fecha_inicio:
-        año_actual = timezone.now().year
-        año_inicio = instance.fecha_inicio.year
-        año_inicial = min(año_inicio, año_actual)
+    año_actual = timezone.now().year
+    año_inicial = año_actual - 5
 
-        formularios_sectoriales = FormularioSectorial.objects.filter(competencia=instance)
+    formularios_sectoriales = FormularioSectorial.objects.filter(competencia=instance)
 
-        for formulario in formularios_sectoriales:
-            for año in range(año_inicial - 4, año_inicial + 1):
-                CoberturaAnual.objects.get_or_create(
-                    formulario_sectorial=formulario,
-                    anio=año
-                )
+    for formulario in formularios_sectoriales:
+        for año in range(año_inicial, año_actual):
+            CoberturaAnual.objects.get_or_create(
+                formulario_sectorial=formulario,
+                anio=año
+            )

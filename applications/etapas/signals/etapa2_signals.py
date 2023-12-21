@@ -25,7 +25,6 @@ def crear_organigramas_regionales(sender, instance, action, pk_set, **kwargs):
             if created:
                 # Crear ObservacionSectorial y Paso1
                 ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
-                Paso1.objects.create(formulario_sectorial=formulario_sectorial)
                 # Crear OrganigramaRegional para cada región asociada a la competencia
                 for region_pk in pk_set:
                     region = Region.objects.get(pk=region_pk)

@@ -9,6 +9,7 @@ from ..functions import organigrama_regional_path
 from ...base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
 from ...regioncomuna.models import Region
+from django.utils.translation import gettext as _
 
 
 class Paso3(PasoBase):
@@ -35,15 +36,18 @@ class Paso3(PasoBase):
         # Verifica si los campos obligatorios están llenos
         completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
 
-        # Verifica si hay instancias de CoberturaAnual con todos los campos llenos
-        coberturas_anuales_completados = sum(
-            [1 for cobertura in self.formulario_sectorial.coberturaanual_set.all()
-             if cobertura.universo_cobertura and cobertura.cobertura_efectivamente_abordada and cobertura.recursos_ejecutados])
+        # Verifica si todas las instancias de CoberturaAnual tienen todos los campos llenos
+        todas_coberturas_anuales_completas = all(
+            cobertura.universo_cobertura and cobertura.cobertura_efectivamente_abordada and cobertura.recursos_ejecutados
+            for cobertura in self.formulario_sectorial.cobertura_anual.all()
+        )
 
-        # Actualizar el total de campos considerando las instancias de CoberturaAnual
-        total_campos += self.formulario_sectorial.coberturaanual_set.count() * 3  # Multiplicar por la cantidad de campos a verificar en CoberturaAnual
+        # Si todas las instancias de CoberturaAnual están completas, añadir 1 a completados
+        if todas_coberturas_anuales_completas:
+            completados += 1
 
-        completados += coberturas_anuales_completados
+        # Actualizar el total de campos para incluir 'coberturas_anuales_completados'
+        total_campos += 1
 
         return f"{completados}/{total_campos}"
 
@@ -55,7 +59,7 @@ class Paso3(PasoBase):
 
 
 class CoberturaAnual(BaseModel):
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='coberturaanual_set')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='cobertura_anual')
     anio = models.IntegerField()
     universo_cobertura = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -64,7 +68,7 @@ class CoberturaAnual(BaseModel):
     @property
     def total_cobertura_efectiva(self):
         if self.cobertura_efectivamente_abordada and self.cobertura_efectivamente_abordada != 0:
-            return self.recursos_ejecutados / self.cobertura_efectivamente_abordada
+            return round(self.recursos_ejecutados / self.cobertura_efectivamente_abordada, 2)
         return _('No calculado')
 
     def __str__(self):

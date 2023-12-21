@@ -77,7 +77,7 @@ class EtapasEjercicioCompetencia(BaseModel):
 
 class ProcedimientosEtapas(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
-                                             related_name='procedimientos_etapas')
+                                             related_name='procedimientos')
     etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
                                              related_name='procedimientos')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
@@ -94,7 +94,7 @@ class PlataformasySoftwares(BaseModel):
     descripcion_costos = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     funcion_plataforma = models.TextField(max_length=500, blank=True)
-    etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set')
+    etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set', blank=True)
     capacitacion_plataforma = models.BooleanField(blank=True, default=False)
 
 

@@ -33,6 +33,16 @@ class Paso3Inline(admin.TabularInline):
     extra = 0
 
 
+class Paso4Inline(admin.TabularInline):
+    model = Paso4
+    extra = 0
+
+
+class Paso5Inline(admin.TabularInline):
+    model = Paso5
+    extra = 0
+
+
 class CoberturaAnualInLine(admin.TabularInline):
     model = CoberturaAnual
     extra = 0
@@ -63,6 +73,11 @@ class FlujogramaCompetenciaInLine(admin.TabularInline):
     extra = 0
 
 
+class CostosDirectosInLine(admin.TabularInline):
+    model = CostosDirectos
+    extra = 0
+
+
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado')
@@ -83,6 +98,9 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         PlataformasySoftwaresInLine,
         FlujogramaCompetenciaInLine,
         Paso3Inline,
+        Paso4Inline,
+        Paso5Inline,
+        CostosDirectosInLine,
     ]
 
     def get_competencia_nombre(self, obj):
@@ -105,3 +123,16 @@ class Paso1Admin(admin.ModelAdmin):
         return obj.formulario_sectorial
 
     formulario_sectorial_display.short_description = 'Formulario Sectorial Asociado'
+
+
+class SubtitulosAdmin(admin.ModelAdmin):
+    list_display = ('id', 'subtitulo',)
+    search_fields = ('subtitulo',)
+
+class ItemSubtituloAdmin(admin.ModelAdmin):
+    list_display = ('id', 'item', 'subtitulo',)
+    search_fields = ('item', 'subtitulo__subtitulo',)
+    list_filter = ('subtitulo',)
+
+admin.site.register(Subtitulos, SubtitulosAdmin)
+admin.site.register(ItemSubtitulo, ItemSubtituloAdmin)
