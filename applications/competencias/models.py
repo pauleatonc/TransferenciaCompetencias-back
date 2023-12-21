@@ -18,16 +18,17 @@ from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
+class Ambito(models.Model):
+    nombre = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nombre
+
 
 class Competencia(BaseModel):
     ORIGEN = (
         ('OP', 'Oficio Presidencial'),
         ('SG', 'Solicitud GORE')
-    )
-    AMBITO = (
-        ('AP', 'Fomento de las Actividades Productivas'),
-        ('OT', 'Ordenamiento Territorial'),
-        ('DSC', 'Desarrollo Social y Cultural')
     )
     ESTADO = (
         ('EP', 'En Estudio'),
@@ -49,7 +50,7 @@ class Competencia(BaseModel):
         blank=False,
         verbose_name='Sectores'
     )
-    ambito = models.CharField(max_length=5, choices=AMBITO, default='AP')
+    ambito_competencia = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='ambito_competencia', null=True, blank=True)
     regiones = models.ManyToManyField(
         Region,
         blank=False,
