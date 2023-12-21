@@ -18,22 +18,29 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         Paso5.objects.create(formulario_sectorial=instance)
 
 
-@receiver(post_delete, sender=CostosDirectos)
-def post_delete_costos_directos(sender, instance, **kwargs):
-    # Actualizar el total de costos directos en Paso5
-    CostosDirectos.actualizar_resumen_costos(instance)
-
-    # Actualizar el total anual en ResumenCostosPorSubtitulo
-    ResumenCostosPorSubtitulo.actualizar_total_anual(instance.item_subtitulo.subtitulo_id, instance.formulario_sectorial_id)
-
-
-@receiver(post_delete, sender=CostosIndirectos)
-def post_delete_costos_indirectos(sender, instance, **kwargs):
-    # Actualizar el total de costos indirectos en Paso5
-    CostosIndirectos.actualizar_resumen_costos(instance)
+def actualizar_resumenes_y_evoluciones(instance, modelo_costos):
+    """
+    Actualiza los resúmenes y evoluciones comunes después de eliminar un costo.
+    """
+    # Actualizar el total de costos en Paso5
+    modelo_costos.actualizar_resumen_costos(instance)
 
     # Actualizar el total anual en ResumenCostosPorSubtitulo
     ResumenCostosPorSubtitulo.actualizar_total_anual(instance.item_subtitulo.subtitulo_id, instance.formulario_sectorial_id)
 
     # Actualizar EvolucionGastoAsociado
     EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(instance.item_subtitulo.subtitulo_id, instance.formulario_sectorial_id)
+
+    # Si es CostosIndirectos, actualizar VariacionPromedio
+    if modelo_costos == CostosIndirectos:
+        VariacionPromedio.actualizar_variacion_por_subtitulo(instance.item_subtitulo.subtitulo_id, instance.formulario_sectorial_id)
+
+
+@receiver(post_delete, sender=CostosDirectos)
+def post_delete_costos_directos(sender, instance, **kwargs):
+    actualizar_resumenes_y_evoluciones(instance, CostosDirectos)
+
+
+@receiver(post_delete, sender=CostosIndirectos)
+def post_delete_costos_indirectos(sender, instance, **kwargs):
+    actualizar_resumenes_y_evoluciones(instance, CostosIndirectos)
