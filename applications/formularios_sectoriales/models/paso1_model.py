@@ -4,19 +4,14 @@ from django.core.validators import FileExtensionValidator
 from .base_model import PasoBase, FormularioSectorial
 from django.db import models
 
-from ..functions import organigrama_regional_path
-from ...base.models import BaseModel
+from applications.formularios_sectoriales.functions import organigrama_regional_path
+from applications.base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
-from ...regioncomuna.models import Region
+from applications.regioncomuna.models import Region
+from applications.competencias.models import Ambito
 
 
 class Paso1(PasoBase):
-
-    AMBITO = (
-        ('AP', 'Fomento de las Actividades Productivas'),
-        ('OT', 'Ordenamiento Territorial'),
-        ('DSC', 'Desarrollo Social y Cultural')
-    )
 
     @property
     def nombre_paso(self):
@@ -73,7 +68,7 @@ class Paso1(PasoBase):
     fuentes_normativas = models.TextField(max_length=500, blank=True)
     territorio_competencia = models.TextField(max_length=500, blank=True)
     enfoque_territorial_competencia = models.TextField(max_length=500, blank=True)
-    ambito = models.CharField(max_length=5, choices=AMBITO, blank=True)
+    ambito_paso1 = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='paso1', null=True, blank=True)
     posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=500, blank=True)
     organo_actual_competencia = models.TextField(max_length=500, blank=True)
 
