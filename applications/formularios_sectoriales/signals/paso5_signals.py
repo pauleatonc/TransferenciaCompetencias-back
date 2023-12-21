@@ -44,3 +44,7 @@ def post_delete_costos_directos(sender, instance, **kwargs):
 @receiver(post_delete, sender=CostosIndirectos)
 def post_delete_costos_indirectos(sender, instance, **kwargs):
     actualizar_resumenes_y_evoluciones(instance, CostosIndirectos)
+
+@receiver(post_delete, sender=ResumenCostosPorSubtitulo)
+def post_delete_resumen_costos(sender, instance, **kwargs):
+    ResumenCostosPorSubtitulo.actualizar_resumen_costos(instance)

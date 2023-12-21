@@ -163,13 +163,12 @@ class ResumenCostosPorSubtitulo(BaseModel):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.actualizar_resumen_costos(self.formulario_sectorial_id)
+        self.actualizar_resumen_costos()
 
-    @classmethod
-    def actualizar_resumen_costos(cls, formulario_sectorial_id):
-        total = cls.objects.filter(formulario_sectorial_id=formulario_sectorial_id).aggregate(Sum('total_anual'))[
+    def actualizar_resumen_costos(self):
+        total = ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(Sum('total_anual'))[
                     'total_anual__sum'] or 0
-        paso = Paso5.objects.get(formulario_sectorial_id=formulario_sectorial_id)
+        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
         paso.costos_totales = total
         paso.save()
 
