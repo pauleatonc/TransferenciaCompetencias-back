@@ -73,6 +73,11 @@ class FlujogramaCompetenciaInLine(admin.TabularInline):
     extra = 0
 
 
+class CostosDirectosInLine(admin.TabularInline):
+    model = CostosDirectos
+    extra = 0
+
+
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado')
@@ -95,6 +100,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         Paso3Inline,
         Paso4Inline,
         Paso5Inline,
+        CostosDirectosInLine,
     ]
 
     def get_competencia_nombre(self, obj):
