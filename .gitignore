@@ -1,2 +1,23 @@
+#Cache de python
+*.pyc
+__pycache__
+
+#BD
+db.sqlite3
+
+#Ambientes de desarrollo
+/env
+/venv
+*.env
+.vscode
 .idea
-/media/
+
+#Images and Documents
+media/
+
+#Otros (cómo .idea)
+.idea
+
+# For this specific project, in prod we collect the estatics file in this folder (for now)
+staticfiles
+/staticfiles/
