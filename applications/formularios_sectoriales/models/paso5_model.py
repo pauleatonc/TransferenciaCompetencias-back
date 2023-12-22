@@ -8,9 +8,6 @@ from django.db import models, transaction
 
 from ..functions import organigrama_regional_path
 from applications.base.models import BaseModel
-from applications.formularios_sectoriales.functions import (
-    verificar_y_eliminar_resumen
-)
 from applications.base.functions import validate_file_size_twenty
 from ...regioncomuna.models import Region
 
@@ -25,20 +22,45 @@ class Paso5(PasoBase):
     def numero_paso(self):
         return 5
 
-    @property
-    def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
-
     def es_instancia_costos_completa(self, instancia):
         campos_requeridos = [
             'formulario_sectorial', 'item_subtitulo', 'total_anual', 'descripcion'
         ]
         return all(getattr(instancia, campo, None) for campo in campos_requeridos)
 
+    def es_evolucion_gasto_completa(self, instancia):
+        return all([
+            instancia.subtitulo_id,
+            CostoAnio.objects.filter(evolucion_gasto=instancia).exists()
+        ]) and all(
+            getattr(anio, 'costo', None) is not None
+            for anio in CostoAnio.objects.filter(evolucion_gasto=instancia)
+        )
+
+    def es_variacion_promedio_completa(self, instancia):
+        return bool(instancia.descripcion)
+
+    def es_personal_directo_completo(self):
+        return PersonalDirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            estamento__isnull=False,
+            calidad_juridica__isnull=False,
+            renta_bruta__isnull=False
+        ).exists()
+
+    def es_personal_indirecto_completo(self):
+        return PersonalIndirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            estamento__isnull=False,
+            calidad_juridica__isnull=False,
+            numero_personas__isnull=False,
+            renta_bruta__isnull=False
+        ).exists()
+
     def avance(self):
         # Lista de todos los campos obligatorios del modelo Paso5
         campos_obligatorios_paso5 = [
-            'glosas_especificas', 'descripcion_funciones_personal_directo', 'descripcion_funciones_personal_indirecto',
+            'descripcion_funciones_personal_directo', 'descripcion_funciones_personal_indirecto',
         ]
         total_campos_paso5 = len(campos_obligatorios_paso5)
         completados_paso5 = sum([1 for campo in campos_obligatorios_paso5 if getattr(self, campo, None)])
@@ -56,9 +78,29 @@ class Paso5(PasoBase):
             [1 for costo in CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id) if
              self.es_instancia_costos_completa(costo)])
 
+        # Verificar EvolucionGastoAsociado y CostoAnio
+        completados_evolucion_gasto = sum(
+            1 for evolucion in EvolucionGastoAsociado.objects.filter(formulario_sectorial=self.formulario_sectorial)
+            if self.es_evolucion_gasto_completa(evolucion)
+        )
+        total_evolucion_gasto = EvolucionGastoAsociado.objects.filter(
+            formulario_sectorial=self.formulario_sectorial).count()
+
+        # Verificar VariacionPromedio
+        completados_variacion_promedio = sum(
+            1 for variacion in VariacionPromedio.objects.filter(formulario_sectorial=self.formulario_sectorial)
+            if self.es_variacion_promedio_completa(variacion)
+        )
+        total_variacion_promedio = VariacionPromedio.objects.filter(
+            formulario_sectorial=self.formulario_sectorial).count()
+
+        # Verificar PersonalDirecto y PersonalIndirecto
+        completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
+        completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
+
         # Total de campos y completados
-        total_campos = total_campos_paso5 + total_costos_directos + total_costos_indirectos
-        completados = completados_paso5 + completados_costos_directos + completados_costos_indirectos
+        total_campos = 8
+        completados = completados_paso5 + completados_costos_directos + completados_costos_indirectos + completados_evolucion_gasto + completados_variacion_promedio + completado_personal_directo + completado_personal_indirecto
 
         return f"{completados}/{total_campos}"
 
@@ -75,6 +117,13 @@ class Paso5(PasoBase):
     """5.3 Costos asociados al ejercicio de la competencia"""
     descripcion_funciones_personal_directo = models.TextField(max_length=1100, blank=True)
     descripcion_funciones_personal_indirecto = models.TextField(max_length=1100, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.campos_obligatorios_completados:
+            self.completado = True
+        else:
+            self.completado = False
+        super(Paso5, self).save(*args, **kwargs)
 
 
 class Subtitulos(models.Model):
