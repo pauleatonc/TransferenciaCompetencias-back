@@ -41,7 +41,6 @@ class Paso1(PasoBase):
 
         # Verifica si hay archivos válidos en el set de MarcoJuridico
 
-
         return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')

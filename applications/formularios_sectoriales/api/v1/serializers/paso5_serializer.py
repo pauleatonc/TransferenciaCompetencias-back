@@ -15,7 +15,8 @@ from applications.formularios_sectoriales.models import (
     Estamento,
     CalidadJuridica,
     PersonalDirecto,
-    PersonalIndirecto
+    PersonalIndirecto,
+    EtapasEjercicioCompetencia
 )
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -261,6 +262,7 @@ class Paso5Serializer(serializers.ModelSerializer):
     listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
     listado_calidades_juridicas = serializers.SerializerMethodField()
+    listado_etapas = serializers.SerializerMethodField()
     p_5_1_a_costos_directos = CostosDirectosSerializer(many=True, read_only=False)
     p_5_1_b_costos_indirectos = CostosIndirectosSerializer(many=True, read_only=False)
     p_5_1_c_resumen_costos_por_subtitulo = ResumenCostosPorSubtituloSerializer(many=True, read_only=False)
@@ -284,6 +286,7 @@ class Paso5Serializer(serializers.ModelSerializer):
             'listado_item_subtitulos',
             'listado_estamentos',
             'listado_calidades_juridicas',
+            'listado_etapas'
         ]
 
     def get_listado_subtitulos(self, obj):
@@ -312,15 +315,9 @@ class Paso5Serializer(serializers.ModelSerializer):
 
         return items_agrupados
 
-    def process_nested_field(self, field_name, data):
-        nested_data = data.get(field_name)
-        internal_nested_data = []
-        for item in nested_data:
-            item_id = item.get('id')  # Extraer el ID
-            item_data = self.fields[field_name].child.to_internal_value(item)
-            item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-            internal_nested_data.append(item_data)
-        return internal_nested_data
+    def get_listado_etapas(self, obj):
+        etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
+        return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados

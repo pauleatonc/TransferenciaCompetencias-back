@@ -78,16 +78,22 @@ class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        # Manejar campos anidados manualmente
-        if 'procedimientos' in data:
-            procedimientos = data.get('procedimientos')
-            internal_procedimientos = []
-            for item in procedimientos:
-                procedimiento_id = item.get('id')  # Extraer el ID
-                procedimiento_data = self.fields['procedimientos'].child.to_internal_value(item)
-                procedimiento_data['id'] = procedimiento_id  # Asegurarse de que el ID se incluya
-                internal_procedimientos.append(procedimiento_data)
-            internal_value['procedimientos'] = internal_procedimientos
+        # Procesar campos anidados
+        for field_name in [
+            'procedimientos',
+        ]:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
 
         return internal_value
 
@@ -170,54 +176,49 @@ class Paso2Serializer(serializers.ModelSerializer):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
-    def process_nested_field(self, field_name, data):
-        nested_data = data.get(field_name)
-        internal_nested_data = []
-        for item in nested_data:
-            item_id = item.get('id')  # Extraer el ID
-            item_data = self.fields[field_name].child.to_internal_value(item)
-            item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-            internal_nested_data.append(item_data)
-        return internal_nested_data
-
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        # Procesar campos anidados utilizando la función auxiliar
-        if 'p_2_1_organismos_intervinientes' in data:
-            internal_value['p_2_1_organismos_intervinientes'] = self.process_nested_field(
-                'p_2_1_organismos_intervinientes', data)
-
-        if 'p_2_2_unidades_intervinientes' in data:
-            internal_value['p_2_2_unidades_intervinientes'] = self.process_nested_field(
-                'p_2_2_unidades_intervinientes', data)
-
-        if 'p_2_3_etapas_ejercicio_competencia' in data:
-            internal_value['p_2_3_etapas_ejercicio_competencia'] = self.process_nested_field(
-                'p_2_3_etapas_ejercicio_competencia', data)
-
-        if 'p_2_4_plataformas_y_softwares' in data:
-            internal_value['p_2_4_plataformas_y_softwares'] = self.process_nested_field(
-                'p_2_4_plataformas_y_softwares', data)
-
-        if 'p_2_5_flujograma_competencia' in data:
-            internal_value['p_2_5_flujograma_competencia'] = self.process_nested_field(
-                'p_2_5_flujograma_competencia', data)
+        # Procesar campos anidados
+        for field_name in [
+            'p_2_1_organismos_intervinientes',
+            'p_2_2_unidades_intervinientes',
+            'p_2_3_etapas_ejercicio_competencia',
+            'p_2_4_plataformas_y_softwares',
+            'p_2_5_flujograma_competencia',
+        ]:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
 
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
+            delete_flag = data.pop('DELETE', False)
+
             if item_id is not None:
-                obj, created = model.objects.update_or_create(
-                    id=item_id,
-                    formulario_sectorial=instance,
-                    defaults=data
-                )
-            else:
-                model.objects.create(formulario_sectorial=instance, **data)
+                if delete_flag:
+                    model.objects.filter(id=item_id).delete()
+                else:
+                    obj, created = model.objects.update_or_create(
+                        id=item_id,
+                        formulario_sectorial=instance,
+                        defaults=data
+                    )
+            elif not delete_flag:
+                obj = model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
         organismos_data = validated_data.pop('p_2_1_organismos_intervinientes', None)
@@ -242,7 +243,13 @@ class Paso2Serializer(serializers.ModelSerializer):
         if etapas_data is not None:
             for etapa_data in etapas_data:
                 etapa_id = etapa_data.pop('id', None)
+                delete_flag = etapa_data.pop('DELETE', False)  # Flag de eliminación para etapas
                 procedimientos_data = etapa_data.pop('procedimientos', [])
+
+                if delete_flag:
+                    EtapasEjercicioCompetencia.objects.filter(id=etapa_id).delete()
+                    print(f"Etapa eliminada: ID {etapa_id}")
+                    continue  # Continúa con la siguiente etapa
 
                 etapa_instance, _ = EtapasEjercicioCompetencia.objects.update_or_create(
                     id=etapa_id,
@@ -252,19 +259,24 @@ class Paso2Serializer(serializers.ModelSerializer):
 
                 for proc_data in procedimientos_data:
                     proc_id = proc_data.pop('id', None)
+                    delete_flag_proc = proc_data.pop('DELETE', False)  # Flag de eliminación para procedimientos
                     unidades = proc_data.pop('unidades_intervinientes', [])
+
+                    if delete_flag_proc:
+                        ProcedimientosEtapas.objects.filter(id=proc_id).delete()
+                        print(f"Procedimiento eliminado: ID {proc_id}")
+                        continue  # Continúa con el siguiente procedimiento
 
                     proc_instance, _ = ProcedimientosEtapas.objects.update_or_create(
                         id=proc_id,
                         defaults={
                             **proc_data,
                             'etapa': etapa_instance,
-                            'formulario_sectorial': instance  # Asignar formulario_sectorial a ProcedimientosEtapas
+                            'formulario_sectorial': instance
                         }
                     )
 
-                    # Actualiza las unidades intervinientes si es necesario
-                    if unidades:
+                    if unidades is not None:  # Revisa si 'unidades' es None o una lista vacía
                         proc_instance.unidades_intervinientes.set(unidades)
 
         if plataformas_data is not None:

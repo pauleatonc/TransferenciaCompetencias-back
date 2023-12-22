@@ -72,42 +72,46 @@ class Paso3Serializer(serializers.ModelSerializer):
             'cobertura_anual',
         ]
 
-    def process_nested_field(self, field_name, data):
-        nested_data = data.get(field_name)
-        internal_nested_data = []
-        for item in nested_data:
-            item_id = item.get('id')  # Extraer el ID
-            item_data = self.fields[field_name].child.to_internal_value(item)
-            item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-            internal_nested_data.append(item_data)
-        return internal_nested_data
-
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
-        internal_value = super(Paso3Serializer, self).to_internal_value(data)
+        internal_value = super().to_internal_value(data)
 
-        # Procesar campos anidados utilizando la función auxiliar
-        if 'paso3' in data:
-            internal_value['paso3'] = self.process_nested_field(
-                'paso3', data)
-
-        if 'cobertura_anual' in data:
-            internal_value['cobertura_anual'] = self.process_nested_field(
-                'cobertura_anual', data)
+        # Procesar campos anidados
+        for field_name in [
+            'paso3',
+            'cobertura_anual',
+        ]:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
 
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
+            delete_flag = data.pop('DELETE', False)
+
             if item_id is not None:
-                obj, created = model.objects.update_or_create(
-                    id=item_id,
-                    formulario_sectorial=instance,
-                    defaults=data
-                )
-            else:
-                model.objects.create(formulario_sectorial=instance, **data)
+                if delete_flag:
+                    model.objects.filter(id=item_id).delete()
+                else:
+                    obj, created = model.objects.update_or_create(
+                        id=item_id,
+                        formulario_sectorial=instance,
+                        defaults=data
+                    )
+            elif not delete_flag:
+                obj = model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
         paso3 = validated_data.pop('paso3', None)
