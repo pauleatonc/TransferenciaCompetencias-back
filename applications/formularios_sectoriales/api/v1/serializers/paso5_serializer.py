@@ -167,8 +167,8 @@ class EstamentoSerializer(serializers.ModelSerializer):
 
 
 class PersonalDirectoSerializer(serializers.ModelSerializer):
-    calidad_juridica = CalidadJuridicaSerializer(many=True)
-    estamento = EstamentoSerializer(many=True)
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
     nombre_calidad_juridica = serializers.SerializerMethodField()
     nombre_estamento = serializers.SerializerMethodField()
 
@@ -190,10 +190,16 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
     def  get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
 
+    def to_representation(self, instance):
+        # Representación original del objeto
+        representation = super(PersonalDirectoSerializer, self).to_representation(instance)
+        estamento = instance.estamento.estamento if instance.estamento else None
+        return {estamento: representation}
+
 
 class PersonalIndirectoSerializer(serializers.ModelSerializer):
-    calidad_juridica = CalidadJuridicaSerializer(many=True)
-    estamento = EstamentoSerializer(many=True)
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
     nombre_calidad_juridica = serializers.SerializerMethodField()
     nombre_estamento = serializers.SerializerMethodField()
 
@@ -215,6 +221,12 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
 
     def  get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
+
+    def to_representation(self, instance):
+        # Representación original del objeto
+        representation = super(PersonalIndirectoSerializer, self).to_representation(instance)
+        estamento = instance.estamento.estamento if instance.estamento else None
+        return {estamento: representation}
 
 
 class Paso5EncabezadoSerializer(serializers.ModelSerializer):
@@ -418,3 +430,27 @@ class Paso5Serializer(serializers.ModelSerializer):
             self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
 
         return instance
+
+    def to_representation(self, instance):
+        representation = super(Paso5Serializer, self).to_representation(instance)
+        personal_directo_agrupado = {}
+        personal_indirecto_agrupado = {}
+
+        # Agrupar Personal Directo por Estamento
+        for personal in representation.get('p_5_3_a_personal_directo', []):
+            for estamento, datos in personal.items():
+                if estamento not in personal_directo_agrupado:
+                    personal_directo_agrupado[estamento] = []
+                personal_directo_agrupado[estamento].append(datos)
+
+        # Agrupar Personal Indirecto por Estamento
+        for personal in representation.get('p_5_3_b_personal_indirecto', []):
+            for estamento, datos in personal.items():
+                if estamento not in personal_indirecto_agrupado:
+                    personal_indirecto_agrupado[estamento] = []
+                personal_indirecto_agrupado[estamento].append(datos)
+
+        representation['p_5_3_a_personal_directo'] = personal_directo_agrupado
+        representation['p_5_3_b_personal_indirecto'] = personal_indirecto_agrupado
+
+        return representation
