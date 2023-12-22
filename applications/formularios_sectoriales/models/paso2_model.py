@@ -81,7 +81,7 @@ class ProcedimientosEtapas(BaseModel):
     etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
                                              related_name='procedimientos')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
-    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes)
+    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, blank=True)
 
 
 class PlataformasySoftwares(BaseModel):
