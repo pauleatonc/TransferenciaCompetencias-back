@@ -15,6 +15,7 @@ from .serializers import (
     Paso3Serializer,
     Paso4Serializer,
     Paso5Serializer,
+    ResumenFormularioSerializer
 )
 
 
@@ -124,3 +125,12 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         formulario_sectorial = self.get_object()
 
         return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)
+
+    @action(detail=True, methods=['get'], url_path='resumen')
+    def resumen(self, request, pk=None):
+        """
+        API para obtener el resumen de todos los pasos del Formulario Sectorial
+        """
+        formulario_sectorial = self.get_object()
+        serializer = ResumenFormularioSerializer(formulario_sectorial)
+        return Response(serializer.data)
