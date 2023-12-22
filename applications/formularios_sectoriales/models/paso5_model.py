@@ -29,21 +29,36 @@ class Paso5(PasoBase):
     def campos_obligatorios_completados(self):
         return self.avance()[0] == self.avance()[1]
 
-    def avance(self):
-        # Lista de todos los campos obligatorios
-        campos_obligatorios = [
-            'forma_juridica_organismo', 'mision_institucional',
-            'identificacion_competencia', 'organigrama_nacional', 'fuentes_normativas',
-            'territorio_competencia', 'enfoque_territorial_competencia',
-            'ambito', 'posibilidad_ejercicio_por_gobierno_regional',
-            'organo_actual_competencia'
+    def es_instancia_costos_completa(self, instancia):
+        campos_requeridos = [
+            'formulario_sectorial', 'item_subtitulo', 'total_anual', 'descripcion'
         ]
-        total_campos = len(campos_obligatorios)
+        return all(getattr(instancia, campo, None) for campo in campos_requeridos)
 
-        # Verifica si los campos obligatorios están llenos
-        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
+    def avance(self):
+        # Lista de todos los campos obligatorios del modelo Paso5
+        campos_obligatorios_paso5 = [
+            'glosas_especificas', 'descripcion_funciones_personal_directo', 'descripcion_funciones_personal_indirecto',
+        ]
+        total_campos_paso5 = len(campos_obligatorios_paso5)
+        completados_paso5 = sum([1 for campo in campos_obligatorios_paso5 if getattr(self, campo, None)])
 
-        # Verifica si hay archivos válidos en el set
+        # Verifica instancias de CostosDirectos y CostosIndirectos
+        total_costos_directos = CostosDirectos.objects.filter(
+            formulario_sectorial_id=self.formulario_sectorial_id).count()
+        completados_costos_directos = sum(
+            [1 for costo in CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id) if
+             self.es_instancia_costos_completa(costo)])
+
+        total_costos_indirectos = CostosIndirectos.objects.filter(
+            formulario_sectorial_id=self.formulario_sectorial_id).count()
+        completados_costos_indirectos = sum(
+            [1 for costo in CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id) if
+             self.es_instancia_costos_completa(costo)])
+
+        # Total de campos y completados
+        total_campos = total_campos_paso5 + total_costos_directos + total_costos_indirectos
+        completados = completados_paso5 + completados_costos_directos + completados_costos_indirectos
 
         return f"{completados}/{total_campos}"
 
