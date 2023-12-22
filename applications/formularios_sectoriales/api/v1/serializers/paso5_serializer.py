@@ -413,9 +413,6 @@ class Paso5Serializer(serializers.ModelSerializer):
                         id=costo_id,
                         defaults=costo_data
                     )
-        # Actualizar o crear EvolucionGastoAsociado
-        if evolucion_gasto_data is not None:
-            self.update_or_create_nested_instances(EvolucionGastoAsociado, evolucion_gasto_data, instance)
 
         # Actualizar o crear VariacionPromedio
         if variacion_promedio_data is not None:

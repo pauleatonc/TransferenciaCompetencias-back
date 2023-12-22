@@ -303,6 +303,10 @@ class VariacionPromedio(BaseModel):
         else:
             cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
 
+    def calcular_variacion(self):
+        self.variacion = (self.gasto_n_5 or 0) - (self.gasto_n_1 or 0)
+        self.save()
+
 
 class Estamento(models.Model):
     estamento = models.CharField(max_length=100)
