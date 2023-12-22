@@ -10,7 +10,7 @@ def populate_models_from_excel(apps, schema_editor):
     Subtitulos = apps.get_model('formularios_sectoriales', 'Subtitulos')
     ItemSubtitulo = apps.get_model('formularios_sectoriales', 'ItemSubtitulo')
 
-    file_path = Path(__file__).resolve().parent.parent / 'Clasificador Presupuestario.xlsx'
+    file_path = Path(__file__).resolve().parent.parent / 'Clasificador_Presupuestario.xlsx'
     df = pd.read_excel(file_path, header=None)
 
     for column in df.columns:
