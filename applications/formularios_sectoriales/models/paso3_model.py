@@ -22,10 +22,6 @@ class Paso3(PasoBase):
     def numero_paso(self):
         return 3
 
-    @property
-    def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
-
     def avance(self):
         # Lista de todos los campos obligatorios
         campos_obligatorios = [
@@ -56,6 +52,13 @@ class Paso3(PasoBase):
     """Campos descripción Cobertura de la Competencia"""
     universo_cobertura = models.TextField(max_length=800, blank=True)
     descripcion_cobertura = models.TextField(max_length=800, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.campos_obligatorios_completados:
+            self.completado = True
+        else:
+            self.completado = False
+        super(Paso3, self).save(*args, **kwargs)
 
 
 class CoberturaAnual(BaseModel):

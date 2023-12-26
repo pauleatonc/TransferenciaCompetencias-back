@@ -66,6 +66,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
     denominacion_organismo = serializers.SerializerMethodField()
 
     class Meta:
@@ -76,6 +77,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
             'denominacion_organismo',
             'forma_juridica_organismo',
             'descripcion_archivo_marco_juridico',
@@ -87,7 +89,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
             'fuentes_normativas',
             'territorio_competencia',
             'enfoque_territorial_competencia',
-            'ambito',
+            'ambito_paso1',
             'posibilidad_ejercicio_por_gobierno_regional',
             'organo_actual_competencia'
         ]

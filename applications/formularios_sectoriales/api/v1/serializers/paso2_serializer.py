@@ -130,6 +130,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
 
     class Meta:
         model = Paso2
@@ -139,6 +140,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
         ]
 
     def avance(self, obj):
@@ -146,7 +148,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-    encabezado = Paso2EncabezadoSerializer(many=True, read_only=False)
+    paso2 = Paso2EncabezadoSerializer(many=True, read_only=False)
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
@@ -158,7 +160,7 @@ class Paso2Serializer(serializers.ModelSerializer):
     class Meta:
         model = FormularioSectorial
         fields = [
-            'encabezado',
+            'paso2',
             'p_2_1_organismos_intervinientes',
             'p_2_2_unidades_intervinientes',
             'p_2_3_etapas_ejercicio_competencia',

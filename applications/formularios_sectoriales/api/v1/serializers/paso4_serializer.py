@@ -39,6 +39,7 @@ class Paso4EncabezadoSerializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
 
     class Meta:
         model = Paso4
@@ -48,6 +49,7 @@ class Paso4EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
         ]
 
     def avance(self, obj):

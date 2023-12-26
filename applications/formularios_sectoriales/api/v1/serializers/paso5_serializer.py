@@ -235,6 +235,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
 
     class Meta:
         model = Paso5
@@ -244,6 +245,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
             'total_costos_directos',
             'total_costos_indirectos',
             'costos_totales',

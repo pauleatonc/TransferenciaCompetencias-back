@@ -21,10 +21,6 @@ class Paso4(PasoBase):
     def numero_paso(self):
         return 4
 
-    @property
-    def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
-
     def avance(self):
         # Campos obligatorios en IndicadorDesempeno
         campos_obligatorios_indicador = [
@@ -45,6 +41,13 @@ class Paso4(PasoBase):
         return "1/1" if todos_indicadores_completos else "0/1"
 
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
+
+    def save(self, *args, **kwargs):
+        if self.campos_obligatorios_completados:
+            self.completado = True
+        else:
+            self.completado = False
+        super(Paso4, self).save(*args, **kwargs)
 
 
 class IndicadorDesempeno(BaseModel):
