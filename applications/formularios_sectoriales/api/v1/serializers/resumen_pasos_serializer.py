@@ -61,6 +61,8 @@ class Paso5ResumenSerializer(PasoBaseSerializer):
 
 
 class ResumenFormularioSerializer(serializers.ModelSerializer):
+    competencia_nombre = serializers.SerializerMethodField()
+    sector_nombre = serializers.SerializerMethodField()
     paso1 = Paso1ResumenSerializer(many=True,  read_only=True)
     paso2 = Paso2ResumenSerializer(many=True,  read_only=True)
     paso3 = Paso3ResumenSerializer(many=True,  read_only=True)
@@ -69,4 +71,22 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FormularioSectorial
-        fields = ['paso1', 'paso2', 'paso3', 'paso4', 'paso5']
+        fields = [
+            'id',
+            'competencia_nombre',
+            'sector_nombre',
+            'formulario_enviado',
+            'fecha_envio',
+            'intento_envio',
+            'paso1',
+            'paso2',
+            'paso3',
+            'paso4',
+            'paso5'
+        ]
+
+    def get_competencia_nombre(self, obj):
+        return obj.competencia.nombre if obj.competencia else None
+
+    def get_sector_nombre(self, obj):
+        return obj.sector.nombre if obj.sector else None
