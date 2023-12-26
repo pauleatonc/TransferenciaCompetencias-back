@@ -51,7 +51,10 @@ class CompetenciaListSerializer(serializers.ModelSerializer):
         fields = ['id', 'nombre', 'ambito', 'estado', 'origen']
 
     def get_ambito(self, obj):
-        return obj.get_ambito_display()
+        return obj.ambito_competencia.nombre if obj.ambito_competencia else None
+
+    def get_competencia_nombre(self, obj):
+        return obj.competencia.nombre if obj.competencia else None
 
     def get_estado(self, obj):
         return obj.get_estado_display()
