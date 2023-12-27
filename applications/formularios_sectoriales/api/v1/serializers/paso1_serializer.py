@@ -66,6 +66,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
     denominacion_organismo = serializers.SerializerMethodField()
 
     class Meta:
@@ -76,6 +77,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
             'denominacion_organismo',
             'forma_juridica_organismo',
             'descripcion_archivo_marco_juridico',
@@ -87,7 +89,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
             'fuentes_normativas',
             'territorio_competencia',
             'enfoque_territorial_competencia',
-            'ambito',
+            'ambito_paso1',
             'posibilidad_ejercicio_por_gobierno_regional',
             'organo_actual_competencia'
         ]
@@ -117,33 +119,28 @@ class Paso1Serializer(WritableNestedModelSerializer):
         ]
 
 
-def process_nested_field(self, field_name, data):
-    nested_data = data.get(field_name)
-    internal_nested_data = []
-    for item in nested_data:
-        item_id = item.get('id')  # Extraer el ID
-        item_data = self.fields[field_name].child.to_internal_value(item)
-        item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-        internal_nested_data.append(item_data)
-    return internal_nested_data
-
-
 def to_internal_value(self, data):
     # Maneja primero los campos no anidados
-    internal_value = super(Paso1Serializer, self).to_internal_value(data)
+    internal_value = super().to_internal_value(data)
 
-    # Procesar campos anidados utilizando la función auxiliar
-    if 'paso1' in data:
-        internal_value['paso1'] = self.process_nested_field(
-            'paso1', data)
-
-    if 'marcojuridico' in data:
-        internal_value['marcojuridico'] = self.process_nested_field(
-            'marcojuridico', data)
-
-    if 'organigramaregional' in data:
-        internal_value['organigramaregional'] = self.process_nested_field(
-            'organigramaregional', data)
+    # Procesar campos anidados
+    for field_name in [
+        'paso1',
+        'marcojuridico',
+        'organigramaregional',
+    ]:
+        if field_name in data:
+            nested_data = data[field_name]
+            internal_nested_data = []
+            for item in nested_data:
+                # Manejar la clave 'DELETE' si está presente
+                if 'DELETE' in item and item['DELETE'] == True:
+                    internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                else:
+                    item_data = self.fields[field_name].child.to_internal_value(item)
+                    item_data['id'] = item.get('id')
+                    internal_nested_data.append(item_data)
+            internal_value[field_name] = internal_nested_data
 
     return internal_value
 
@@ -151,14 +148,19 @@ def to_internal_value(self, data):
 def update_or_create_nested_instances(self, model, nested_data, instance):
     for data in nested_data:
         item_id = data.pop('id', None)
+        delete_flag = data.pop('DELETE', False)
+
         if item_id is not None:
-            obj, created = model.objects.update_or_create(
-                id=item_id,
-                formulario_sectorial=instance,
-                defaults=data
-            )
-        else:
-            model.objects.create(formulario_sectorial=instance, **data)
+            if delete_flag:
+                model.objects.filter(id=item_id).delete()
+            else:
+                obj, created = model.objects.update_or_create(
+                    id=item_id,
+                    formulario_sectorial=instance,
+                    defaults=data
+                )
+        elif not delete_flag:
+            obj = model.objects.create(formulario_sectorial=instance, **data)
 
 
 def update(self, instance, validated_data):

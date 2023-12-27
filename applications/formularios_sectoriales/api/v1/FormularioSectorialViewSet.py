@@ -1,29 +1,22 @@
-from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
-from rest_framework.decorators import action
 from rest_framework import viewsets, status
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from applications.formularios_sectoriales.models import (
-    FormularioSectorial,
-    Paso1,
-    OrganigramaRegional,
-    Paso2
+    FormularioSectorial
 )
-from applications.etapas.models import Etapa1
+from applications.users.permissions import IsSUBDEREOrSuperuser
 from .serializers import (
     FormularioSectorialDetailSerializer,
     Paso1Serializer,
-    MarcoJuridicoSerializer,
-    OrganigramaRegionalSerializer,
     Paso2Serializer,
     Paso3Serializer,
     Paso4Serializer,
     Paso5Serializer,
+    ResumenFormularioSerializer
 )
-from applications.users.permissions import IsSUBDEREOrSuperuser
 
 
 def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
@@ -132,3 +125,12 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         formulario_sectorial = self.get_object()
 
         return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)
+
+    @action(detail=True, methods=['get'], url_path='resumen')
+    def resumen(self, request, pk=None):
+        """
+        API para obtener el resumen de todos los pasos del Formulario Sectorial
+        """
+        formulario_sectorial = self.get_object()
+        serializer = ResumenFormularioSerializer(formulario_sectorial)
+        return Response(serializer.data)

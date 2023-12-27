@@ -21,26 +21,24 @@ class Paso1(PasoBase):
     def numero_paso(self):
         return 1
 
-    @property
-    def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
-
     def avance(self):
         # Lista de todos los campos obligatorios
         campos_obligatorios = [
             'forma_juridica_organismo', 'mision_institucional',
             'identificacion_competencia', 'organigrama_nacional', 'fuentes_normativas',
             'territorio_competencia', 'enfoque_territorial_competencia',
-            'ambito', 'posibilidad_ejercicio_por_gobierno_regional',
+            'ambito_paso1', 'posibilidad_ejercicio_por_gobierno_regional',
             'organo_actual_competencia'
         ]
-        total_campos = len(campos_obligatorios)
+        total_campos = len(campos_obligatorios) + 1  # Incrementar en uno por el archivo en MarcoJuridico
 
         # Verifica si los campos obligatorios están llenos
         completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
 
-        # Verifica si hay archivos válidos en el set de MarcoJuridico
-
+        # Verificar si hay al menos un archivo en MarcoJuridico
+        marco_juridico_count = self.formulario_sectorial.marcojuridico.count()
+        if marco_juridico_count > 0:
+            completados += 1
 
         return f"{completados}/{total_campos}"
 
@@ -71,6 +69,13 @@ class Paso1(PasoBase):
     ambito_paso1 = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='paso1', null=True, blank=True)
     posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=500, blank=True)
     organo_actual_competencia = models.TextField(max_length=500, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.campos_obligatorios_completados:
+            self.completado = True
+        else:
+            self.completado = False
+        super(Paso1, self).save(*args, **kwargs)
 
 
 class MarcoJuridico(BaseModel):

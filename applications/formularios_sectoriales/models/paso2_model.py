@@ -20,29 +20,47 @@ class Paso2(PasoBase):
     def numero_paso(self):
         return 2
 
-    @property
-    def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
-
     def avance(self):
-        # Lista de todos los campos obligatorios
-        campos_obligatorios = [
-            'forma_juridica_organismo', 'mision_institucional',
-            'identificacion_competencia', 'organigrama_nacional', 'fuentes_normativas',
-            'territorio_competencia', 'enfoque_territorial_competencia',
-            'ambito', 'posibilidad_ejercicio_por_gobierno_regional',
-            'organo_actual_competencia'
-        ]
-        total_campos = len(campos_obligatorios)
+        completados = 0
+        total_campos = 3
 
-        # Verifica si los campos obligatorios están llenos
-        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
+        # Verificar UnidadesIntervinientes
+        unidades_intervinientes_completas = all(
+            unidad.nombre_unidad and unidad.descripcion_unidad
+            for unidad in self.formulario_sectorial.p_2_2_unidades_intervinientes.all()
+        )
+        if unidades_intervinientes_completas:
+            completados += 1
 
-        # Verifica si hay archivos válidos en el set
+        # Verificar PlataformasySoftwares
+        plataformas_completas = any(
+            plataforma.nombre_plataforma and plataforma.descripcion_tecnica and
+            plataforma.costo_adquisicion is not None and plataforma.costo_mantencion_anual is not None and
+            plataforma.descripcion_costos and plataforma.descripcion_tecnica and
+            plataforma.funcion_plataforma for plataforma in
+            self.formulario_sectorial.p_2_4_plataformas_y_softwares.all()
+        )
+        if plataformas_completas:
+            completados += 1
+
+        # Verificar FlujogramaCompetencia
+        flujograma_completo = any(
+            flujograma.flujograma_competencia and flujograma.descripcion_cualitativa
+            for flujograma in self.formulario_sectorial.p_2_5_flujograma_competencia.all()
+        )
+        if flujograma_completo:
+            completados += 1
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='encabezado')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+
+    def save(self, *args, **kwargs):
+        if self.campos_obligatorios_completados:
+            self.completado = True
+        else:
+            self.completado = False
+        super(Paso2, self).save(*args, **kwargs)
 
 
 class OrganismosIntervinientes(BaseModel):
@@ -81,7 +99,7 @@ class ProcedimientosEtapas(BaseModel):
     etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
                                              related_name='procedimientos')
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
-    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes)
+    unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, blank=True)
 
 
 class PlataformasySoftwares(BaseModel):

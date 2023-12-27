@@ -11,7 +11,12 @@ from applications.formularios_sectoriales.models import (
     ResumenCostosPorSubtitulo,
     CostoAnio,
     EvolucionGastoAsociado,
-    VariacionPromedio
+    VariacionPromedio,
+    Estamento,
+    CalidadJuridica,
+    PersonalDirecto,
+    PersonalIndirecto,
+    EtapasEjercicioCompetencia
 )
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -104,6 +109,7 @@ class CostoAnioSerializer(serializers.ModelSerializer):
 
 
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
+    costo_anio = CostoAnioSerializer(many=True)
     class Meta:
         model = EvolucionGastoAsociado
         fields = [
@@ -143,11 +149,93 @@ class VariacionPromedioSerializer(serializers.ModelSerializer):
         ]
 
 
+class CalidadJuridicaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CalidadJuridica
+        fields = [
+            'id',
+            'calidad_juridica',
+        ]
+
+
+class EstamentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Estamento
+        fields = [
+            'id',
+            'estamento',
+        ]
+
+
+class PersonalDirectoSerializer(serializers.ModelSerializer):
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
+    nombre_calidad_juridica = serializers.SerializerMethodField()
+    nombre_estamento = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonalDirecto
+        fields = [
+            'id',
+            'estamento',
+            'nombre_estamento',
+            'calidad_juridica',
+            'nombre_calidad_juridica',
+            'renta_bruta',
+            'grado',
+        ]
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
+
+    def  get_nombre_estamento(self, obj):
+        return obj.estamento.estamento if obj.estamento else None
+
+    def to_representation(self, instance):
+        # Representación original del objeto
+        representation = super(PersonalDirectoSerializer, self).to_representation(instance)
+        estamento = instance.estamento.estamento if instance.estamento else None
+        return {estamento: representation}
+
+
+class PersonalIndirectoSerializer(serializers.ModelSerializer):
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
+    nombre_calidad_juridica = serializers.SerializerMethodField()
+    nombre_estamento = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonalIndirecto
+        fields = [
+            'id',
+            'estamento',
+            'nombre_estamento',
+            'calidad_juridica',
+            'nombre_calidad_juridica',
+            'numero_personas',
+            'renta_bruta',
+            'grado',
+        ]
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
+
+    def  get_nombre_estamento(self, obj):
+        return obj.estamento.estamento if obj.estamento else None
+
+    def to_representation(self, instance):
+        # Representación original del objeto
+        representation = super(PersonalIndirectoSerializer, self).to_representation(instance)
+        estamento = instance.estamento.estamento if instance.estamento else None
+        return {estamento: representation}
+
+
 class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
+    estado_stepper = serializers.ReadOnlyField()
 
     class Meta:
         model = Paso5
@@ -157,10 +245,13 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'numero_paso',
             'avance',
             'campos_obligatorios_completados',
+            'estado_stepper',
             'total_costos_directos',
             'total_costos_indirectos',
             'costos_totales',
             'glosas_especificas',
+            'descripcion_funciones_personal_directo',
+            'descripcion_funciones_personal_indirecto',
         ]
 
     def avance(self, obj):
@@ -171,11 +262,16 @@ class Paso5Serializer(serializers.ModelSerializer):
     paso5 = Paso5EncabezadoSerializer(many=True, read_only=False)
     listado_subtitulos = serializers.SerializerMethodField()
     listado_item_subtitulos = serializers.SerializerMethodField()
+    listado_estamentos = serializers.SerializerMethodField()
+    listado_calidades_juridicas = serializers.SerializerMethodField()
+    listado_etapas = serializers.SerializerMethodField()
     p_5_1_a_costos_directos = CostosDirectosSerializer(many=True, read_only=False)
     p_5_1_b_costos_indirectos = CostosIndirectosSerializer(many=True, read_only=False)
     p_5_1_c_resumen_costos_por_subtitulo = ResumenCostosPorSubtituloSerializer(many=True, read_only=False)
     p_5_2_evolucion_gasto_asociado = EvolucionGastoAsociadoSerializer(many=True, read_only=False)
     p_5_2_variacion_promedio = VariacionPromedioSerializer(many=True, read_only=False)
+    p_5_3_a_personal_directo = PersonalDirectoSerializer(many=True, read_only=False)
+    p_5_3_b_personal_indirecto = PersonalIndirectoSerializer(many=True, read_only=False)
 
     class Meta:
         model = FormularioSectorial
@@ -186,14 +282,29 @@ class Paso5Serializer(serializers.ModelSerializer):
             'p_5_1_c_resumen_costos_por_subtitulo',
             'p_5_2_evolucion_gasto_asociado',
             'p_5_2_variacion_promedio',
+            'p_5_3_a_personal_directo',
+            'p_5_3_b_personal_indirecto',
             'listado_subtitulos',
             'listado_item_subtitulos',
+            'listado_estamentos',
+            'listado_calidades_juridicas',
+            'listado_etapas'
         ]
 
     def get_listado_subtitulos(self, obj):
         # Obtener todos los registros de Subtitulos y serializarlos
         subtitulos = Subtitulos.objects.all()
         return SubtitulosSerializer(subtitulos, many=True).data
+
+    def get_listado_estamentos(self, obj):
+        # Obtener todos los registros de Estamento y serializarlos
+        estamentos = Estamento.objects.all()
+        return EstamentoSerializer(estamentos, many=True).data
+
+    def get_listado_calidades_juridicas(self, obj):
+        # Obtener todos los registros de CalidadJuridica y serializarlos
+        calidades_juridicas = CalidadJuridica.objects.all()
+        return CalidadJuridicaSerializer(calidades_juridicas, many=True).data
 
     def get_listado_item_subtitulos(self, obj):
         # Agrupar ItemSubtitulo por Subtitulos
@@ -206,22 +317,24 @@ class Paso5Serializer(serializers.ModelSerializer):
 
         return items_agrupados
 
-    def process_nested_field(self, field_name, data):
-        nested_data = data.get(field_name)
-        internal_nested_data = []
-        for item in nested_data:
-            item_id = item.get('id')  # Extraer el ID
-            item_data = self.fields[field_name].child.to_internal_value(item)
-            item_data['id'] = item_id  # Asegurarse de que el ID se incluya
-            internal_nested_data.append(item_data)
-        return internal_nested_data
+    def get_listado_etapas(self, obj):
+        etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
+        return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
         # Procesar campos anidados
-        for field_name in ['p_5_1_a_costos_directos', 'p_5_1_b_costos_indirectos', 'p_5_1_c_resumen_costos_por_subtitulo', 'p_5_2_evolucion_gasto_asociado', 'p_5_2_variacion_promedio']:
+        for field_name in [
+            'p_5_1_a_costos_directos',
+            'p_5_1_b_costos_indirectos',
+            'p_5_1_c_resumen_costos_por_subtitulo',
+            'p_5_2_evolucion_gasto_asociado',
+            'p_5_2_variacion_promedio',
+            'p_5_3_a_personal_directo',
+            'p_5_3_b_personal_indirecto',
+        ]:
             if field_name in data:
                 nested_data = data[field_name]
                 internal_nested_data = []
@@ -260,6 +373,8 @@ class Paso5Serializer(serializers.ModelSerializer):
         resumen_costos_data = validated_data.pop('p_5_1_c_resumen_costos_por_subtitulo', None)
         evolucion_gasto_data = validated_data.pop('p_5_2_evolucion_gasto_asociado', None)
         variacion_promedio_data = validated_data.pop('p_5_2_variacion_promedio', None)
+        personal_directo_data = validated_data.pop('p_5_3_a_personal_directo', None)
+        personal_indirecto_data = validated_data.pop('p_5_3_b_personal_indirecto', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -297,12 +412,41 @@ class Paso5Serializer(serializers.ModelSerializer):
                         id=costo_id,
                         defaults=costo_data
                     )
-        # Actualizar o crear EvolucionGastoAsociado
-        if evolucion_gasto_data is not None:
-            self.update_or_create_nested_instances(EvolucionGastoAsociado, evolucion_gasto_data, instance)
 
         # Actualizar o crear VariacionPromedio
         if variacion_promedio_data is not None:
             self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance)
 
+        # Actualizar o crear PersonalDirecto
+        if personal_directo_data is not None:
+            self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance)
+
+        # Actualizar o crear PersonalIndirecto
+        if personal_indirecto_data is not None:
+            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
+
         return instance
+
+    def to_representation(self, instance):
+        representation = super(Paso5Serializer, self).to_representation(instance)
+        personal_directo_agrupado = {}
+        personal_indirecto_agrupado = {}
+
+        # Agrupar Personal Directo por Estamento
+        for personal in representation.get('p_5_3_a_personal_directo', []):
+            for estamento, datos in personal.items():
+                if estamento not in personal_directo_agrupado:
+                    personal_directo_agrupado[estamento] = []
+                personal_directo_agrupado[estamento].append(datos)
+
+        # Agrupar Personal Indirecto por Estamento
+        for personal in representation.get('p_5_3_b_personal_indirecto', []):
+            for estamento, datos in personal.items():
+                if estamento not in personal_indirecto_agrupado:
+                    personal_indirecto_agrupado[estamento] = []
+                personal_indirecto_agrupado[estamento].append(datos)
+
+        representation['p_5_3_a_personal_directo'] = personal_directo_agrupado
+        representation['p_5_3_b_personal_indirecto'] = personal_indirecto_agrupado
+
+        return representation
