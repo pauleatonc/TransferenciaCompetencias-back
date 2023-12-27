@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from applications.competencias.models import Competencia
+from applications.competencias.models import Competencia, Ambito
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
@@ -148,3 +148,8 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'tiempo_transcurrido': obj.tiempo_transcurrido()
         }
 
+
+class AmbitoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ambito
+        fields = ('id', 'nombre')

@@ -8,9 +8,28 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1
-from .serializers import (CompetenciaListSerializer, CompetenciaCreateSerializer,
-                          CompetenciaUpdateSerializer, CompetenciaDetailSerializer, CompetenciaHomeListSerializer)
+from .serializers import (
+    CompetenciaListSerializer,
+    CompetenciaCreateSerializer,
+    CompetenciaUpdateSerializer,
+    CompetenciaDetailSerializer,
+    CompetenciaHomeListSerializer
+)
+
 from applications.users.permissions import IsSUBDEREOrSuperuser
+
+
+def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
+    if request.method == 'PATCH':
+        print("Datos recibidos para PATCH:", request.data)
+        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:  # GET
+        serializer = serializer_class(formulario_sectorial)
+        return Response(serializer.data)
 
 
 class CustomPageNumberPagination(PageNumberPagination):

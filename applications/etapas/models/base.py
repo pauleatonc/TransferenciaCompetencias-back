@@ -22,6 +22,7 @@ class EtapaBase(BaseModel):
     plazo_dias = models.IntegerField(null=True, blank=True)
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
+    omitida = models.BooleanField(default=False)
     tiempo_transcurrido_registrado = models.IntegerField(default=0)
     ultima_finalizacion = models.DateTimeField(null=True, blank=True)
 
@@ -35,6 +36,8 @@ class EtapaBase(BaseModel):
     def actualizar_estado(self):
         if not self.fecha_inicio:
             return 'no_iniciada'
+        elif self.omitida:
+            return 'omitida'
         elif self.aprobada:
             return 'finalizada'
         elif self.enviada:

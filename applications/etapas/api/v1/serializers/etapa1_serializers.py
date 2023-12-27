@@ -17,7 +17,17 @@ class Etapa1Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = Etapa1
-        fields = ['nombre_etapa', 'estado', 'competencia_creada', 'usuarios_vinculados', 'fecha_inicio', 'tiempo_transcurrido_registrado', 'ultimo_editor', 'fecha_ultima_modificacion']
+        fields = [
+            'id',
+            'nombre_etapa',
+            'estado',
+            'competencia_creada',
+            'usuarios_vinculados',
+            'fecha_inicio',
+            'tiempo_transcurrido_registrado',
+            'ultimo_editor',
+            'fecha_ultima_modificacion'
+        ]
 
     def get_competencia_creada(self, obj):
         return [{

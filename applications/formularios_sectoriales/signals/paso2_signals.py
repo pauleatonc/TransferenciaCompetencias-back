@@ -1,6 +1,6 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from ..models import *
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso2, OrganismosIntervinientes, PlataformasySoftwares, FlujogramaCompetencia, UnidadesIntervinientes
 
 @receiver(post_save, sender=FormularioSectorial)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):

@@ -39,8 +39,6 @@ def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
     if instance.estado == 'finalizada':
         # Si Etapa1 se ha finalizado, actualiza Etapa2
         etapa2.usuarios_notificados = True
-        if not etapa2.fecha_inicio:
-            etapa2.fecha_inicio = timezone.now()
         etapa2.plazo_dias = instance.competencia.plazo_formulario_sectorial
     else:
         # Si Etapa1 no está finalizada, asegúrate de que usuarios_notificados en Etapa2 sea False
@@ -82,15 +80,9 @@ def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
     if todas_enviadas:
         # Obtener Etapa2 y Etapa3 relacionadas con la competencia
         etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
-        etapa3 = Etapa3.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
 
         # Actualizar Etapa2
         if etapa2:
             etapa2.enviada = False
             etapa2.aprobada = True
             etapa2.save()
-
-        # Configurar y guardar Etapa3
-        if etapa3:
-            etapa3.fecha_inicio = timezone.now()
-            etapa3.save()

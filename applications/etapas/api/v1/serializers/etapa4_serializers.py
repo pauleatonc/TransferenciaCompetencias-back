@@ -20,6 +20,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
     class Meta:
         model = Etapa4
         fields = [
+            'id',
             'nombre_etapa',
             'estado',
             'fecha_inicio',

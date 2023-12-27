@@ -13,7 +13,6 @@ class Etapa3(EtapaBase):
 
     """ Campos subetapa 3"""
     usuario_notificado = models.BooleanField(default=False)
-    omitir_etapa = models.BooleanField(default=False)
 
     """ Campos DIPRES etapa 3"""
     comentario_minuta_etapa3 = models.TextField(max_length=500, blank=True)

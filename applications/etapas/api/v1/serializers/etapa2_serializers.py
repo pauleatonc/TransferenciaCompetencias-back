@@ -21,6 +21,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
     class Meta:
         model = Etapa2
         fields = [
+            'id',
             'nombre_etapa',
             'estado',
             'fecha_inicio',
