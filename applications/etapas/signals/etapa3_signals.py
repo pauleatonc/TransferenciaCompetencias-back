@@ -10,8 +10,6 @@ from applications.formularios_gores.models import FormularioGORE
 from applications.regioncomuna.models import Region
 
 
-
-
 @receiver(m2m_changed, sender=Competencia.usuarios_dipres.through)
 def actualizar_etapa3_al_modificar_usuarios_dipres(sender, instance, action, pk_set, **kwargs):
     if action in ['post_add', 'post_remove', 'post_clear']:

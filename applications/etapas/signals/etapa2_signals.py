@@ -80,7 +80,6 @@ def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
     if todas_enviadas:
         # Obtener Etapa2 y Etapa3 relacionadas con la competencia
         etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
-        etapa3 = Etapa3.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
 
         # Actualizar Etapa2
         if etapa2:
