@@ -148,7 +148,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-    paso2 = Paso2EncabezadoSerializer(many=True, read_only=False)
+    paso2 = Paso2EncabezadoSerializer()
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)

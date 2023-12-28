@@ -1,6 +1,5 @@
 from django.contrib import admin
 from .models import *
-from ..etapas.models import ObservacionSectorial
 
 
 class Paso1Inline(admin.TabularInline):
@@ -15,11 +14,6 @@ class MarcoJuridicoInLine(admin.TabularInline):
 
 class OrganigramaRegionalInLine(admin.TabularInline):
     model = OrganigramaRegional
-    extra = 0
-
-
-class ObservacionSectorialInLine(admin.TabularInline):
-    model = ObservacionSectorial
     extra = 0
 
 
@@ -40,6 +34,11 @@ class Paso4Inline(admin.TabularInline):
 
 class Paso5Inline(admin.TabularInline):
     model = Paso5
+    extra = 0
+
+
+class ObservacionesSubdereInline(admin.TabularInline):
+    model = ObservacionesSubdereFormularioSectorial
     extra = 0
 
 
@@ -90,7 +89,6 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         MarcoJuridicoInLine,
         OrganigramaRegionalInLine,
         Paso2Inline,
-        ObservacionSectorialInLine,
         CoberturaAnualInLine,
         OrganismosIntervinientesInLine,
         UnidadesIntervinientesInLine,
@@ -101,6 +99,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         Paso4Inline,
         Paso5Inline,
         CostosDirectosInLine,
+        ObservacionesSubdereInline
     ]
 
     def get_competencia_nombre(self, obj):

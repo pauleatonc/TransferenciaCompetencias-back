@@ -64,7 +64,7 @@ class Paso3EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso3Serializer(serializers.ModelSerializer):
 
-    paso3 = Paso3EncabezadoSerializer(many=True)
+    paso3 = Paso3EncabezadoSerializer()
     cobertura_anual = CoberturaAnualSerializer(many=True)
 
     class Meta:

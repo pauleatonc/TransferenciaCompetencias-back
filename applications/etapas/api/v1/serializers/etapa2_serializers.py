@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
-from applications.etapas.models import Etapa2, ObservacionSectorial
-from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.etapas.models import Etapa2
+from applications.formularios_sectoriales.models import FormularioSectorial, ObservacionesSubdereFormularioSectorial
 
 User = get_user_model()
 
@@ -143,7 +143,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
         user = self.context['request'].user
         es_subdere = user.groups.filter(name='SUBDERE').exists()
         formularios_sectoriales = FormularioSectorial.objects.filter(competencia=obj.competencia)
-        observaciones = ObservacionSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+        observaciones = ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
 
         detalle = []
         for formulario in formularios_sectoriales:
@@ -153,7 +153,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Observación' if observacion.observacion_enviada else 'Subir Observación' if es_subdere else 'Observación pendiente'
                 detalle.append({
-                    "id": observacion.id,
+                    "id": formulario.id,
                     "nombre": f"Observación del formulario sectorial ({formulario.sector.nombre})",
                     "estado": estado,
                     "accion": accion

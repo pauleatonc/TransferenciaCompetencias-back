@@ -40,7 +40,7 @@ class Paso4(PasoBase):
         # Devuelve '1/1' si todos los indicadores están completos, de lo contrario '0/1'
         return "1/1" if todos_indicadores_completos else "0/1"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:

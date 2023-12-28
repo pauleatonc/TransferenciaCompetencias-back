@@ -104,7 +104,7 @@ class Paso5(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
 
     """5.1 Costos asociados al ejercicio de la competencia"""
     total_costos_directos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

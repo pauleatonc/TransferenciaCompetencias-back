@@ -53,7 +53,7 @@ class Paso2(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:

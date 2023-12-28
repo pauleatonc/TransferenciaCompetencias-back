@@ -22,6 +22,8 @@ def actualizar_etapa1_al_modificar_usuarios_sectoriales(sender, instance, action
                 etapa1.usuarios_vinculados = True
                 etapa1.aprobada = True
                 etapa1.competencia_creada = True
+                if not etapa1.fecha_inicio:
+                    etapa1.fecha_inicio = timezone.now()
                 etapa1.save()
 
                 if instance.estado != 'EP':
