@@ -42,7 +42,7 @@ class Paso1(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)

@@ -148,7 +148,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-    paso2 = Paso2EncabezadoSerializer(many=True, read_only=False)
+    paso2 = Paso2EncabezadoSerializer()
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
@@ -156,6 +156,7 @@ class Paso2Serializer(serializers.ModelSerializer):
     p_2_5_flujograma_competencia = FlujogramaCompetenciaSerializer(many=True, read_only=False)
     listado_unidades = serializers.SerializerMethodField()
     listado_etapas = serializers.SerializerMethodField()
+    listado_organismos = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
@@ -168,6 +169,7 @@ class Paso2Serializer(serializers.ModelSerializer):
             'p_2_5_flujograma_competencia',
             'listado_unidades',
             'listado_etapas',
+            'listado_organismos',
         ]
 
     def get_listado_unidades(self, obj):
@@ -177,6 +179,10 @@ class Paso2Serializer(serializers.ModelSerializer):
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
+
+    def get_listado_organismos(self, obj):
+        # Retornar clave y valor para choices ORGANISMO
+        return {clave: valor for clave, valor in OrganismosIntervinientes.ORGANISMO}
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados

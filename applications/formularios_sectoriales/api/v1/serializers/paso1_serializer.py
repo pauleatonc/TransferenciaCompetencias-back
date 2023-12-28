@@ -18,7 +18,7 @@ class MarcoJuridicoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MarcoJuridico
-        fields = ['pk', 'documento', 'documento_url']
+        fields = ['id', 'documento', 'documento_url']
 
     def get_documento_url(self, obj):
         if obj.documento and hasattr(obj.documento, 'url'):
@@ -45,7 +45,7 @@ class OrganigramaRegionalSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganigramaRegional
         fields = [
-            'pk',
+            'id',
             'region',
             'documento',
             'documento_url'
@@ -72,7 +72,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Paso1
         fields = [
-            'pk',
+            'id',
             'nombre_paso',
             'numero_paso',
             'avance',
@@ -105,14 +105,14 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso1Serializer(WritableNestedModelSerializer):
-    paso1 = Paso1EncabezadoSerializer(many=True)
+    paso1 = Paso1EncabezadoSerializer()
     marcojuridico = MarcoJuridicoSerializer(many=True)
     organigramaregional = OrganigramaRegionalSerializer(many=True)
 
     class Meta:
         model = FormularioSectorial
         fields = [
-            'pk',
+            'id',
             'paso1',
             'marcojuridico',
             'organigramaregional'

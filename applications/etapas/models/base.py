@@ -16,7 +16,7 @@ class EtapaBase(BaseModel):
         ('omitida', 'Omitida')
     )
 
-    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
+    competencia = models.OneToOneField(Competencia, on_delete=models.CASCADE)
     estado = models.CharField(max_length=50, choices=ESTADOS, default='no_iniciada')
     fecha_inicio = models.DateTimeField(null=True, blank=True)
     plazo_dias = models.IntegerField(null=True, blank=True)

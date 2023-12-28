@@ -259,7 +259,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso5Serializer(serializers.ModelSerializer):
-    paso5 = Paso5EncabezadoSerializer(many=True, read_only=False)
+    paso5 = Paso5EncabezadoSerializer()
     listado_subtitulos = serializers.SerializerMethodField()
     listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()

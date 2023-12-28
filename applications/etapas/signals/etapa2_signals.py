@@ -5,9 +5,10 @@ from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1, Etapa2, ObservacionSectorial, Etapa3
+from applications.etapas.models import Etapa1, Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
 from applications.regioncomuna.models import Region
+from applications.formularios_sectoriales.models import ObservacionesSubdereFormularioSectorial
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
@@ -23,8 +24,6 @@ def crear_organigramas_regionales(sender, instance, action, pk_set, **kwargs):
             )
 
             if created:
-                # Crear ObservacionSectorial y Paso1
-                ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
                 # Crear OrganigramaRegional para cada región asociada a la competencia
                 for region_pk in pk_set:
                     region = Region.objects.get(pk=region_pk)
@@ -69,12 +68,12 @@ def actualizar_estado_formulario_completo_sectorial(sender, instance, **kwargs):
         etapa2.save()
 
 
-@receiver(post_save, sender=ObservacionSectorial)
+@receiver(post_save, sender=ObservacionesSubdereFormularioSectorial)
 def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
     # Comprobar si todas las observaciones han sido enviadas
     todas_enviadas = all(
         observacion.observacion_enviada for observacion in
-        ObservacionSectorial.objects.filter(formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
+        ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
     )
 
     if todas_enviadas:

@@ -47,7 +47,7 @@ class Paso3(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
 
     """Campos descripción Cobertura de la Competencia"""
     universo_cobertura = models.TextField(max_length=800, blank=True)
