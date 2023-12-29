@@ -103,11 +103,11 @@ def obtener_informacion_etapas(competencia):
 
 
 class CompetenciaDetailSerializer(serializers.ModelSerializer):
-    etapa1 = Etapa1Serializer(source='etapa1_set', many=True)
-    etapa2 = Etapa2Serializer(source='etapa2_set', many=True)
-    etapa3 = Etapa3Serializer(source='etapa3_set', many=True)
-    etapa4 = Etapa4Serializer(source='etapa4_set', many=True)
-    etapa5 = Etapa5Serializer(source='etapa5_set', many=True)
+    etapa1 = Etapa1Serializer()
+    etapa2 = Etapa2Serializer()
+    etapa3 = Etapa3Serializer()
+    etapa4 = Etapa4Serializer()
+    etapa5 = Etapa5Serializer()
     usuarios_subdere = UsuarioSerializer(many=True, read_only=True)
     usuarios_dipres = UsuarioSerializer(many=True, read_only=True)
     usuarios_sectoriales = UsuarioSerializer(many=True, read_only=True)
