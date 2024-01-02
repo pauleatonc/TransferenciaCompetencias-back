@@ -92,15 +92,13 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
 
         # Filtrar según el tipo de usuario
         if user.groups.filter(name='SUBDERE').exists():
-            queryset = queryset.filter(creado_por=user)
+            queryset = queryset.filter(usuarios_subdere=user)
         elif user.groups.filter(name='GORE').exists():
             queryset = queryset.filter(usuarios_gore=user)
         elif user.groups.filter(name='DIPRES').exists():
             queryset = queryset.filter(usuarios_dipres=user)
         elif user.groups.filter(name='Usuario Sectorial').exists():
             queryset = queryset.filter(usuarios_sectoriales=user)
-
-        queryset = queryset.prefetch_related('etapa1_set')
 
         paginator = CustomHomePagination()
         page = paginator.paginate_queryset(queryset, request)

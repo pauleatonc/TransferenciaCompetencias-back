@@ -12,6 +12,7 @@ class Etapa1Serializer(serializers.ModelSerializer):
     estado = serializers.CharField(source='get_estado_display')
     competencia_creada = serializers.SerializerMethodField()
     usuarios_vinculados = serializers.SerializerMethodField()
+    oficio_inicio_sectorial = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
 
@@ -23,7 +24,7 @@ class Etapa1Serializer(serializers.ModelSerializer):
             'estado',
             'competencia_creada',
             'usuarios_vinculados',
-            'fecha_inicio',
+            'oficio_inicio_sectorial',
             'tiempo_transcurrido_registrado',
             'ultimo_editor',
             'fecha_ultima_modificacion'
@@ -82,3 +83,45 @@ class Etapa1Serializer(serializers.ModelSerializer):
             return None
         except obj.historical.model.DoesNotExist:
             return None
+
+    def get_oficio_inicio_sectorial(self, obj):
+        return self.obtener_estado_accion_generico(
+            condicion=obj.oficio_origen,
+            usuario_grupo='SUBDERE',
+            nombre_accion='Subir oficio y su fecha para habilitar formulario sectorial',
+            nombre_pendiente='Subir oficio'
+        )
+
+
+    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente,
+                                       siempre_pendiente=False):
+        user = self.context['request'].user
+        es_grupo_usuario = user.groups.filter(name=usuario_grupo).exists()
+
+        # Para usuarios DIPRES, verificar si están en la lista de usuarios_dipres de la Competencia
+        if usuario_grupo == 'SUBDERE':
+            es_grupo_usuario = es_grupo_usuario and self.instance.competencia.usuarios_dipres.filter(
+                id=user.id).exists()
+
+        if condicion:
+            return {
+                "nombre": nombre_accion,
+                "estado": 'finalizada',
+                "accion": 'Ver Oficio'
+            }
+
+        if siempre_pendiente:
+            return {
+                "nombre": nombre_pendiente,
+                "estado": 'pendiente',
+                "accion": nombre_pendiente
+            }
+
+        estado = 'revision' if es_grupo_usuario else 'pendiente'
+        accion = nombre_accion if es_grupo_usuario else nombre_pendiente
+
+        return {
+            "nombre": nombre_accion,
+            "estado": estado,
+            "accion": accion
+        }
