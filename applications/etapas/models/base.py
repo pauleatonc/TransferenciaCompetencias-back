@@ -1,6 +1,8 @@
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
+from applications.base.functions import validate_file_size_twenty
 #
 from applications.competencias.models import Competencia
 from applications.base.models import BaseModel
@@ -25,6 +27,12 @@ class EtapaBase(BaseModel):
     omitida = models.BooleanField(default=False)
     tiempo_transcurrido_registrado = models.IntegerField(default=0)
     ultima_finalizacion = models.DateTimeField(null=True, blank=True)
+    oficio_origen = models.FileField(upload_to='oficios_competencias',
+                                     validators=[
+                                         FileExtensionValidator(
+                                             ['pdf'], message='Solo se permiten archivos PDF.'),
+                                         validate_file_size_twenty],
+                                     verbose_name='Oficio inicio etapa', blank=True, null=True)
 
     class Meta:
         abstract = True
