@@ -4,6 +4,12 @@ from rest_framework import serializers
 
 from applications.etapas.models import Etapa3
 from applications.competencias.models import Competencia
+from applications.etapas.functions import (
+    get_ultimo_editor,
+    get_fecha_ultima_modificacion,
+    calcular_tiempo_registro,
+    obtener_estado_accion_generico,
+)
 
 User = get_user_model()
 
@@ -17,6 +23,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
     usuario_notificado = serializers.SerializerMethodField()
     minuta_sectorial = serializers.SerializerMethodField()
     observacion_minuta_sectorial = serializers.SerializerMethodField()
+    oficio_inicio_gore = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa3
@@ -30,88 +37,75 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'fecha_ultima_modificacion',
             'usuario_notificado',
             'minuta_sectorial',
-            'observacion_minuta_sectorial'
+            'observacion_minuta_sectorial',
+            'oficio_inicio_gore',
+            'oficio_origen',
         ]
 
-    def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
 
     def get_ultimo_editor(self, obj):
-        return self.obtener_ultimo_editor_de_historial(obj)
+        return get_ultimo_editor(self, obj)
+
+    def get_fecha_ultima_modificacion(self, obj):
+        return get_fecha_ultima_modificacion(self, obj)
+
 
     def get_usuario_notificado(self, obj):
-        return self.obtener_estado_accion_generico(
+        usuarios_dipres = obj.competencia.usuarios_dipres.all()
+        usuarios_info = [f'{usuario.nombre_completo} ({usuario.email})' for usuario in usuarios_dipres]
+        nombre_singular = f'Notificar a {", ".join(usuarios_info)}'
+
+        return obtener_estado_accion_generico(
+            self,
             condicion=obj.usuario_notificado,
+            condicion_anterior=obj.competencia.etapa2.aprobada,
             usuario_grupo='DIPRES',
-            nombre_accion='Notificar a DIPRES',
-            nombre_pendiente='Asociar usuario DIPRES a la competencia'
+            conteo_condicion=1,
+            nombre_singular=nombre_singular,
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
         )
 
     def get_minuta_sectorial(self, obj):
-        return self.obtener_estado_accion_generico(
+        return obtener_estado_accion_generico(
+            self,
             condicion=obj.minuta_etapa3_enviada,
+            condicion_anterior=obj.usuario_notificado,
             usuario_grupo='DIPRES',
-            nombre_accion='Subir minuta',
-            nombre_pendiente='Subir minuta',
-            siempre_pendiente=True
+            conteo_condicion=1,
+            nombre_singular='Subir minuta',
+            accion_usuario_grupo='Subir minuta',
+            accion_general='Minuta pendiente',
+            accion_finalizada_usuario_grupo='Ver minuta',
+            accion_finalizada_general='Ver minuta',
         )
 
     def get_observacion_minuta_sectorial(self, obj):
-        return self.obtener_estado_accion_generico(
+        return obtener_estado_accion_generico(
+            self,
             condicion=obj.observacion_minuta_sectorial_enviada,
+            condicion_anterior=obj.minuta_etapa3_enviada,
             usuario_grupo='SUBDERE',
-            nombre_accion='Revisión SUBDERE',
-            nombre_pendiente='Subir Observaciones',
-            siempre_pendiente=True
+            conteo_condicion=1,
+            nombre_singular='Subir observación',
+            accion_usuario_grupo='Subir observación',
+            accion_general='Observación pendiente',
+            accion_finalizada_usuario_grupo='Ver observación',
+            accion_finalizada_general='Ver observación',
         )
 
-    # Funciones de ayuda
-    def obtener_ultimo_editor_de_historial(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                }
-        return None
-
-    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente,
-                                       siempre_pendiente=False):
-        user = self.context['request'].user
-        es_grupo_usuario = user.groups.filter(name=usuario_grupo).exists()
-
-        # Para usuarios DIPRES, verificar si están en la lista de usuarios_dipres de la Competencia
-        if usuario_grupo == 'DIPRES':
-            es_grupo_usuario = es_grupo_usuario and self.instance.competencia.usuarios_dipres.filter(
-                id=user.id).exists()
-
-        if condicion:
-            return {
-                "nombre": nombre_accion,
-                "estado": 'finalizada',
-                "accion": 'Finalizada'
-            }
-
-        if siempre_pendiente:
-            return {
-                "nombre": nombre_pendiente,
-                "estado": 'pendiente',
-                "accion": nombre_pendiente
-            }
-
-        estado = 'revision' if es_grupo_usuario else 'pendiente'
-        accion = nombre_accion if es_grupo_usuario else nombre_pendiente
-
-        return {
-            "nombre": nombre_accion,
-            "estado": estado,
-            "accion": accion
-        }
+    def get_oficio_inicio_gore(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            condicion=obj.competencia.etapa3.oficio_origen,
+            condicion_anterior=obj.competencia.etapa2.aprobada,
+            usuario_grupo='SUBDERE',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar formulario GORE',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )

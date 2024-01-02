@@ -3,6 +3,8 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa1
+from applications.etapas.functions import get_ultimo_editor, get_fecha_ultima_modificacion, obtener_estado_accion_generico
+
 
 User = get_user_model()
 
@@ -37,31 +39,15 @@ class Etapa1Serializer(serializers.ModelSerializer):
             "accion": "Finalizada"
         }]
 
-
-
     def get_ultimo_editor(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                    # Asegúrate de que el campo 'profile' exista en tu modelo de User
-                }
-        return None
+        return get_ultimo_editor(self, obj)
 
     def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
+        return get_fecha_ultima_modificacion(self, obj)
 
     def get_usuarios_vinculados(self, obj):
-        return self.obtener_estado_accion_generico(
+        return obtener_estado_accion_generico(
+            self,
             condicion=obj.usuarios_vinculados,
             conteo_condicion=obj.competencia.usuarios_subdere.count(),
             usuario_grupo='SUBDERE',
@@ -74,39 +60,15 @@ class Etapa1Serializer(serializers.ModelSerializer):
         )
 
     def get_oficio_inicio_sectorial(self, obj):
-        return self.obtener_estado_accion_generico(
-            condicion=obj.oficio_origen,
+        return obtener_estado_accion_generico(
+            self,
+            condicion=obj.competencia.etapa2.oficio_origen,
+            condicion_anterior=obj.usuarios_vinculados,
             usuario_grupo='SUBDERE',
             conteo_condicion=1,
             nombre_singular='Subir oficio y su fecha para habilitar formulario sectorial',
-            nombre_plural='',
             accion_usuario_grupo='Subir oficio',
             accion_general='Oficio pendiente',
             accion_finalizada_usuario_grupo='Ver oficio',
             accion_finalizada_general='Ver oficio',
         )
-
-    def obtener_estado_accion_generico(self, condicion, usuario_grupo, conteo_condicion, nombre_singular,
-                                       nombre_plural, accion_usuario_grupo, accion_general,
-                                       accion_finalizada_usuario_grupo, accion_finalizada_general,
-                                       siempre_pendiente=False):
-        user = self.context['request'].user
-        grupos_usuario = [grupo.strip() for grupo in usuario_grupo.split(',')]
-
-        # Verificar si el usuario pertenece a al menos uno de los grupos especificados
-        es_grupo_usuario = any(user.groups.filter(name=grupo).exists() for grupo in grupos_usuario)
-
-        if es_grupo_usuario:
-            return {
-                "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
-                "estado": 'finalizada' if condicion else ('pendiente' if siempre_pendiente else 'revision'),
-                "accion": accion_finalizada_usuario_grupo if condicion else accion_usuario_grupo
-            }
-        else:
-            return {
-                "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
-                "estado": 'finalizada' if condicion else 'pendiente',
-                "accion": accion_finalizada_general if condicion else accion_general
-            }
-
-

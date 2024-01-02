@@ -4,6 +4,13 @@ from rest_framework import serializers
 
 from applications.etapas.models import Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial, ObservacionesSubdereFormularioSectorial
+from applications.etapas.functions import (
+    get_ultimo_editor,
+    get_fecha_ultima_modificacion,
+    calcular_tiempo_registro,
+    obtener_estado_accion_generico,
+    reordenar_detalle,
+)
 
 User = get_user_model()
 
@@ -17,6 +24,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
     usuarios_notificados = serializers.SerializerMethodField()
     formulario_sectorial = serializers.SerializerMethodField()
     observaciones_sectorial = serializers.SerializerMethodField()
+    oficio_inicio_dipres = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa2
@@ -31,28 +39,16 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'fecha_ultima_modificacion',
             'usuarios_notificados',
             'formulario_sectorial',
-            'observaciones_sectorial'
+            'observaciones_sectorial',
+            'oficio_inicio_dipres',
+            'oficio_origen'
         ]
 
     def get_ultimo_editor(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                }
-        return None
+        return get_ultimo_editor(self, obj)
 
     def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
+        return get_fecha_ultima_modificacion(self, obj)
 
     def get_usuarios_notificados(self, obj):
         user = self.context['request'].user
@@ -181,26 +177,24 @@ class Etapa2Serializer(serializers.ModelSerializer):
         }
 
     def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-        if etapa_obj.fecha_inicio and fecha_envio:
-            delta = fecha_envio - etapa_obj.fecha_inicio
-            total_seconds = int(delta.total_seconds())
-            dias = total_seconds // (24 * 3600)
-            horas = (total_seconds % (24 * 3600)) // 3600
-            minutos = (total_seconds % 3600) // 60
-            return {'dias': dias, 'horas': horas, 'minutos': minutos}
-        return {'dias': 0, 'horas': 0, 'minutos': 0}
+        return calcular_tiempo_registro(etapa_obj, fecha_envio)
 
     def reordenar_detalle(self, detalle, user):
-        # Identificar si el usuario actual está mencionado en cada elemento de detalle
-        usuario_principal = []
-        otros = []
+        return reordenar_detalle(detalle, user)
 
-        nombre_sector_usuario = user.sector.nombre if user.sector else None
+    def get_oficio_inicio_dipres(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            id=obj.competencia.etapa3.id,
+            condicion=obj.competencia.etapa3.oficio_origen,
+            condicion_anterior=obj.aprobada,
+            usuario_grupo='DIPRES',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar minuta DIPRES',
+            nombre_plural='',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )
 
-        for d in detalle:
-            if user.nombre_completo in d['nombre'] or (nombre_sector_usuario and nombre_sector_usuario in d['nombre']):
-                usuario_principal.append(d)
-            else:
-                otros.append(d)
-
-        return usuario_principal + otros
