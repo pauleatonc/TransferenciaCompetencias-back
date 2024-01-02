@@ -48,6 +48,9 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
             'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
+            'fecha_envio',
+            'formulario_enviado',
+            'intento_envio'
         ]
 
     def get_competencia_nombre(self, obj):
@@ -61,7 +64,7 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
         return None
 
     def get_etapa2(self, obj):
-        return obj.competencia.etapa2_set.first()
+        return obj.competencia.etapa2
 
     def get_plazo_dias(self, obj):
         etapa2 = self.get_etapa2(obj)
