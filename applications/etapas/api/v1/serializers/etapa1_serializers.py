@@ -37,30 +37,6 @@ class Etapa1Serializer(serializers.ModelSerializer):
             "accion": "Finalizada"
         }]
 
-    def get_usuarios_vinculados(self, obj):
-        user = self.context['request'].user
-        nombre = "Usuario sectorial vinculado a la competencia creada"
-        if obj.competencia.sectores.count() > 1:
-            nombre = "Usuarios sectoriales vinculados a la competencia creada"
-
-        # Utiliza el campo 'usuarios_vinculados' directamente para determinar el estado
-        estado = 'finalizada' if obj.usuarios_vinculados else 'pendiente'
-        accion = "Usuario(s) pendiente(s)"
-
-        if obj.usuarios_vinculados:
-            if user.groups.filter(name='SUBDERE').exists():
-                accion = "Editar usuarios"
-            else:
-                accion = "Finalizada"
-        else:
-            if not user.groups.filter(name='SUBDERE').exists():
-                accion = "Usuario(s) pendiente(s)"
-
-        return [{
-            "nombre": nombre,
-            "estado": estado,
-            "accion": accion
-        }]
 
 
     def get_ultimo_editor(self, obj):
@@ -84,44 +60,53 @@ class Etapa1Serializer(serializers.ModelSerializer):
         except obj.historical.model.DoesNotExist:
             return None
 
+    def get_usuarios_vinculados(self, obj):
+        return self.obtener_estado_accion_generico(
+            condicion=obj.usuarios_vinculados,
+            conteo_condicion=obj.competencia.usuarios_subdere.count(),
+            usuario_grupo='SUBDERE',
+            nombre_singular='Usuario sectorial vinculado a la competencia creada',
+            nombre_plural='Usuarios sectoriales vinculados a la competencia creada',
+            accion_usuario_grupo='Editar usuario(s)',
+            accion_general ='Usuario(s) pendiente(s)',
+            accion_finalizada_usuario_grupo='Editar usuario(s)',
+            accion_finalizada_general='Finalizada'
+        )
+
     def get_oficio_inicio_sectorial(self, obj):
         return self.obtener_estado_accion_generico(
             condicion=obj.oficio_origen,
             usuario_grupo='SUBDERE',
-            nombre_accion='Subir oficio y su fecha para habilitar formulario sectorial',
-            nombre_pendiente='Subir oficio'
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar formulario sectorial',
+            nombre_plural='',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
         )
 
-
-    def obtener_estado_accion_generico(self, condicion, usuario_grupo, nombre_accion, nombre_pendiente,
+    def obtener_estado_accion_generico(self, condicion, usuario_grupo, conteo_condicion, nombre_singular,
+                                       nombre_plural, accion_usuario_grupo, accion_general,
+                                       accion_finalizada_usuario_grupo, accion_finalizada_general,
                                        siempre_pendiente=False):
         user = self.context['request'].user
-        es_grupo_usuario = user.groups.filter(name=usuario_grupo).exists()
+        grupos_usuario = [grupo.strip() for grupo in usuario_grupo.split(',')]
 
-        # Para usuarios DIPRES, verificar si están en la lista de usuarios_dipres de la Competencia
-        if usuario_grupo == 'SUBDERE':
-            es_grupo_usuario = es_grupo_usuario and self.instance.competencia.usuarios_dipres.filter(
-                id=user.id).exists()
+        # Verificar si el usuario pertenece a al menos uno de los grupos especificados
+        es_grupo_usuario = any(user.groups.filter(name=grupo).exists() for grupo in grupos_usuario)
 
-        if condicion:
+        if es_grupo_usuario:
             return {
-                "nombre": nombre_accion,
-                "estado": 'finalizada',
-                "accion": 'Ver Oficio'
+                "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
+                "estado": 'finalizada' if condicion else ('pendiente' if siempre_pendiente else 'revision'),
+                "accion": accion_finalizada_usuario_grupo if condicion else accion_usuario_grupo
+            }
+        else:
+            return {
+                "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
+                "estado": 'finalizada' if condicion else 'pendiente',
+                "accion": accion_finalizada_general if condicion else accion_general
             }
 
-        if siempre_pendiente:
-            return {
-                "nombre": nombre_pendiente,
-                "estado": 'pendiente',
-                "accion": nombre_pendiente
-            }
 
-        estado = 'revision' if es_grupo_usuario else 'pendiente'
-        accion = nombre_accion if es_grupo_usuario else nombre_pendiente
-
-        return {
-            "nombre": nombre_accion,
-            "estado": estado,
-            "accion": accion
-        }
