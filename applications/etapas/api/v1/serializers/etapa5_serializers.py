@@ -77,10 +77,17 @@ class Etapa5Serializer(serializers.ModelSerializer):
         )
 
     def get_oficio_inicio_dipres(self, obj):
+        if obj.competencia.etapa3.oficio_origen:
+            id_etapa3 = obj.competencia.etapa3.id
+            condicion = True
+        else:
+            id_etapa3 = obj.competencia.etapa5.id
+            condicion = obj.oficio_origen
+
         return obtener_estado_accion_generico(
             self,
-            id=obj.competencia.etapa5.id,
-            condicion=obj.oficio_origen,
+            id=id_etapa3,
+            condicion=condicion,
             condicion_anterior=obj.usuario_notificado,
             usuario_grupo='DIPRES',
             conteo_condicion=1,
