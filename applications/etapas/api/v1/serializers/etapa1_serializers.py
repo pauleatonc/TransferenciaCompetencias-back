@@ -14,7 +14,6 @@ class Etapa1Serializer(serializers.ModelSerializer):
     estado = serializers.CharField(source='get_estado_display')
     competencia_creada = serializers.SerializerMethodField()
     usuarios_vinculados = serializers.SerializerMethodField()
-    oficio_inicio_sectorial = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
 
@@ -26,7 +25,6 @@ class Etapa1Serializer(serializers.ModelSerializer):
             'estado',
             'competencia_creada',
             'usuarios_vinculados',
-            'oficio_inicio_sectorial',
             'tiempo_transcurrido_registrado',
             'ultimo_editor',
             'fecha_ultima_modificacion'
@@ -59,16 +57,3 @@ class Etapa1Serializer(serializers.ModelSerializer):
             accion_finalizada_general='Finalizada'
         )
 
-    def get_oficio_inicio_sectorial(self, obj):
-        return obtener_estado_accion_generico(
-            self,
-            condicion=obj.competencia.etapa2.oficio_origen,
-            condicion_anterior=obj.usuarios_vinculados,
-            usuario_grupo='SUBDERE',
-            conteo_condicion=1,
-            nombre_singular='Subir oficio y su fecha para habilitar formulario sectorial',
-            accion_usuario_grupo='Subir oficio',
-            accion_general='Oficio pendiente',
-            accion_finalizada_usuario_grupo='Ver oficio',
-            accion_finalizada_general='Ver oficio',
-        )

@@ -22,7 +22,7 @@ def actualizar_etapa4_al_modificar_usuarios_gore(sender, instance, action, pk_se
                     todos_los_usuarios_asignados = False
                     break
 
-            etapa4.usuarios_notificados = todos_los_usuarios_asignados
+            etapa4.usuarios_gore_notificados = todos_los_usuarios_asignados
 
             etapa4.save()
 

@@ -22,9 +22,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     usuarios_notificados = serializers.SerializerMethodField()
+    oficio_inicio_sectorial = serializers.SerializerMethodField()
     formulario_sectorial = serializers.SerializerMethodField()
     observaciones_sectorial = serializers.SerializerMethodField()
-    oficio_inicio_dipres = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa2
@@ -38,9 +38,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_notificados',
+            'oficio_inicio_sectorial',
             'formulario_sectorial',
             'observaciones_sectorial',
-            'oficio_inicio_dipres',
             'oficio_origen'
         ]
 
@@ -49,6 +49,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
     def get_fecha_ultima_modificacion(self, obj):
         return get_fecha_ultima_modificacion(self, obj)
+
+    def reordenar_detalle(self, detalle, user):
+        return reordenar_detalle(detalle, user)
 
     def get_usuarios_notificados(self, obj):
         user = self.context['request'].user
@@ -94,6 +97,21 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "detalle_usuarios_notificados": detalle
         }
 
+    def get_oficio_inicio_sectorial(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            id=obj.competencia.etapa2.id,
+            condicion=obj.oficio_origen,
+            condicion_anterior=obj.usuarios_notificados,
+            usuario_grupo='SUBDERE',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar formulario sectorial',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )
+
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
         es_usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(id=user.id).exists()
@@ -104,7 +122,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
             formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia,
                                                                       sector=sector).first()
             if formulario_sectorial:
-                estado_revision = es_usuario_sectorial and obj.usuarios_notificados
+                estado_revision = es_usuario_sectorial and obj.oficio_origen
                 estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if es_usuario_sectorial else 'Formulario pendiente'
                 detalle_formulario = {
@@ -176,25 +194,4 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "detalle_observaciones_sectoriales": detalle
         }
 
-    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-        return calcular_tiempo_registro(etapa_obj, fecha_envio)
-
-    def reordenar_detalle(self, detalle, user):
-        return reordenar_detalle(detalle, user)
-
-    def get_oficio_inicio_dipres(self, obj):
-        return obtener_estado_accion_generico(
-            self,
-            id=obj.competencia.etapa3.id,
-            condicion=obj.competencia.etapa3.oficio_origen,
-            condicion_anterior=obj.aprobada,
-            usuario_grupo='DIPRES',
-            conteo_condicion=1,
-            nombre_singular='Subir oficio y su fecha para habilitar minuta DIPRES',
-            nombre_plural='',
-            accion_usuario_grupo='Subir oficio',
-            accion_general='Oficio pendiente',
-            accion_finalizada_usuario_grupo='Ver oficio',
-            accion_finalizada_general='Ver oficio',
-        )
 

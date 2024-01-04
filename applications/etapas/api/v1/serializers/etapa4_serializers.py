@@ -5,6 +5,14 @@ from rest_framework import serializers
 from applications.etapas.models import Etapa4
 from applications.formularios_gores.models import FormularioGORE
 
+from applications.etapas.functions import (
+    get_ultimo_editor,
+    get_fecha_ultima_modificacion,
+    calcular_tiempo_registro,
+    obtener_estado_accion_generico,
+    reordenar_detalle
+)
+
 User = get_user_model()
 
 
@@ -15,6 +23,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.ReadOnlyField()
     usuarios_gore = serializers.SerializerMethodField()
+    oficio_inicio_gore = serializers.SerializerMethodField()
     formularios_gore = serializers.SerializerMethodField()
 
     class Meta:
@@ -28,29 +37,21 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_gore',
+            'oficio_inicio_gore',
             'formularios_gore',
         ]
 
     def get_ultimo_editor(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                    # Asegúrate de que el campo 'profile' exista en tu modelo de User
-                }
-        return None
+        return get_ultimo_editor(self, obj)
 
     def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
+        return get_fecha_ultima_modificacion(self, obj)
+
+    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
+        return calcular_tiempo_registro(etapa_obj, fecha_envio)
+
+    def reordenar_detalle(self, detalle, user):
+        return reordenar_detalle(detalle, user)
 
     def get_usuarios_gore(self, obj):
         user = self.context['request'].user
@@ -95,6 +96,21 @@ class Etapa4Serializer(serializers.ModelSerializer):
             "detalle_usuarios_gore_notificados": detalle
         }
 
+    def get_oficio_inicio_gore(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            id=obj.competencia.etapa4.id,
+            condicion=obj.oficio_origen,
+            condicion_anterior=obj.usuarios_gore_notificados,
+            usuario_grupo='SUBDERE',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar formulario GORE',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )
+
     def get_formularios_gore(self, obj):
         user = self.context['request'].user
         es_usuario_gore = obj.competencia.usuarios_gore.filter(id=user.id).exists()
@@ -104,7 +120,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
         for region in regiones:
             formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
             if formulario_gore:
-                estado_revision = es_usuario_gore and obj.usuarios_gore_notificados
+                estado_revision = es_usuario_gore and obj.oficio_origen
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
                 detalle_formulario = {
@@ -135,28 +151,3 @@ class Etapa4Serializer(serializers.ModelSerializer):
             "formularios_gore_completos": [resumen],
             "detalle_formularios_gore": detalle
         }
-
-    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-        if etapa_obj.fecha_inicio and fecha_envio:
-            delta = fecha_envio - etapa_obj.fecha_inicio
-            total_seconds = int(delta.total_seconds())
-            dias = total_seconds // (24 * 3600)
-            horas = (total_seconds % (24 * 3600)) // 3600
-            minutos = (total_seconds % 3600) // 60
-            return {'dias': dias, 'horas': horas, 'minutos': minutos}
-        return {'dias': 0, 'horas': 0, 'minutos': 0}
-
-    def reordenar_detalle(self, detalle, user):
-        # Identificar si el usuario actual está mencionado en cada elemento de detalle
-        usuario_principal = []
-        otros = []
-
-        nombre_region_usuario = user.region.region if user.region else None
-
-        for d in detalle:
-            if user.nombre_completo in d['nombre'] or (nombre_region_usuario and nombre_region_usuario in d['nombre']):
-                usuario_principal.append(d)
-            else:
-                otros.append(d)
-
-        return usuario_principal + otros

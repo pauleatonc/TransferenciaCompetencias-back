@@ -7,7 +7,6 @@ from applications.competencias.models import Competencia
 from applications.etapas.functions import (
     get_ultimo_editor,
     get_fecha_ultima_modificacion,
-    calcular_tiempo_registro,
     obtener_estado_accion_generico,
 )
 
@@ -21,9 +20,9 @@ class Etapa3Serializer(serializers.ModelSerializer):
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.ReadOnlyField()
     usuario_notificado = serializers.SerializerMethodField()
+    oficio_inicio_dipres = serializers.SerializerMethodField()
     minuta_sectorial = serializers.SerializerMethodField()
     observacion_minuta_sectorial = serializers.SerializerMethodField()
-    oficio_inicio_gore = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa3
@@ -36,10 +35,20 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuario_notificado',
+            'oficio_inicio_dipres',
             'minuta_sectorial',
             'observacion_minuta_sectorial',
-            'oficio_inicio_gore',
             'oficio_origen',
+
+            # Campos DIPRES etapa 3
+            'comentario_minuta_etapa3',
+            'archivo_minuta_etapa3',
+            'minuta_etapa3_enviada',
+
+            # Campos Revisión SUBDERE etapa 3
+            'comentario_minuta_sectorial',
+            'archivo_observacion_minuta_sectorial',
+            'observacion_minuta_sectorial_enviada'
         ]
 
 
@@ -48,7 +57,6 @@ class Etapa3Serializer(serializers.ModelSerializer):
 
     def get_fecha_ultima_modificacion(self, obj):
         return get_fecha_ultima_modificacion(self, obj)
-
 
     def get_usuario_notificado(self, obj):
         usuarios_dipres = obj.competencia.usuarios_dipres.all()
@@ -68,11 +76,28 @@ class Etapa3Serializer(serializers.ModelSerializer):
             accion_finalizada_general='Ver oficio',
         )
 
+    def get_oficio_inicio_dipres(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            id=obj.competencia.etapa3.id,
+            condicion=obj.oficio_origen,
+            condicion_anterior=obj.usuario_notificado,
+            usuario_grupo='DIPRES',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar minuta DIPRES',
+            nombre_plural='',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )
+
     def get_minuta_sectorial(self, obj):
         return obtener_estado_accion_generico(
             self,
+            id=obj.competencia.etapa3.id,
             condicion=obj.minuta_etapa3_enviada,
-            condicion_anterior=obj.usuario_notificado,
+            condicion_anterior=obj.oficio_origen,
             usuario_grupo='DIPRES',
             conteo_condicion=1,
             nombre_singular='Subir minuta',
@@ -85,27 +110,15 @@ class Etapa3Serializer(serializers.ModelSerializer):
     def get_observacion_minuta_sectorial(self, obj):
         return obtener_estado_accion_generico(
             self,
+            id=obj.competencia.etapa3.id,
             condicion=obj.observacion_minuta_sectorial_enviada,
             condicion_anterior=obj.minuta_etapa3_enviada,
             usuario_grupo='SUBDERE',
             conteo_condicion=1,
-            nombre_singular='Subir observación',
-            accion_usuario_grupo='Subir observación',
-            accion_general='Observación pendiente',
-            accion_finalizada_usuario_grupo='Ver observación',
-            accion_finalizada_general='Ver observación',
+            nombre_singular='Revisión SUBDERE',
+            accion_usuario_grupo='Subir Observaciones',
+            accion_general='Observaciones pendientes',
+            accion_finalizada_usuario_grupo='Ver Observaciones',
+            accion_finalizada_general='Ver Observaciones',
         )
 
-    def get_oficio_inicio_gore(self, obj):
-        return obtener_estado_accion_generico(
-            self,
-            condicion=obj.competencia.etapa3.oficio_origen,
-            condicion_anterior=obj.competencia.etapa2.aprobada,
-            usuario_grupo='SUBDERE',
-            conteo_condicion=1,
-            nombre_singular='Subir oficio y su fecha para habilitar formulario GORE',
-            accion_usuario_grupo='Subir oficio',
-            accion_general='Oficio pendiente',
-            accion_finalizada_usuario_grupo='Ver oficio',
-            accion_finalizada_general='Ver oficio',
-        )
