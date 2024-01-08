@@ -30,7 +30,7 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
             'id',
             'organismo',
             'organismo_display',
-            'sector_ministerio_servicio',
+            'nombre_ministerio_servicio',
             'descripcion'
         ]
 

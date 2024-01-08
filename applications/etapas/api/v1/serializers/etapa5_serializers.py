@@ -67,20 +67,27 @@ class Etapa5Serializer(serializers.ModelSerializer):
             self,
             condicion=obj.usuario_notificado,
             condicion_anterior=obj.competencia.etapa2.aprobada,
-            usuario_grupo='DIPRES',
+            usuario_grupo='SUBDERE',
             conteo_condicion=1,
             nombre_singular=nombre_singular,
-            accion_usuario_grupo='Subir oficio',
-            accion_general='Oficio pendiente',
-            accion_finalizada_usuario_grupo='Ver oficio',
-            accion_finalizada_general='Ver oficio',
+            accion_usuario_grupo='Agregar usuario',
+            accion_general='Usuario pendiente',
+            accion_finalizada_usuario_grupo='Finalizada',
+            accion_finalizada_general='Finalizada',
         )
 
     def get_oficio_inicio_dipres(self, obj):
+        if obj.competencia.etapa3.oficio_origen:
+            id_etapa3 = obj.competencia.etapa3.id
+            condicion = True
+        else:
+            id_etapa3 = obj.competencia.etapa5.id
+            condicion = obj.oficio_origen
+
         return obtener_estado_accion_generico(
             self,
-            id=obj.competencia.etapa5.id,
-            condicion=obj.oficio_origen,
+            id=id_etapa3,
+            condicion=condicion,
             condicion_anterior=obj.usuario_notificado,
             usuario_grupo='DIPRES',
             conteo_condicion=1,

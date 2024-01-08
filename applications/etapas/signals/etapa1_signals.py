@@ -8,7 +8,7 @@ from applications.competencias.models import Competencia
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
 def actualizar_etapa1_al_modificar_usuarios_sectoriales(sender, instance, action, pk_set, **kwargs):
     if action in ['post_add', 'post_remove', 'post_clear']:
-        etapa1 = instance.etapa1_set.first()
+        etapa1 = instance.etapa1
 
         if etapa1:
             todos_los_usuarios_vinculados = True
