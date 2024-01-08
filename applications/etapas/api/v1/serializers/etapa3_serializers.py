@@ -67,13 +67,13 @@ class Etapa3Serializer(serializers.ModelSerializer):
             self,
             condicion=obj.usuario_notificado,
             condicion_anterior=obj.competencia.etapa2.aprobada,
-            usuario_grupo='DIPRES',
+            usuario_grupo='SUBDERE',
             conteo_condicion=1,
             nombre_singular=nombre_singular,
-            accion_usuario_grupo='Subir oficio',
-            accion_general='Oficio pendiente',
-            accion_finalizada_usuario_grupo='Ver oficio',
-            accion_finalizada_general='Ver oficio',
+            accion_usuario_grupo='Agregar usuario',
+            accion_general='Usuario pendiente',
+            accion_finalizada_usuario_grupo='Finalizada',
+            accion_finalizada_general='Finalizada',
         )
 
     def get_oficio_inicio_dipres(self, obj):

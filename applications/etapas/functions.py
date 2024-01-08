@@ -47,33 +47,26 @@ def obtener_estado_accion_generico(
         nombre_plural=None,
         condicion_anterior=None,
         id=None):
+    # Verificar si el usuario pertenece a al menos uno de los grupos especificados
+    user = self.context['request'].user
+    grupos_usuario = [grupo.strip() for grupo in usuario_grupo.split(',')]
+    es_grupo_usuario = any(user.groups.filter(name=grupo).exists() for grupo in grupos_usuario)
 
+    # Asignar valores basados en si el usuario pertenece al grupo
+    if es_grupo_usuario:
+        estado = 'finalizada' if condicion else 'revision' if condicion_anterior else 'pendiente'
+        accion = accion_finalizada_usuario_grupo if condicion else accion_usuario_grupo
+    else:
+        estado = 'finalizada' if condicion else 'pendiente'
+        accion = accion_finalizada_general if condicion else accion_general
+
+    # Retornar el diccionario con la información
     return {
         "id": id,
         "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
-        "estado": 'finalizada' if condicion else 'revision' if condicion_anterior else 'pendiente',
-        "accion": accion_finalizada_usuario_grupo if condicion else accion_usuario_grupo
+        "estado": estado,
+        "accion": accion
     }
-    user = self.context['request'].user
-    grupos_usuario = [grupo.strip() for grupo in usuario_grupo.split(',')]
-
-    # Verificar si el usuario pertenece a al menos uno de los grupos especificados
-    es_grupo_usuario = any(user.groups.filter(name=grupo).exists() for grupo in grupos_usuario)
-
-    if es_grupo_usuario:
-        return {
-            "id": id,
-            "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
-            "estado": 'finalizada' if condicion else 'revision' if condicion_anterior else 'pendiente',
-            "accion": accion_finalizada_usuario_grupo if condicion else accion_usuario_grupo
-        }
-    else:
-        return {
-            "id": id,
-            "nombre": nombre_plural if conteo_condicion > 1 else nombre_singular,
-            "estado": 'finalizada' if condicion else 'pendiente',
-            "accion": accion_finalizada_general if condicion else accion_general
-        }
 
 
 def reordenar_detalle(self, detalle, user):

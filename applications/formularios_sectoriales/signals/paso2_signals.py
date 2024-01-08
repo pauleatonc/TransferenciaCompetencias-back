@@ -12,7 +12,7 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         organismo_interviniente = OrganismosIntervinientes.objects.create(
             formulario_sectorial=instance,
             organismo='MIN',
-            sector_ministerio_servicio=instance.sector
+            nombre_ministerio_servicio=instance.sector
         )
 
         # Crear instancia de PlataformasySoftwares
