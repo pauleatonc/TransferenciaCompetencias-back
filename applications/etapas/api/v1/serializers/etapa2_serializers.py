@@ -25,6 +25,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
     oficio_inicio_sectorial = serializers.SerializerMethodField()
     formulario_sectorial = serializers.SerializerMethodField()
     observaciones_sectorial = serializers.SerializerMethodField()
+    tipo_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa2
@@ -41,8 +42,12 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'oficio_inicio_sectorial',
             'formulario_sectorial',
             'observaciones_sectorial',
-            'oficio_origen'
+            'oficio_origen',
+            'tipo_usuario'
         ]
+
+    def get_tipo_usuario(self, obj):
+        return {"Sectorial"}
 
     def get_ultimo_editor(self, obj):
         return get_ultimo_editor(self, obj)

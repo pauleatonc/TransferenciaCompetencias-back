@@ -23,6 +23,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
     oficio_inicio_dipres = serializers.SerializerMethodField()
     minuta_gore = serializers.SerializerMethodField()
     observacion_minuta_gore = serializers.SerializerMethodField()
+    tipo_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa5
@@ -39,6 +40,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'minuta_gore',
             'observacion_minuta_gore',
             'oficio_origen',
+            'tipo_usuario',
 
             # Campos DIPRES etapa 5
             'comentario_minuta_etapa5',
@@ -51,6 +53,9 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'observacion_minuta_gore_enviada'
 
         ]
+
+    def get_tipo_usuario(self, obj):
+        return {"DIPRES"}
 
     def get_ultimo_editor(self, obj):
         return get_ultimo_editor(self, obj)
