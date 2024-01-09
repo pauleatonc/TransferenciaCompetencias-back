@@ -23,6 +23,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
     oficio_inicio_dipres = serializers.SerializerMethodField()
     minuta_sectorial = serializers.SerializerMethodField()
     observacion_minuta_sectorial = serializers.SerializerMethodField()
+    tipo_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa3
@@ -39,6 +40,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'minuta_sectorial',
             'observacion_minuta_sectorial',
             'oficio_origen',
+            'tipo_usuario',
 
             # Campos DIPRES etapa 3
             'comentario_minuta_etapa3',
@@ -51,6 +53,8 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'observacion_minuta_sectorial_enviada'
         ]
 
+    def get_tipo_usuario(self, obj):
+        return {"DIPRES"}
 
     def get_ultimo_editor(self, obj):
         return get_ultimo_editor(self, obj)

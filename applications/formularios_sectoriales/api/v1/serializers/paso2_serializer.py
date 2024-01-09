@@ -181,8 +181,17 @@ class Paso2Serializer(serializers.ModelSerializer):
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
     def get_listado_organismos(self, obj):
-        # Retornar clave y valor para choices ORGANISMO
-        return {clave: valor for clave, valor in OrganismosIntervinientes.ORGANISMO}
+        # Obtener todos los organismos asignados al FormularioSectorial actual
+        organismos_asignados = OrganismosIntervinientes.objects.filter(
+            formulario_sectorial=obj
+        ).values_list('organismo', flat=True)
+
+        # Retornar clave y valor para choices ORGANISMO, excluyendo los ya asignados
+        return {
+            clave: valor
+            for clave, valor in OrganismosIntervinientes.ORGANISMO
+            if clave not in organismos_asignados
+        }
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados

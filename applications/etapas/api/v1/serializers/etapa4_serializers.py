@@ -25,6 +25,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
     usuarios_gore = serializers.SerializerMethodField()
     oficio_inicio_gore = serializers.SerializerMethodField()
     formularios_gore = serializers.SerializerMethodField()
+    tipo_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa4
@@ -39,7 +40,11 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'usuarios_gore',
             'oficio_inicio_gore',
             'formularios_gore',
+            'tipo_usuario'
         ]
+
+    def get_tipo_usuario(self, obj):
+        return {"GORE"}
 
     def get_ultimo_editor(self, obj):
         return get_ultimo_editor(self, obj)
