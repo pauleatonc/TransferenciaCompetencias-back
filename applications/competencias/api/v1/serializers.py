@@ -153,3 +153,8 @@ class AmbitoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ambito
         fields = ('id', 'nombre')
+
+
+class OrigenSerializer(serializers.Serializer):
+    clave = serializers.CharField(max_length=2)
+    descripcion = serializers.CharField(max_length=30)
