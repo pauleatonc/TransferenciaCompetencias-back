@@ -39,7 +39,8 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
-    organismo = OrganismosIntervinientesSerializer(read_only=True)
+    organismo_id = serializers.IntegerField(write_only=True)
+    organismo = OrganismosIntervinientesSerializer()
 
     class Meta:
         model = UnidadesIntervinientes
@@ -47,7 +48,8 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
             'id',
             'nombre_unidad',
             'descripcion_unidad',
-            'organismo'
+            'organismo',
+            'organismo_id'
         ]
 
 
