@@ -84,6 +84,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
             'mision_institucional',
             'informacion_adicional_marco_juridico',
             'organigrama_nacional',
+            'descripcion_archivo_organigrama_nacional',
             'descripcion_archivo_organigrama_regional',
             'identificacion_competencia',
             'fuentes_normativas',
