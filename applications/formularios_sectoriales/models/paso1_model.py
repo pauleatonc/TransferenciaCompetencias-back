@@ -58,6 +58,7 @@ class Paso1(PasoBase):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_twenty],
                                  verbose_name='Organigrama Nacional', blank=True, null=True)
+    descripcion_archivo_organigrama_nacional = models.TextField(max_length=500, blank=True)
     descripcion_archivo_organigrama_regional = models.TextField(max_length=500, blank=True)
 
 
