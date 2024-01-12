@@ -1,15 +1,8 @@
-import os
-from django.core.validators import FileExtensionValidator
-from django.contrib import admin
+from django.db import models
+from django.utils.translation import gettext as _
 
 from .base_model import PasoBase, FormularioSectorial
-from django.db import models
-
-from ..functions import organigrama_regional_path
-from ...base.models import BaseModel
-from applications.base.functions import validate_file_size_twenty
-from ...regioncomuna.models import Region
-from django.utils.translation import gettext as _
+from applications.base.models import BaseModel
 
 
 class Paso3(PasoBase):
