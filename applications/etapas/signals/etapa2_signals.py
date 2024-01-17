@@ -85,3 +85,18 @@ def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
             etapa2.enviada = False
             etapa2.aprobada = True
             etapa2.save()
+
+@receiver(m2m_changed, sender=Competencia.sectores.through)
+@transaction.atomic
+def agregar_formulario_sector_por_sector(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        # Asegúrate de que la instancia de Competencia está completamente guardada
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            # Aquí se crea el formulario asociado al GORE
+            FormularioSectorial.objects.get_or_create(
+                competencia=competencia,
+                sector=sector,
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
+            )

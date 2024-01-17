@@ -56,7 +56,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
         return get_fecha_ultima_modificacion(self, obj)
 
     def reordenar_detalle(self, detalle, user):
-        return reordenar_detalle(detalle, user)
+        return reordenar_detalle(self, detalle, user)
 
     def get_usuarios_notificados(self, obj):
         user = self.context['request'].user

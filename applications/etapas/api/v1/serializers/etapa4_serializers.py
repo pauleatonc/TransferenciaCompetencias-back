@@ -56,7 +56,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
         return calcular_tiempo_registro(etapa_obj, fecha_envio)
 
     def reordenar_detalle(self, detalle, user):
-        return reordenar_detalle(detalle, user)
+        return reordenar_detalle(self, detalle, user)
 
     def get_usuarios_gore(self, obj):
         user = self.context['request'].user
