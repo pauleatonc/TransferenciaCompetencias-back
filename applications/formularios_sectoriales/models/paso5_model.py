@@ -107,9 +107,9 @@ class Paso5(PasoBase):
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
 
     """5.1 Costos asociados al ejercicio de la competencia"""
-    total_costos_directos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total_costos_indirectos = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    costos_totales = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_costos_directos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    total_costos_indirectos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    costos_totales = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     """5.2 Costos asociados al ejercicio de la competencia"""
     glosas_especificas = models.TextField(max_length=500, blank=True)
@@ -148,7 +148,7 @@ class CostosDirectos(BaseModel):
                                              related_name='p_5_1_a_costos_directos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_directos', blank=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos')
-    total_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(default=False, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
@@ -192,7 +192,7 @@ class CostosIndirectos(BaseModel):
                                              related_name='p_5_1_b_costos_indirectos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos')
-    total_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(default=False, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
@@ -236,7 +236,7 @@ class ResumenCostosPorSubtitulo(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_c_resumen_costos_por_subtitulo')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='resumen_costos')
-    total_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_anual = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     descripcion = models.TextField(max_length=300, blank=True)
 
     def save(self, *args, **kwargs):
@@ -316,16 +316,16 @@ class EvolucionGastoAsociado(BaseModel):
 class CostoAnio(BaseModel):
     evolucion_gasto = models.ForeignKey(EvolucionGastoAsociado, on_delete=models.CASCADE, related_name='costo_anio')
     anio = models.IntegerField()
-    costo = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    costo = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
 
 class VariacionPromedio(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_2_variacion_promedio')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='variacion_promedio')
-    gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    variacion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
     @classmethod
@@ -370,7 +370,7 @@ class PersonalDirecto(BaseModel):
                                              related_name='p_5_3_a_personal_directo')
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo')
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo')
-    renta_bruta = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True)
 
 
@@ -380,5 +380,5 @@ class PersonalIndirecto(BaseModel):
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto')
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto')
     numero_personas = models.IntegerField(null=True, blank=True)
-    renta_bruta = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True)
