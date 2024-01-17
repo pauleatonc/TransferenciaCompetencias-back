@@ -348,112 +348,126 @@ class Paso5Serializer(WritableNestedModelSerializer):
         representation['p_5_3_b_personal_indirecto'] = personal_indirecto_agrupado
 
         return representation
+    
+    def update_paso5_instance(self, instance, paso5_data):
+        # Asume que 'paso5_data' contiene los datos del objeto relacionado
+        paso5_instance = getattr(instance, 'paso5', None)
+        if paso5_instance:
+            for attr, value in paso5_data.items():
+                setattr(paso5_instance, attr, value)
+            paso5_instance.save()
+        else:
+            Paso5.objects.create(formulario_sectorial=instance, **paso5_data)
 
-
-def to_internal_value(self, data):
-    # Maneja primero los campos no anidados
-    internal_value = super().to_internal_value(data)
-
-    # Procesar campos anidados
-    for field_name in [
-        'p_5_1_a_costos_directos',
-        'p_5_1_b_costos_indirectos',
-        'p_5_1_c_resumen_costos_por_subtitulo',
-        'p_5_2_evolucion_gasto_asociado',
-        'p_5_2_variacion_promedio',
-        'p_5_3_a_personal_directo',
-        'p_5_3_b_personal_indirecto',
-    ]:
-        if field_name in data:
-            nested_data = data[field_name]
-            internal_nested_data = []
-            for item in nested_data:
-                # Manejar la clave 'DELETE' si está presente
-                if 'DELETE' in item and item['DELETE'] == True:
-                    internal_nested_data.append({'id': item['id'], 'DELETE': True})
+    def to_internal_value(self, data):
+        # Maneja primero los campos no anidados
+        internal_value = super().to_internal_value(data)
+    
+        # Procesar campos anidados
+        for field_name in [
+            'p_5_1_a_costos_directos',
+            'p_5_1_b_costos_indirectos',
+            'p_5_1_c_resumen_costos_por_subtitulo',
+            'p_5_2_evolucion_gasto_asociado',
+            'p_5_2_variacion_promedio',
+            'p_5_3_a_personal_directo',
+            'p_5_3_b_personal_indirecto',
+        ]:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
+    
+        return internal_value
+    
+    
+    def update_or_create_nested_instances(self, model, nested_data, instance):
+        for data in nested_data:
+            item_id = data.pop('id', None)
+            delete_flag = data.pop('DELETE', False)
+    
+            if item_id is not None:
+                if delete_flag:
+                    model.objects.filter(id=item_id).delete()
                 else:
-                    item_data = self.fields[field_name].child.to_internal_value(item)
-                    item_data['id'] = item.get('id')
-                    internal_nested_data.append(item_data)
-            internal_value[field_name] = internal_nested_data
+                    obj, created = model.objects.update_or_create(
+                        id=item_id,
+                        formulario_sectorial=instance,
+                        defaults=data
+                    )
+            elif not delete_flag:
+                obj = model.objects.create(formulario_sectorial=instance, **data)
+    
+    
+    def update(self, instance, validated_data):
+        paso5 = validated_data.pop('paso5', None)
+        costos_directos_data = validated_data.pop('p_5_1_a_costos_directos', None)
+        costos_indirectos_data = validated_data.pop('p_5_1_b_costos_indirectos', None)
+        resumen_costos_data = validated_data.pop('p_5_1_c_resumen_costos_por_subtitulo', None)
+        evolucion_gasto_data = validated_data.pop('p_5_2_evolucion_gasto_asociado', None)
+        variacion_promedio_data = validated_data.pop('p_5_2_variacion_promedio', None)
+        personal_directo_data = validated_data.pop('p_5_3_a_personal_directo', None)
+        personal_indirecto_data = validated_data.pop('p_5_3_b_personal_indirecto', None)
+    
+        # Actualizar los atributos de FormularioSectorial
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
 
-    return internal_value
-
-
-def update_or_create_nested_instances(self, model, nested_data, instance):
-    for data in nested_data:
-        item_id = data.pop('id', None)
-        delete_flag = data.pop('DELETE', False)
-
-        if item_id is not None:
-            if delete_flag:
-                model.objects.filter(id=item_id).delete()
-            else:
-                obj, created = model.objects.update_or_create(
-                    id=item_id,
-                    formulario_sectorial=instance,
-                    defaults=data
+        # Actualizar o crear Paso5
+        if paso5 is not None:
+            self.update_paso5_instance(instance, paso5)
+    
+        # Actualizar o crear CostosDirectos
+        if costos_directos_data is not None:
+            self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance)
+    
+        # Actualizar o crear CostosIndirectos
+        if costos_indirectos_data is not None:
+            self.update_or_create_nested_instances(CostosIndirectos, costos_indirectos_data, instance)
+    
+        # Actualizar o crear ResumenCostosPorSubtitulo
+        if resumen_costos_data is not None:
+            self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_data, instance)
+    
+        # Actualizar o crear EvolucionGastoAsociado
+        if evolucion_gasto_data is not None:
+            for evolucion_gasto_data in evolucion_gasto_data:
+                evolucion_gasto_id = evolucion_gasto_data.pop('id', None)
+                costo_anio_data = evolucion_gasto_data.pop('costo_anio', [])
+    
+                evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
+                    id=evolucion_gasto_id,
+                    defaults=evolucion_gasto_data,
+                    formulario_sectorial=instance
                 )
-        elif not delete_flag:
-            obj = model.objects.create(formulario_sectorial=instance, **data)
-
-
-def update(self, instance, validated_data):
-    costos_directos_data = validated_data.pop('p_5_1_a_costos_directos', None)
-    costos_indirectos_data = validated_data.pop('p_5_1_b_costos_indirectos', None)
-    resumen_costos_data = validated_data.pop('p_5_1_c_resumen_costos_por_subtitulo', None)
-    evolucion_gasto_data = validated_data.pop('p_5_2_evolucion_gasto_asociado', None)
-    variacion_promedio_data = validated_data.pop('p_5_2_variacion_promedio', None)
-    personal_directo_data = validated_data.pop('p_5_3_a_personal_directo', None)
-    personal_indirecto_data = validated_data.pop('p_5_3_b_personal_indirecto', None)
-
-    # Actualizar los atributos de FormularioSectorial
-    for attr, value in validated_data.items():
-        setattr(instance, attr, value)
-    instance.save()
-
-    # Actualizar o crear CostosDirectos
-    if costos_directos_data is not None:
-        self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance)
-
-    # Actualizar o crear CostosIndirectos
-    if costos_indirectos_data is not None:
-        self.update_or_create_nested_instances(CostosIndirectos, costos_indirectos_data, instance)
-
-    # Actualizar o crear ResumenCostosPorSubtitulo
-    if resumen_costos_data is not None:
-        self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_data, instance)
-
-    # Actualizar o crear EvolucionGastoAsociado
-    if evolucion_gasto_data is not None:
-        for evolucion_gasto_data in evolucion_gasto_data:
-            evolucion_gasto_id = evolucion_gasto_data.pop('id', None)
-            costo_anio_data = evolucion_gasto_data.pop('costo_anio', [])
-
-            evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
-                id=evolucion_gasto_id,
-                defaults=evolucion_gasto_data,
-                formulario_sectorial=instance
-            )
-
-            for costo_data in costo_anio_data:
-                costo_id = costo_data.pop('id', None)
-                costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
-                CostoAnio.objects.update_or_create(
-                    id=costo_id,
-                    defaults=costo_data
-                )
-
-    # Actualizar o crear VariacionPromedio
-    if variacion_promedio_data is not None:
-        self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance)
-
-    # Actualizar o crear PersonalDirecto
-    if personal_directo_data is not None:
-        self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance)
-
-    # Actualizar o crear PersonalIndirecto
-    if personal_indirecto_data is not None:
-        self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
-
-    return instance
+    
+                for costo_data in costo_anio_data:
+                    costo_id = costo_data.pop('id', None)
+                    costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
+                    CostoAnio.objects.update_or_create(
+                        id=costo_id,
+                        defaults=costo_data
+                    )
+    
+        # Actualizar o crear VariacionPromedio
+        if variacion_promedio_data is not None:
+            self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance)
+    
+        # Actualizar o crear PersonalDirecto
+        if personal_directo_data is not None:
+            self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance)
+    
+        # Actualizar o crear PersonalIndirecto
+        if personal_indirecto_data is not None:
+            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
+    
+        return instance

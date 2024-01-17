@@ -57,9 +57,12 @@ class Paso3(PasoBase):
 class CoberturaAnual(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='cobertura_anual')
     anio = models.IntegerField()
-    universo_cobertura = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    recursos_ejecutados = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    universo_cobertura = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    recursos_ejecutados = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+
+    class Meta:
+        ordering = ['anio']
 
     @property
     def total_cobertura_efectiva(self):

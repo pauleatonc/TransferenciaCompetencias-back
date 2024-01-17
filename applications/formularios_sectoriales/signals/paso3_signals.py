@@ -16,7 +16,8 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 @receiver(post_save, sender=FormularioSectorial)
 def crear_coberturas_anuales(sender, instance, created, **kwargs):
     if created:
-        año_actual = timezone.now().year
+        competencia = instance.competencia
+        año_actual = competencia.fecha_inicio.year
         año_inicial = año_actual - 5
 
         for año in range(año_inicial, año_actual):
@@ -28,7 +29,8 @@ def crear_coberturas_anuales(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Competencia)
 def actualizar_coberturas_anuales(sender, instance, **kwargs):
-    año_actual = timezone.now().year
+
+    año_actual = instance.fecha_inicio.year
     año_inicial = año_actual - 5
 
     formularios_sectoriales = FormularioSectorial.objects.filter(competencia=instance)
