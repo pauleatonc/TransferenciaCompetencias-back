@@ -13,7 +13,7 @@ User = get_user_model()
 
 
 class MarcoJuridicoSerializer(serializers.ModelSerializer):
-    documento = serializers.fileField()
+    documento = serializers.FileField()
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,7 +40,7 @@ class MarcoJuridicoSerializer(serializers.ModelSerializer):
 
 class OrganigramaRegionalSerializer(serializers.ModelSerializer):
     region = serializers.SerializerMethodField()
-    documento = serializers.fileField()
+    documento = serializers.FileField()
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
