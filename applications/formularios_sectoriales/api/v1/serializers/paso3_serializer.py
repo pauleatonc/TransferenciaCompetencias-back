@@ -1,17 +1,12 @@
-from drf_writable_nested import WritableNestedModelSerializer
+from django.contrib.auth import get_user_model
+from drf_writable_nested.serializers import WritableNestedModelSerializer
 from rest_framework import serializers
-from applications.competencias.models import Competencia
+
 from applications.formularios_sectoriales.models import (
     FormularioSectorial,
     Paso3,
     CoberturaAnual
 )
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
-from .base_serializer import FormularioSectorialDetailSerializer
 
 User = get_user_model()
 
@@ -32,10 +27,6 @@ class CoberturaAnualSerializer(serializers.ModelSerializer):
 
     def total_cobertura_efectiva(self, obj):
         return obj.total_cobertura_efectiva()
-
-    def update(self, instance, validated_data):
-        print("Actualizar CoberturaAnual:", instance, validated_data)
-        return super().update(instance, validated_data)
 
 
 class Paso3EncabezadoSerializer(serializers.ModelSerializer):
@@ -62,14 +53,14 @@ class Paso3EncabezadoSerializer(serializers.ModelSerializer):
         return obj.avance()
 
 
-class Paso3Serializer(serializers.ModelSerializer):
-
-    paso3 = Paso3EncabezadoSerializer(many=True)
+class Paso3Serializer(WritableNestedModelSerializer):
+    paso3 = Paso3EncabezadoSerializer()
     cobertura_anual = CoberturaAnualSerializer(many=True)
 
     class Meta:
         model = FormularioSectorial
         fields = [
+            'id',
             'paso3',
             'cobertura_anual',
         ]
@@ -80,7 +71,6 @@ class Paso3Serializer(serializers.ModelSerializer):
 
         # Procesar campos anidados
         for field_name in [
-            'paso3',
             'cobertura_anual',
         ]:
             if field_name in data:
@@ -97,6 +87,7 @@ class Paso3Serializer(serializers.ModelSerializer):
                 internal_value[field_name] = internal_nested_data
 
         return internal_value
+
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
@@ -115,6 +106,17 @@ class Paso3Serializer(serializers.ModelSerializer):
             elif not delete_flag:
                 obj = model.objects.create(formulario_sectorial=instance, **data)
 
+    def update_paso3_instance(self, instance, paso3_data):
+        # Asume que 'paso3_data' contiene los datos del objeto relacionado
+        paso3_instance = getattr(instance, 'paso3', None)
+        if paso3_instance:
+            for attr, value in paso3_data.items():
+                setattr(paso3_instance, attr, value)
+            paso3_instance.save()
+        else:
+            Paso3.objects.create(formulario_sectorial=instance, **paso3_data)
+
+
     def update(self, instance, validated_data):
         paso3 = validated_data.pop('paso3', None)
         cobertura_data = validated_data.pop('cobertura_anual', None)
@@ -126,7 +128,7 @@ class Paso3Serializer(serializers.ModelSerializer):
 
         # Actualizar o crear Paso3
         if paso3 is not None:
-            self.update_or_create_nested_instances(Paso3, paso3, instance)
+            self.update_paso3_instance(instance, paso3)
 
         # Actualizar o crear OrganismosIntervinientes
         if cobertura_data is not None:

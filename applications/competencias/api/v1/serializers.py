@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from applications.competencias.models import Competencia
+from applications.competencias.models import Competencia, Ambito
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
@@ -82,6 +82,12 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
 
 
 class CompetenciaUpdateSerializer(serializers.ModelSerializer):
+    nombre = serializers.CharField(required=False)
+    plazo_formulario_sectorial = serializers.IntegerField(required=False)
+    plazo_formulario_gore = serializers.IntegerField(required=False)
+    sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
+    regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
+
     class Meta:
         model = Competencia
         fields = '__all__'
@@ -90,7 +96,7 @@ class CompetenciaUpdateSerializer(serializers.ModelSerializer):
 
 def obtener_informacion_etapas(competencia):
     etapas_info = {}
-    for i in range(1, 6):  # Asumiendo que tienes etapas de 1 a 5
+    for i in range(1, 6):
         etapa_model = globals().get(f'Etapa{i}')
         if etapa_model:
             etapa = etapa_model.objects.filter(competencia=competencia).first()
@@ -103,11 +109,11 @@ def obtener_informacion_etapas(competencia):
 
 
 class CompetenciaDetailSerializer(serializers.ModelSerializer):
-    etapa1 = Etapa1Serializer(source='etapa1_set', many=True)
-    etapa2 = Etapa2Serializer(source='etapa2_set', many=True)
-    etapa3 = Etapa3Serializer(source='etapa3_set', many=True)
-    etapa4 = Etapa4Serializer(source='etapa4_set', many=True)
-    etapa5 = Etapa5Serializer(source='etapa5_set', many=True)
+    etapa1 = Etapa1Serializer()
+    etapa2 = Etapa2Serializer()
+    etapa3 = Etapa3Serializer()
+    etapa4 = Etapa4Serializer()
+    etapa5 = Etapa5Serializer()
     usuarios_subdere = UsuarioSerializer(many=True, read_only=True)
     usuarios_dipres = UsuarioSerializer(many=True, read_only=True)
     usuarios_sectoriales = UsuarioSerializer(many=True, read_only=True)
@@ -123,6 +129,13 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'nombre',
             'resumen_competencia',
             'sectores',
+            'regiones',
+            'origen',
+            'ambito_competencia',
+            'oficio_origen',
+            'fecha_inicio',
+            'plazo_formulario_sectorial',
+            'plazo_formulario_gore',
             'etapa1',
             'etapa2',
             'etapa3',
@@ -148,3 +161,13 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'tiempo_transcurrido': obj.tiempo_transcurrido()
         }
 
+
+class AmbitoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ambito
+        fields = ('id', 'nombre')
+
+
+class OrigenSerializer(serializers.Serializer):
+    clave = serializers.CharField(max_length=2)
+    descripcion = serializers.CharField(max_length=30)

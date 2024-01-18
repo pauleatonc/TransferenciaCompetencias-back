@@ -3,6 +3,8 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa1
+from applications.etapas.functions import get_ultimo_editor, get_fecha_ultima_modificacion, obtener_estado_accion_generico
+
 
 User = get_user_model()
 
@@ -17,7 +19,16 @@ class Etapa1Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = Etapa1
-        fields = ['nombre_etapa', 'estado', 'competencia_creada', 'usuarios_vinculados', 'fecha_inicio', 'tiempo_transcurrido_registrado', 'ultimo_editor', 'fecha_ultima_modificacion']
+        fields = [
+            'id',
+            'nombre_etapa',
+            'estado',
+            'competencia_creada',
+            'usuarios_vinculados',
+            'tiempo_transcurrido_registrado',
+            'ultimo_editor',
+            'fecha_ultima_modificacion'
+        ]
 
     def get_competencia_creada(self, obj):
         return [{
@@ -26,49 +37,23 @@ class Etapa1Serializer(serializers.ModelSerializer):
             "accion": "Finalizada"
         }]
 
-    def get_usuarios_vinculados(self, obj):
-        user = self.context['request'].user
-        nombre = "Usuario sectorial vinculado a la competencia creada"
-        if obj.competencia.sectores.count() > 1:
-            nombre = "Usuarios sectoriales vinculados a la competencia creada"
-
-        # Utiliza el campo 'usuarios_vinculados' directamente para determinar el estado
-        estado = 'finalizada' if obj.usuarios_vinculados else 'pendiente'
-        accion = "Usuario(s) pendiente(s)"
-
-        if obj.usuarios_vinculados:
-            if user.groups.filter(name='SUBDERE').exists():
-                accion = "Editar usuarios"
-            else:
-                accion = "Finalizada"
-        else:
-            if not user.groups.filter(name='SUBDERE').exists():
-                accion = "Usuario(s) pendiente(s)"
-
-        return [{
-            "nombre": nombre,
-            "estado": estado,
-            "accion": accion
-        }]
-
-
     def get_ultimo_editor(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                    # Asegúrate de que el campo 'profile' exista en tu modelo de User
-                }
-        return None
+        return get_ultimo_editor(self, obj)
 
     def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
+        return get_fecha_ultima_modificacion(self, obj)
+
+    def get_usuarios_vinculados(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            condicion=obj.usuarios_vinculados,
+            conteo_condicion=obj.competencia.usuarios_subdere.count(),
+            usuario_grupo='SUBDERE',
+            nombre_singular='Usuario sectorial vinculado a la competencia creada',
+            nombre_plural='Usuarios sectoriales vinculados a la competencia creada',
+            accion_usuario_grupo='Editar usuario(s)',
+            accion_general ='Usuario(s) pendiente(s)',
+            accion_finalizada_usuario_grupo='Editar usuario(s)',
+            accion_finalizada_general='Finalizada'
+        )
+

@@ -2,8 +2,15 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
 
-from applications.etapas.models import Etapa2, ObservacionSectorial
-from applications.formularios_sectoriales.models import FormularioSectorial
+from applications.etapas.models import Etapa2
+from applications.formularios_sectoriales.models import FormularioSectorial, ObservacionesSubdereFormularioSectorial
+from applications.etapas.functions import (
+    get_ultimo_editor,
+    get_fecha_ultima_modificacion,
+    calcular_tiempo_registro,
+    obtener_estado_accion_generico,
+    reordenar_detalle,
+)
 
 User = get_user_model()
 
@@ -15,12 +22,15 @@ class Etapa2Serializer(serializers.ModelSerializer):
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
     usuarios_notificados = serializers.SerializerMethodField()
+    oficio_inicio_sectorial = serializers.SerializerMethodField()
     formulario_sectorial = serializers.SerializerMethodField()
     observaciones_sectorial = serializers.SerializerMethodField()
+    tipo_usuario = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa2
         fields = [
+            'id',
             'nombre_etapa',
             'estado',
             'fecha_inicio',
@@ -29,29 +39,24 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_notificados',
+            'oficio_inicio_sectorial',
             'formulario_sectorial',
-            'observaciones_sectorial'
+            'observaciones_sectorial',
+            'oficio_origen',
+            'tipo_usuario'
         ]
 
+    def get_tipo_usuario(self, obj):
+        return {"Sectorial"}
+
     def get_ultimo_editor(self, obj):
-        historial = obj.historical.all().order_by('-history_date')
-        for record in historial:
-            if record.history_user:
-                return {
-                    'nombre_completo': record.history_user.nombre_completo,
-                    'perfil': record.history_user.perfil
-                }
-        return None
+        return get_ultimo_editor(self, obj)
 
     def get_fecha_ultima_modificacion(self, obj):
-        try:
-            ultimo_registro = obj.historical.latest('history_date')
-            if ultimo_registro:
-                fecha_local = timezone.localtime(ultimo_registro.history_date)
-                return fecha_local.strftime('%d/%m/%Y - %H:%M')
-            return None
-        except obj.historical.model.DoesNotExist:
-            return None
+        return get_fecha_ultima_modificacion(self, obj)
+
+    def reordenar_detalle(self, detalle, user):
+        return reordenar_detalle(self, detalle, user)
 
     def get_usuarios_notificados(self, obj):
         user = self.context['request'].user
@@ -97,6 +102,21 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "detalle_usuarios_notificados": detalle
         }
 
+    def get_oficio_inicio_sectorial(self, obj):
+        return obtener_estado_accion_generico(
+            self,
+            id=obj.competencia.etapa2.id,
+            condicion=obj.oficio_origen,
+            condicion_anterior=obj.usuarios_notificados,
+            usuario_grupo='SUBDERE',
+            conteo_condicion=1,
+            nombre_singular='Subir oficio y su fecha para habilitar formulario sectorial',
+            accion_usuario_grupo='Subir oficio',
+            accion_general='Oficio pendiente',
+            accion_finalizada_usuario_grupo='Ver oficio',
+            accion_finalizada_general='Ver oficio',
+        )
+
     def get_formulario_sectorial(self, obj):
         user = self.context['request'].user
         es_usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(id=user.id).exists()
@@ -107,7 +127,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
             formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia,
                                                                       sector=sector).first()
             if formulario_sectorial:
-                estado_revision = es_usuario_sectorial and obj.usuarios_notificados
+                estado_revision = es_usuario_sectorial and obj.oficio_origen
                 estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if es_usuario_sectorial else 'Formulario pendiente'
                 detalle_formulario = {
@@ -142,7 +162,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
         user = self.context['request'].user
         es_subdere = user.groups.filter(name='SUBDERE').exists()
         formularios_sectoriales = FormularioSectorial.objects.filter(competencia=obj.competencia)
-        observaciones = ObservacionSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+        observaciones = ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
 
         detalle = []
         for formulario in formularios_sectoriales:
@@ -152,7 +172,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Observación' if observacion.observacion_enviada else 'Subir Observación' if es_subdere else 'Observación pendiente'
                 detalle.append({
-                    "id": observacion.id,
+                    "id": formulario.id,
                     "nombre": f"Observación del formulario sectorial ({formulario.sector.nombre})",
                     "estado": estado,
                     "accion": accion
@@ -179,27 +199,4 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "detalle_observaciones_sectoriales": detalle
         }
 
-    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-        if etapa_obj.fecha_inicio and fecha_envio:
-            delta = fecha_envio - etapa_obj.fecha_inicio
-            total_seconds = int(delta.total_seconds())
-            dias = total_seconds // (24 * 3600)
-            horas = (total_seconds % (24 * 3600)) // 3600
-            minutos = (total_seconds % 3600) // 60
-            return {'dias': dias, 'horas': horas, 'minutos': minutos}
-        return {'dias': 0, 'horas': 0, 'minutos': 0}
 
-    def reordenar_detalle(self, detalle, user):
-        # Identificar si el usuario actual está mencionado en cada elemento de detalle
-        usuario_principal = []
-        otros = []
-
-        nombre_sector_usuario = user.sector.nombre if user.sector else None
-
-        for d in detalle:
-            if user.nombre_completo in d['nombre'] or (nombre_sector_usuario and nombre_sector_usuario in d['nombre']):
-                usuario_principal.append(d)
-            else:
-                otros.append(d)
-
-        return usuario_principal + otros

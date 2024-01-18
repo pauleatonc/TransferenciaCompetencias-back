@@ -1,6 +1,8 @@
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
+from applications.base.functions import validate_file_size_twenty
 #
 from applications.competencias.models import Competencia
 from applications.base.models import BaseModel
@@ -16,14 +18,21 @@ class EtapaBase(BaseModel):
         ('omitida', 'Omitida')
     )
 
-    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
+    competencia = models.OneToOneField(Competencia, on_delete=models.CASCADE)
     estado = models.CharField(max_length=50, choices=ESTADOS, default='no_iniciada')
     fecha_inicio = models.DateTimeField(null=True, blank=True)
     plazo_dias = models.IntegerField(null=True, blank=True)
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
+    omitida = models.BooleanField(default=False)
     tiempo_transcurrido_registrado = models.IntegerField(default=0)
     ultima_finalizacion = models.DateTimeField(null=True, blank=True)
+    oficio_origen = models.FileField(upload_to='oficios_competencias',
+                                     validators=[
+                                         FileExtensionValidator(
+                                             ['pdf'], message='Solo se permiten archivos PDF.'),
+                                         validate_file_size_twenty],
+                                     verbose_name='Oficio inicio etapa', blank=True, null=True)
 
     class Meta:
         abstract = True
@@ -35,6 +44,8 @@ class EtapaBase(BaseModel):
     def actualizar_estado(self):
         if not self.fecha_inicio:
             return 'no_iniciada'
+        elif self.omitida:
+            return 'omitida'
         elif self.aprobada:
             return 'finalizada'
         elif self.enviada:

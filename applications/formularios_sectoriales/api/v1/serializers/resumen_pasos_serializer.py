@@ -63,11 +63,11 @@ class Paso5ResumenSerializer(PasoBaseSerializer):
 class ResumenFormularioSerializer(serializers.ModelSerializer):
     competencia_nombre = serializers.SerializerMethodField()
     sector_nombre = serializers.SerializerMethodField()
-    paso1 = Paso1ResumenSerializer(many=True,  read_only=True)
-    paso2 = Paso2ResumenSerializer(many=True,  read_only=True)
-    paso3 = Paso3ResumenSerializer(many=True,  read_only=True)
-    paso4 = Paso4ResumenSerializer(many=True,  read_only=True)
-    paso5 = Paso5ResumenSerializer(many=True,  read_only=True)
+    paso1 = Paso1ResumenSerializer(read_only=True)
+    paso2 = Paso2ResumenSerializer(read_only=True)
+    paso3 = Paso3ResumenSerializer(read_only=True)
+    paso4 = Paso4ResumenSerializer(read_only=True)
+    paso5 = Paso5ResumenSerializer(read_only=True)
 
     class Meta:
         model = FormularioSectorial

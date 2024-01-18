@@ -53,7 +53,7 @@ class Paso2(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:
@@ -74,16 +74,22 @@ class OrganismosIntervinientes(BaseModel):
 
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_2_1_organismos_intervinientes')
     organismo = models.CharField(max_length=5, choices=ORGANISMO, blank=True)
-    sector_ministerio_servicio = models.CharField(max_length=500, blank=True)
+    nombre_ministerio_servicio = models.CharField(max_length=500, blank=True)
     descripcion = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ['id']
 
 
 class UnidadesIntervinientes(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_2_2_unidades_intervinientes')
-    organismo = models.ForeignKey(OrganismosIntervinientes, on_delete=models.CASCADE, related_name='unidadesintervinientes_set')
+    organismo = models.ForeignKey(OrganismosIntervinientes, on_delete=models.CASCADE, related_name='unidadesintervinientes')
     nombre_unidad = models.TextField(max_length=500, blank=True)
     descripcion_unidad = models.TextField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ['id']
 
 
 class EtapasEjercicioCompetencia(BaseModel):

@@ -42,7 +42,7 @@ class Paso1(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
 
     """1.1  Ficha de descripción organizacional"""
     forma_juridica_organismo = models.TextField(max_length=500, blank=True)
@@ -58,6 +58,7 @@ class Paso1(PasoBase):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_twenty],
                                  verbose_name='Organigrama Nacional', blank=True, null=True)
+    descripcion_archivo_organigrama_nacional = models.TextField(max_length=500, blank=True)
     descripcion_archivo_organigrama_regional = models.TextField(max_length=500, blank=True)
 
 

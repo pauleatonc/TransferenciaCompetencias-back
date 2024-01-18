@@ -1,15 +1,8 @@
-import os
-from django.core.validators import FileExtensionValidator
-from django.contrib import admin
+from django.db import models
+from django.utils.translation import gettext as _
 
 from .base_model import PasoBase, FormularioSectorial
-from django.db import models
-
-from ..functions import organigrama_regional_path
-from ...base.models import BaseModel
-from applications.base.functions import validate_file_size_twenty
-from ...regioncomuna.models import Region
-from django.utils.translation import gettext as _
+from applications.base.models import BaseModel
 
 
 class Paso3(PasoBase):
@@ -47,7 +40,7 @@ class Paso3(PasoBase):
 
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
 
     """Campos descripción Cobertura de la Competencia"""
     universo_cobertura = models.TextField(max_length=800, blank=True)
@@ -64,9 +57,12 @@ class Paso3(PasoBase):
 class CoberturaAnual(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='cobertura_anual')
     anio = models.IntegerField()
-    universo_cobertura = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    recursos_ejecutados = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    universo_cobertura = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    recursos_ejecutados = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+
+    class Meta:
+        ordering = ['anio']
 
     @property
     def total_cobertura_efectiva(self):

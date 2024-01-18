@@ -8,9 +8,28 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from applications.competencias.models import Competencia
 from applications.etapas.models import Etapa1
-from .serializers import (CompetenciaListSerializer, CompetenciaCreateSerializer,
-                          CompetenciaUpdateSerializer, CompetenciaDetailSerializer, CompetenciaHomeListSerializer)
+from .serializers import (
+    CompetenciaListSerializer,
+    CompetenciaCreateSerializer,
+    CompetenciaUpdateSerializer,
+    CompetenciaDetailSerializer,
+    CompetenciaHomeListSerializer
+)
+
 from applications.users.permissions import IsSUBDEREOrSuperuser
+
+
+def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
+    if request.method == 'PATCH':
+        print("Datos recibidos para PATCH:", request.data)
+        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    else:  # GET
+        serializer = serializer_class(formulario_sectorial)
+        return Response(serializer.data)
 
 
 class CustomPageNumberPagination(PageNumberPagination):
@@ -48,7 +67,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         """
         Devuelve las clases de permisos de instancia para la acción solicitada.
         """
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsSUBDEREOrSuperuser]
         else:
             permission_classes = [IsAuthenticated]
@@ -73,15 +92,13 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
 
         # Filtrar según el tipo de usuario
         if user.groups.filter(name='SUBDERE').exists():
-            queryset = queryset.filter(creado_por=user)
+            queryset = queryset.filter(usuarios_subdere=user)
         elif user.groups.filter(name='GORE').exists():
             queryset = queryset.filter(usuarios_gore=user)
         elif user.groups.filter(name='DIPRES').exists():
             queryset = queryset.filter(usuarios_dipres=user)
         elif user.groups.filter(name='Usuario Sectorial').exists():
             queryset = queryset.filter(usuarios_sectoriales=user)
-
-        queryset = queryset.prefetch_related('etapa1_set')
 
         paginator = CustomHomePagination()
         page = paginator.paginate_queryset(queryset, request)

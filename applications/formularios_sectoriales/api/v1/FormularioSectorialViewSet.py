@@ -15,7 +15,8 @@ from .serializers import (
     Paso3Serializer,
     Paso4Serializer,
     Paso5Serializer,
-    ResumenFormularioSerializer
+    ResumenFormularioSerializer,
+    ObservacionesSubdereSerializer
 )
 
 
@@ -134,3 +135,9 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         formulario_sectorial = self.get_object()
         serializer = ResumenFormularioSerializer(formulario_sectorial)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get', 'patch'], url_path='observaciones-subdere-sectorial')
+    def observaciones_sectoriales(self, request, pk=None):
+        formulario_sectorial = self.get_object()
+
+        return manejar_formularios_pasos(request, formulario_sectorial, ObservacionesSubdereSerializer)

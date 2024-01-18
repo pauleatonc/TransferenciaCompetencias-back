@@ -1,78 +1,41 @@
-from drf_writable_nested import WritableNestedModelSerializer
 from rest_framework import serializers
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import (
-    FormularioSectorial,
-    Paso4,
-    IndicadorDesempeno
-)
+from applications.formularios_sectoriales.models import FormularioSectorial, MarcoJuridico, OrganigramaRegional
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
+from applications.formularios_sectoriales.models import ObservacionesSubdereFormularioSectorial
 from .base_serializer import FormularioSectorialDetailSerializer
+
 
 User = get_user_model()
 
 
-class IndicadorDesempenoSerializer(serializers.ModelSerializer):
-    indicador_display = serializers.SerializerMethodField()
+class CamposObservacionesSerializer(serializers.ModelSerializer):
     class Meta:
-        model = IndicadorDesempeno
+        model = ObservacionesSubdereFormularioSectorial
         fields = [
             'id',
-            'indicador',
-            'indicador_display',
-            'formula_calculo',
-            'descripcion_indicador',
-            'medios_calculo',
-            'verificador_asociado'
+            'observacion_paso1',
+            'observacion_paso2',
+            'observacion_paso3',
+            'observacion_paso4',
+            'observacion_paso5',
+            'observacion_enviada',
+            'fecha_envio',
         ]
 
-    def get_indicador_display(self, obj):
-        return obj.get_indicador_display()
 
-
-class Paso4EncabezadoSerializer(serializers.ModelSerializer):
-    nombre_paso = serializers.ReadOnlyField()
-    numero_paso = serializers.ReadOnlyField()
-    avance = serializers.SerializerMethodField()
-    campos_obligatorios_completados = serializers.ReadOnlyField()
-    estado_stepper = serializers.ReadOnlyField()
-
-    class Meta:
-        model = Paso4
-        fields = [
-            'id',
-            'nombre_paso',
-            'numero_paso',
-            'avance',
-            'campos_obligatorios_completados',
-            'estado_stepper',
-        ]
-
-    def avance(self, obj):
-        return obj.avance()
-
-
-class Paso4Serializer(serializers.ModelSerializer):
-
-    paso4 = Paso4EncabezadoSerializer()
-    indicador_desempeno = IndicadorDesempenoSerializer(many=True)
-    lista_indicadores = serializers.SerializerMethodField()
+class ObservacionesSubdereSerializer(serializers.ModelSerializer):
+    observaciones_sectoriales = CamposObservacionesSerializer()
 
     class Meta:
         model = FormularioSectorial
         fields = [
-            'paso4',
-            'indicador_desempeno',
-            'lista_indicadores',
+            'observaciones_sectoriales'
         ]
-
-    def get_lista_indicadores(self, obj):
-        # Retornar clave y valor para choices INDICADOR
-        return {clave: valor for clave, valor in IndicadorDesempeno.INDICADOR}
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
@@ -80,7 +43,7 @@ class Paso4Serializer(serializers.ModelSerializer):
 
         # Procesar campos anidados
         for field_name in [
-            'indicador_desempeno',
+            'observaciones_sectoriales',
         ]:
             if field_name in data:
                 nested_data = data[field_name]
@@ -115,15 +78,16 @@ class Paso4Serializer(serializers.ModelSerializer):
                 obj = model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
-        indicador_desempeno = validated_data.pop('indicador_desempeno', None)
+        observaciones_data = validated_data.pop('observaciones_sectoriales', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Actualizar o crear IndicadorDesempeno
-        if indicador_desempeno is not None:
-            self.update_or_create_nested_instances(IndicadorDesempeno, indicador_desempeno, instance)
+        # Actualizar o crear ObservacionesSubdereFormularioSectorial
+        if observaciones_data is not None:
+            self.update_or_create_nested_instances(ObservacionesSubdereFormularioSectorial, observaciones_data, instance)
+
 
         return instance

@@ -5,9 +5,10 @@ from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1, Etapa2, ObservacionSectorial, Etapa3
+from applications.etapas.models import Etapa1, Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
 from applications.regioncomuna.models import Region
+from applications.formularios_sectoriales.models import ObservacionesSubdereFormularioSectorial
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
@@ -23,8 +24,6 @@ def crear_organigramas_regionales(sender, instance, action, pk_set, **kwargs):
             )
 
             if created:
-                # Crear ObservacionSectorial y Paso1
-                ObservacionSectorial.objects.create(formulario_sectorial=formulario_sectorial)
                 # Crear OrganigramaRegional para cada región asociada a la competencia
                 for region_pk in pk_set:
                     region = Region.objects.get(pk=region_pk)
@@ -39,8 +38,6 @@ def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
     if instance.estado == 'finalizada':
         # Si Etapa1 se ha finalizado, actualiza Etapa2
         etapa2.usuarios_notificados = True
-        if not etapa2.fecha_inicio:
-            etapa2.fecha_inicio = timezone.now()
         etapa2.plazo_dias = instance.competencia.plazo_formulario_sectorial
     else:
         # Si Etapa1 no está finalizada, asegúrate de que usuarios_notificados en Etapa2 sea False
@@ -71,18 +68,17 @@ def actualizar_estado_formulario_completo_sectorial(sender, instance, **kwargs):
         etapa2.save()
 
 
-@receiver(post_save, sender=ObservacionSectorial)
+@receiver(post_save, sender=ObservacionesSubdereFormularioSectorial)
 def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
     # Comprobar si todas las observaciones han sido enviadas
     todas_enviadas = all(
         observacion.observacion_enviada for observacion in
-        ObservacionSectorial.objects.filter(formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
+        ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
     )
 
     if todas_enviadas:
         # Obtener Etapa2 y Etapa3 relacionadas con la competencia
         etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
-        etapa3 = Etapa3.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
 
         # Actualizar Etapa2
         if etapa2:
@@ -90,7 +86,25 @@ def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
             etapa2.aprobada = True
             etapa2.save()
 
-        # Configurar y guardar Etapa3
-        if etapa3:
-            etapa3.fecha_inicio = timezone.now()
-            etapa3.save()
+@receiver(m2m_changed, sender=Competencia.sectores.through)
+@transaction.atomic
+def actualizar_formularios_sector(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        # Crear formularios sectoriales cuando se añaden sectores
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            FormularioSectorial.objects.get_or_create(
+                competencia=competencia,
+                sector=sector,
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
+            )
+    elif action == 'post_remove' and instance.pk:
+        # Eliminar formularios sectoriales cuando se quitan sectores
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            FormularioSectorial.objects.filter(
+                competencia=competencia,
+                sector=sector
+            ).delete()

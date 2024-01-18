@@ -30,7 +30,7 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
             'id',
             'organismo',
             'organismo_display',
-            'sector_ministerio_servicio',
+            'nombre_ministerio_servicio',
             'descripcion'
         ]
 
@@ -39,7 +39,8 @@ class OrganismosIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
-    organismo = OrganismosIntervinientesSerializer(read_only=True)
+    organismo_id = serializers.IntegerField(write_only=True)
+    organismo = OrganismosIntervinientesSerializer()
 
     class Meta:
         model = UnidadesIntervinientes
@@ -47,7 +48,8 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
             'id',
             'nombre_unidad',
             'descripcion_unidad',
-            'organismo'
+            'organismo',
+            'organismo_id'
         ]
 
 
@@ -148,7 +150,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso2Serializer(serializers.ModelSerializer):
-    paso2 = Paso2EncabezadoSerializer(many=True, read_only=False)
+    paso2 = Paso2EncabezadoSerializer()
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
@@ -156,6 +158,7 @@ class Paso2Serializer(serializers.ModelSerializer):
     p_2_5_flujograma_competencia = FlujogramaCompetenciaSerializer(many=True, read_only=False)
     listado_unidades = serializers.SerializerMethodField()
     listado_etapas = serializers.SerializerMethodField()
+    listado_organismos = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
@@ -168,6 +171,7 @@ class Paso2Serializer(serializers.ModelSerializer):
             'p_2_5_flujograma_competencia',
             'listado_unidades',
             'listado_etapas',
+            'listado_organismos',
         ]
 
     def get_listado_unidades(self, obj):
@@ -177,6 +181,19 @@ class Paso2Serializer(serializers.ModelSerializer):
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
+
+    def get_listado_organismos(self, obj):
+        # Obtener todos los organismos asignados al FormularioSectorial actual
+        organismos_asignados = OrganismosIntervinientes.objects.filter(
+            formulario_sectorial=obj
+        ).values_list('organismo', flat=True)
+
+        # Retornar clave y valor para choices ORGANISMO, excluyendo los ya asignados
+        return {
+            clave: valor
+            for clave, valor in OrganismosIntervinientes.ORGANISMO
+            if clave not in organismos_asignados
+        }
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
