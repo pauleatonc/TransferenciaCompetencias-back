@@ -63,6 +63,15 @@ class CompetenciaListSerializer(serializers.ModelSerializer):
         return obj.get_origen_display()
 
 
+class CompetenciaListAllSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Competencia
+        fields = [
+            'id',
+            'nombre',
+        ]
+
+
 class CompetenciaHomeListSerializer(serializers.ModelSerializer):
 
     etapas_info = serializers.SerializerMethodField()

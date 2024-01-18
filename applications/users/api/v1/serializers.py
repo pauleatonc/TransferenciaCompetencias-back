@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.api.v1.serializers.base_serializer import CompetenciaSerializer
+from applications.competencias.api.v1.serializers import CompetenciaListAllSerializer
 from applications.users.models import User
 from django.contrib.auth.models import Group, Permission
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     grupo_de_usuario = serializers.SerializerMethodField()
     competencias_asignadas = serializers.SerializerMethodField()
+    competencias_por_asignar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -29,7 +30,8 @@ class UserSerializer(serializers.ModelSerializer):
             'region',
             'is_active',
             'grupo_de_usuario',
-            'competencias_asignadas'
+            'competencias_asignadas',
+            'competencias_por_asignar'
         )
 
     def create(self, validated_data):
@@ -66,10 +68,39 @@ class UserSerializer(serializers.ModelSerializer):
         elif perfil == 'GORE':
             competencias = Competencia.objects.filter(usuarios_gore=obj)
 
-        return CompetenciaSerializer(competencias, many=True).data
+        return CompetenciaListAllSerializer(competencias, many=True).data
+
+    def get_competencias_por_asignar(self, obj):
+        # Obtener todas las competencias
+        queryset = Competencia.objects.all()
+
+        # Filtrar según el tipo de usuario
+        if obj.groups.filter(name='SUBDERE').exists():
+            queryset = queryset.exclude(usuarios_subdere=obj)
+        elif obj.groups.filter(name='DIPRES').exists():
+            queryset = queryset.exclude(usuarios_dipres=obj)
+        elif obj.groups.filter(name='Usuario Sectorial').exists():
+            # Filtrar por sectores y excluir las competencias asignadas
+            queryset = queryset.filter(sectores=obj.sector).exclude(usuarios_sectoriales=obj)
+        elif obj.groups.filter(name='GORE').exists():
+            # Filtrar por regiones y excluir las competencias asignadas
+            queryset = queryset.filter(regiones=obj.region).exclude(usuarios_gore=obj)
+
+        return CompetenciaListAllSerializer(queryset, many=True).data
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
+    """
+    Enpoint para actualizar un usuario.
+
+    Se utiliza para modificar competencias asignadas. Deben enviarse en el siguiente formato:
+    {
+        "competencias_modificar": [
+            {"id": 90, "action": "add"},
+            {"id": 79, "action": "delete"}
+        ]
+    }
+    """
     competencias_modificar = serializers.ListField(
         child=serializers.DictField(),
         write_only=True,
