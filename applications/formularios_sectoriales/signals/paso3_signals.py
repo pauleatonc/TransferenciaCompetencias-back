@@ -42,8 +42,8 @@ def actualizar_coberturas_anuales(sender, instance, **kwargs):
         # Usar el penúltimo registro histórico para comparar
         penultimo_historico = history[1]
 
-        last_fecha_inicio = make_naive(penultimo_historico.instance.fecha_inicio).date()
-        current_fecha_inicio = make_naive(instance.fecha_inicio).date()
+        last_fecha_inicio = penultimo_historico.instance.fecha_inicio
+        current_fecha_inicio = instance.fecha_inicio
 
         print(f"Penúltimo registro histórico encontrado. Fecha inicio anterior: {last_fecha_inicio}")  # Debug
         print(f"Fecha inicio actual: {current_fecha_inicio}")  # Debug
