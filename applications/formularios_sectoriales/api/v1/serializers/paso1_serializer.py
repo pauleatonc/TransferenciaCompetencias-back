@@ -13,6 +13,7 @@ User = get_user_model()
 
 
 class MarcoJuridicoSerializer(serializers.ModelSerializer):
+    documento = serializers.fileField()
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,6 +40,7 @@ class MarcoJuridicoSerializer(serializers.ModelSerializer):
 
 class OrganigramaRegionalSerializer(serializers.ModelSerializer):
     region = serializers.SerializerMethodField()
+    documento = serializers.fileField()
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -67,6 +69,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
     denominacion_organismo = serializers.SerializerMethodField()
+    organigrama_nacional = serializers.FileField()
 
     class Meta:
         model = Paso1
