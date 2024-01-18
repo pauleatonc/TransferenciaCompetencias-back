@@ -67,7 +67,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         """
         Devuelve las clases de permisos de instancia para la acción solicitada.
         """
-        if self.action == 'create':
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
             permission_classes = [IsSUBDEREOrSuperuser]
         else:
             permission_classes = [IsAuthenticated]

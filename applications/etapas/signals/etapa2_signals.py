@@ -85,3 +85,26 @@ def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
             etapa2.enviada = False
             etapa2.aprobada = True
             etapa2.save()
+
+@receiver(m2m_changed, sender=Competencia.sectores.through)
+@transaction.atomic
+def actualizar_formularios_sector(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        # Crear formularios sectoriales cuando se añaden sectores
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            FormularioSectorial.objects.get_or_create(
+                competencia=competencia,
+                sector=sector,
+                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {competencia.nombre}'}
+            )
+    elif action == 'post_remove' and instance.pk:
+        # Eliminar formularios sectoriales cuando se quitan sectores
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for sector_pk in pk_set:
+            sector = SectorGubernamental.objects.get(pk=sector_pk)
+            FormularioSectorial.objects.filter(
+                competencia=competencia,
+                sector=sector
+            ).delete()

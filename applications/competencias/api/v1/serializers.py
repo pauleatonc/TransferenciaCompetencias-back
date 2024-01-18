@@ -82,6 +82,12 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
 
 
 class CompetenciaUpdateSerializer(serializers.ModelSerializer):
+    nombre = serializers.CharField(required=False)
+    plazo_formulario_sectorial = serializers.IntegerField(required=False)
+    plazo_formulario_gore = serializers.IntegerField(required=False)
+    sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
+    regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
+
     class Meta:
         model = Competencia
         fields = '__all__'
@@ -90,7 +96,7 @@ class CompetenciaUpdateSerializer(serializers.ModelSerializer):
 
 def obtener_informacion_etapas(competencia):
     etapas_info = {}
-    for i in range(1, 6):  # Asumiendo que tienes etapas de 1 a 5
+    for i in range(1, 6):
         etapa_model = globals().get(f'Etapa{i}')
         if etapa_model:
             etapa = etapa_model.objects.filter(competencia=competencia).first()
@@ -127,6 +133,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'origen',
             'ambito_competencia',
             'oficio_origen',
+            'fecha_inicio',
             'plazo_formulario_sectorial',
             'plazo_formulario_gore',
             'etapa1',

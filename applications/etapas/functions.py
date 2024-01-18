@@ -70,16 +70,17 @@ def obtener_estado_accion_generico(
 
 
 def reordenar_detalle(self, detalle, user):
-    # Identificar si el usuario actual está mencionado en cada elemento de detalle
     usuario_principal = []
     otros = []
 
     nombre_sector_usuario = user.sector.nombre if user.sector else None
 
     for d in detalle:
+        # Comprobar si el nombre del usuario o el nombre del sector están en el detalle
         if user.nombre_completo in d['nombre'] or (nombre_sector_usuario and nombre_sector_usuario in d['nombre']):
             usuario_principal.append(d)
         else:
             otros.append(d)
 
+    # Devolver primero los detalles del usuario principal, seguido de los demás
     return usuario_principal + otros
