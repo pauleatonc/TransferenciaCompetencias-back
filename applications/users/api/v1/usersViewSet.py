@@ -143,7 +143,7 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         pk = kwargs.get('pk')  # Obtiene el id del usuario
         user = self.get_object(pk)
-        partial = kwargs.pop('partial', False)  # Determina si la solicitud es PATCH
+        partial = kwargs.pop('partial', True)
 
         user_serializer = UpdateUserSerializer(user, data=request.data, partial=partial)
         if user_serializer.is_valid():

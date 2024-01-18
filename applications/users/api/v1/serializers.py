@@ -1,4 +1,7 @@
 from rest_framework import serializers
+
+from applications.competencias.models import Competencia
+from applications.formularios_sectoriales.api.v1.serializers.base_serializer import CompetenciaSerializer
 from applications.users.models import User
 from django.contrib.auth.models import Group, Permission
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -11,10 +14,23 @@ class UserSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(write_only=True, required=True)
     grupo_de_usuario = serializers.SerializerMethodField()
+    competencias_asignadas = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('id', 'password', 'nombre_completo', 'rut', 'email', 'perfil', 'sector', 'region', 'is_active', 'grupo_de_usuario')
+        fields = (
+            'id',
+            'password',
+            'nombre_completo',
+            'rut',
+            'email',
+            'perfil',
+            'sector',
+            'region',
+            'is_active',
+            'grupo_de_usuario',
+            'competencias_asignadas'
+        )
 
     def create(self, validated_data):
         user = User(**validated_data)
@@ -37,15 +53,76 @@ class UserSerializer(serializers.ModelSerializer):
 
         return 'Registrado'
 
+    def get_competencias_asignadas(self, obj):
+        perfil = obj.perfil
+        competencias = []
+
+        if perfil == 'SUBDERE':
+            competencias = Competencia.objects.filter(usuarios_subdere=obj)
+        elif perfil == 'DIPRES':
+            competencias = Competencia.objects.filter(usuarios_dipres=obj)
+        elif perfil == 'Usuario Sectorial':
+            competencias = Competencia.objects.filter(usuarios_sectoriales=obj)
+        elif perfil == 'GORE':
+            competencias = Competencia.objects.filter(usuarios_gore=obj)
+
+        return CompetenciaSerializer(competencias, many=True).data
+
 
 class UpdateUserSerializer(serializers.ModelSerializer):
+    competencias_modificar = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
 
-    """
-    Indicar solo los campos actualizables
-    """
     class Meta:
         model = User
-        fields = ('nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region')
+        fields = ('nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region', 'competencias_modificar')
+
+    def update(self, instance, validated_data):
+        competencias_modificar = validated_data.pop('competencias_modificar', None)
+
+        # Procesar la actualización normal del usuario
+        instance = super(UpdateUserSerializer, self).update(instance, validated_data)
+
+        # Lógica para modificar competencias
+        if competencias_modificar:
+            perfil = instance.perfil
+            for competencia_data in competencias_modificar:
+                competencia_id = competencia_data.get('id')
+                action = competencia_data.get('action')  # 'add' o 'delete'
+
+                try:
+                    competencia = Competencia.objects.get(id=competencia_id)
+
+                    if action == 'delete':
+                        # Lógica para eliminar la competencia
+                        if perfil == 'SUBDERE':
+                            competencia.usuarios_subdere.remove(instance)
+                        if perfil == 'DIPRES':
+                            competencia.usuarios_dipres.remove(instance)
+                        if perfil == 'Usuario Sectorial':
+                            competencia.usuarios_sectoriales.remove(instance)
+                        if perfil == 'GORE':
+                            competencia.usuarios_gore.remove(instance)
+                    elif action == 'add':
+                        # Lógica para agregar la competencia
+                        if perfil == 'SUBDERE':
+                            competencia.usuarios_subdere.add(instance)
+                        if perfil == 'DIPRES':
+                            competencia.usuarios_dipres.add(instance)
+                        if perfil == 'Usuario Sectorial':
+                            competencia.usuarios_sectoriales.add(instance)
+                        if perfil == 'GORE':
+                            competencia.usuarios_gore.add(instance)
+
+                except Competencia.DoesNotExist:
+                    # Manejar el caso en que la competencia no exista
+                    pass
+
+        return instance
+
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """
