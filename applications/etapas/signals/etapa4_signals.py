@@ -13,7 +13,7 @@ from applications.regioncomuna.models import Region
 @receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
 def actualizar_etapa4_al_modificar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
     if action in ['post_add', 'post_remove', 'post_clear']:
-        etapa4 = instance.etapa4_set.first()
+        etapa4 = instance.etapa4
 
         if etapa4:
             todos_los_usuarios_asignados = True
