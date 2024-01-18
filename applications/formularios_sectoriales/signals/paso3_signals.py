@@ -19,14 +19,18 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 def crear_coberturas_anuales(sender, instance, created, **kwargs):
     if created:
         competencia = instance.competencia
-        año_actual = competencia.fecha_inicio.year
-        año_inicial = año_actual - 5
+        # Verificar si fecha_inicio está definida
+        if competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            año_inicial = año_actual - 5
 
-        for año in range(año_inicial, año_actual):
-            CoberturaAnual.objects.get_or_create(
-                formulario_sectorial=instance,
-                anio=año
-            )
+            for año in range(año_inicial, año_actual):
+                CoberturaAnual.objects.get_or_create(
+                    formulario_sectorial=instance,
+                    anio=año
+                )
+        else:
+            print("Advertencia: competencia.fecha_inicio no está definida.")
 
 
 @receiver(post_save, sender=Competencia)
