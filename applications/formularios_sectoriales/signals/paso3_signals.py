@@ -19,14 +19,18 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 def crear_coberturas_anuales(sender, instance, created, **kwargs):
     if created:
         competencia = instance.competencia
-        año_actual = competencia.fecha_inicio.year
-        año_inicial = año_actual - 5
+        # Verificar si fecha_inicio está definida
+        if competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            año_inicial = año_actual - 5
 
-        for año in range(año_inicial, año_actual):
-            CoberturaAnual.objects.get_or_create(
-                formulario_sectorial=instance,
-                anio=año
-            )
+            for año in range(año_inicial, año_actual):
+                CoberturaAnual.objects.get_or_create(
+                    formulario_sectorial=instance,
+                    anio=año
+                )
+        else:
+            print("Advertencia: competencia.fecha_inicio no está definida.")
 
 
 @receiver(post_save, sender=Competencia)
@@ -38,8 +42,8 @@ def actualizar_coberturas_anuales(sender, instance, **kwargs):
         # Usar el penúltimo registro histórico para comparar
         penultimo_historico = history[1]
 
-        last_fecha_inicio = make_naive(penultimo_historico.instance.fecha_inicio).date()
-        current_fecha_inicio = make_naive(instance.fecha_inicio).date()
+        last_fecha_inicio = penultimo_historico.instance.fecha_inicio
+        current_fecha_inicio = instance.fecha_inicio
 
         print(f"Penúltimo registro histórico encontrado. Fecha inicio anterior: {last_fecha_inicio}")  # Debug
         print(f"Fecha inicio actual: {current_fecha_inicio}")  # Debug

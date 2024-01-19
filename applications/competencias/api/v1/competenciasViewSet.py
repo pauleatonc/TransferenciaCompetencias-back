@@ -73,16 +73,23 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
-
     def list(self, request, *args, **kwargs):
         """
         Listado de Competencias
 
-        Devuelve una lista de todas las competencias disponibles.
+        Devuelve una lista paginada de todas las competencias disponibles.
         Acceso para usuarios autenticados.
         """
-        competencias = self.filter_queryset(self.get_queryset())
-        serializer = self.get_serializer(competencias, many=True)
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Usar el paginador para paginar el queryset
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Si no hay paginación, devolver todos los datos
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='lista-home')
