@@ -1,12 +1,15 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
-from applications.base import models
 from applications.formularios_sectoriales.models import (
     CostosDirectos,
     CostosIndirectos,
     ResumenCostosPorSubtitulo,
-    Paso5, EvolucionGastoAsociado, VariacionPromedio, CostoAnio, FormularioSectorial
+    Paso5,
+    EvolucionGastoAsociado,
+    VariacionPromedio,
+    CostoAnio,
+    FormularioSectorial
 )
 from django.utils import timezone
 

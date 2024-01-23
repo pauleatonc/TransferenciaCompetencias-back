@@ -16,6 +16,11 @@ class UserSerializer(serializers.ModelSerializer):
     grupo_de_usuario = serializers.SerializerMethodField()
     competencias_asignadas = serializers.SerializerMethodField()
     competencias_por_asignar = serializers.SerializerMethodField()
+    competencias_modificar = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
 
     class Meta:
         model = User
@@ -31,15 +36,43 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'grupo_de_usuario',
             'competencias_asignadas',
-            'competencias_por_asignar'
+            'competencias_por_asignar',
+            'competencias_modificar',
         )
 
     def create(self, validated_data):
-        user = User(**validated_data)
-        password = validated_data.pop('password', None)  # Usa pop para evitar KeyError y manejar el caso si falta
-        if password:
-            user.set_password(password)
+        competencias_modificar = validated_data.pop('competencias_modificar', [])
+        user = User.objects.create(**validated_data)
+        if validated_data.get('password'):
+            user.set_password(validated_data['password'])
         user.save()
+
+        # Procesar competencias para modificar
+        for competencia_data in competencias_modificar:
+            competencia_id = competencia_data.get('id')
+            action = competencia_data.get('action')
+
+            try:
+                competencia = Competencia.objects.get(id=competencia_id)
+
+                if action == 'add':
+                    # Usuarios SUBDERE o DIPRES pueden ser asignados a cualquier competencia
+                    if user.perfil in ['SUBDERE', 'DIPRES']:
+                        competencia.usuarios_subdere.add(user)
+                        competencia.usuarios_dipres.add(user)
+
+                    # Usuarios Sectoriales solo a competencias con sectores coincidentes
+                    elif user.perfil == 'Usuario Sectorial' and user.sector in competencia.sectores.all():
+                        competencia.usuarios_sectoriales.add(user)
+
+                    # Usuarios GORE solo a competencias con regiones coincidentes
+                    elif user.perfil == 'GORE' and user.region in competencia.regiones.all():
+                        competencia.usuarios_gore.add(user)
+
+            except Competencia.DoesNotExist:
+                # Manejar el caso en que la competencia no exista
+                pass
+
         return user
 
     def get_grupo_de_usuario(self, obj):

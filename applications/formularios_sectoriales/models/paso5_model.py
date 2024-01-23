@@ -174,11 +174,16 @@ class CostosDirectos(BaseModel):
                                                              self.formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
-        total = CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
-            Sum('total_anual'))['total_anual__sum'] or 0
-        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
-        paso.total_costos_directos = total
-        paso.save()
+        try:
+            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
+            total = CostosDirectos.objects.filter(
+                formulario_sectorial_id=self.formulario_sectorial_id
+            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+            paso.total_costos_directos = total
+            paso.save()
+        except Paso5.DoesNotExist:
+            # Manejar la excepción, como registrar un error o simplemente pasar
+            pass
 
     def crear_o_actualizar_resumen_evolucion_variacion(self):
         subtitulo_id = self.item_subtitulo.subtitulo_id
@@ -218,11 +223,16 @@ class CostosIndirectos(BaseModel):
                                                              self.formulario_sectorial_id)
 
     def actualizar_resumen_costos(self):
-        total = CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
-            Sum('total_anual'))['total_anual__sum'] or 0
-        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
-        paso.total_costos_indirectos = total
-        paso.save()
+        try:
+            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
+            total = CostosIndirectos.objects.filter(
+                formulario_sectorial_id=self.formulario_sectorial_id
+            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+            paso.total_costos_directos = total
+            paso.save()
+        except Paso5.DoesNotExist:
+            # Manejar la excepción, como registrar un error o simplemente pasar
+            pass
 
     def crear_o_actualizar_resumen_evolucion_variacion(self):
         subtitulo_id = self.item_subtitulo.subtitulo_id
@@ -244,39 +254,55 @@ class ResumenCostosPorSubtitulo(BaseModel):
         self.actualizar_resumen_costos()
 
     def actualizar_resumen_costos(self):
-        total = \
-        ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
-            Sum('total_anual'))[
-            'total_anual__sum'] or 0
-        paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
-        paso.costos_totales = total
-        paso.save()
+        try:
+            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id)
+            total = ResumenCostosPorSubtitulo.objects.filter(
+                formulario_sectorial_id=self.formulario_sectorial_id
+            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+            paso.costos_totales = total
+            paso.save()
+        except Paso5.DoesNotExist:
+            # Manejar la excepción, como registrar un error o simplemente pasar
+            pass
 
     @classmethod
     def actualizar_total_anual(cls, subtitulo_id, formulario_sectorial_id):
-        total_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+        try:
+            # Intentar obtener la instancia de Paso5
+            paso = Paso5.objects.get(formulario_sectorial_id=formulario_sectorial_id)
 
-        total_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+            # Calcular el total de costos directos e indirectos
+            total_directos = CostosDirectos.objects.filter(
+                item_subtitulo__subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id
+            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
 
-        total = total_directos + total_indirectos
+            total_indirectos = CostosIndirectos.objects.filter(
+                item_subtitulo__subtitulo_id=subtitulo_id,
+                formulario_sectorial_id=formulario_sectorial_id
+            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
 
-        if total > 0:
-            resumen, created = cls.objects.get_or_create(
-                subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id,
-                defaults={'total_anual': total}
-            )
-            if not created:
-                resumen.total_anual = total
-                resumen.save()
-        else:
-            cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
+            # Calcular el total y actualizar o crear el ResumenCostosPorSubtitulo
+            total = total_directos + total_indirectos
+            if total > 0:
+                resumen, created = cls.objects.get_or_create(
+                    subtitulo_id=subtitulo_id,
+                    formulario_sectorial_id=formulario_sectorial_id,
+                    defaults={'total_anual': total}
+                )
+                if not created:
+                    resumen.total_anual = total
+                    resumen.save()
+            else:
+                cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
+
+            # Actualizar el total en la instancia de Paso5
+            paso.costos_totales = total
+            paso.save()
+
+        except Paso5.DoesNotExist:
+            # Manejar la excepción, como registrar un error o simplemente pasar
+            pass
 
     def __str__(self):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
