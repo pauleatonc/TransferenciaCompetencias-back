@@ -1,13 +1,13 @@
-from ...models import SectorGubernamental
+from applications.sectores_gubernamentales.models import Ministerio
 #
 from rest_framework.generics import ListAPIView
 #
-from .serializer import SectorGubernamentalSerializer
+from .serializer import MinisterioSerializer
 
 
 class SectorGubernamentalView(ListAPIView):
 
-    serializer_class = SectorGubernamentalSerializer
+    serializer_class = MinisterioSerializer
 
     def get_queryset(self):
-        return SectorGubernamental.objects.all()
+        return Ministerio.objects.all()

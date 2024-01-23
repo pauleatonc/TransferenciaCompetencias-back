@@ -3,9 +3,12 @@ import pandas as pd
 from pathlib import Path
 
 
-def populate_models_from_excel(apps, schema_editor):
-    Ministerio = apps.get_model('sectores_gubernamentales', 'Ministerio')
-    SectorGubernamental = apps.get_model('sectores_gubernamentales', 'SectorGubernamental')
+def populate_models_from_excel(apps=None, schema_editor=None):
+    if apps is None:
+        from applications.sectores_gubernamentales.models import Ministerio, SectorGubernamental
+    else:
+        Ministerio = apps.get_model('sectores_gubernamentales', 'Ministerio')
+        SectorGubernamental = apps.get_model('sectores_gubernamentales', 'SectorGubernamental')
 
     file_path = Path(__file__).resolve().parent.parent / 'Nomina Reparticiones Públicas.xlsx'
     df = pd.read_excel(file_path, header=None)

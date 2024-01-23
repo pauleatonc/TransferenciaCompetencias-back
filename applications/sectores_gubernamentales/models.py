@@ -9,8 +9,8 @@ class Ministerio(models.Model):
 
 
 class SectorGubernamental(models.Model):
-    nombre = models.CharField(max_length=200, unique=True)
-    ministerio = models.ForeignKey(Ministerio, on_delete=models.CASCADE, related_name='servicio')
+    nombre = models.CharField(max_length=200)
+    ministerio = models.ForeignKey(Ministerio, on_delete=models.CASCADE, related_name='servicios')
 
     def __str__(self):
         return self.nombre

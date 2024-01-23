@@ -1,7 +1,7 @@
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from rest_framework.decorators import action
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
@@ -13,7 +13,8 @@ from .serializers import (
     CompetenciaCreateSerializer,
     CompetenciaUpdateSerializer,
     CompetenciaDetailSerializer,
-    CompetenciaHomeListSerializer
+    CompetenciaHomeListSerializer,
+    CompetenciaListAllSerializer
 )
 
 from applications.users.permissions import IsSUBDEREOrSuperuser
@@ -46,7 +47,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     queryset = Competencia.objects.all()
     filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomPageNumberPagination
-    search_fields = ['id', 'nombre', 'sectores__nombre', 'ambito', 'regiones__region', 'origen', 'usuarios_subdere__nombre_completo',
+    search_fields = ['id', 'nombre', 'sectores__nombre', 'ambito_competencia', 'regiones__region', 'origen', 'usuarios_subdere__nombre_completo',
                      'usuarios_dipres__nombre_completo', 'usuarios_sectoriales__nombre_completo', 'usuarios_gore__nombre_completo']
     ordering_fields = ['estado']
     permission_classes = [IsAuthenticated]
@@ -166,3 +167,29 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         competencia = self.get_object()
         competencia.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'], url_path='filtrar-por-criterio')
+    def filtrar_por_criterio(self, request):
+        """
+        Endpoint para filtrar competencias por región o sector.
+
+        Para utilizar este endpoint:
+        Para filtrar por región: http://tuservidor.com/competencias/filtrar-por-criterio/?region_id=ID_DE_LA_REGION
+        Para filtrar por sector: http://tuservidor.com/competencias/filtrar-por-criterio/?sector_id=ID_DEL_SECTOR
+        Para obtener todas las competencias: http://tuservidor.com/competencias/filtrar-por-criterio/
+        """
+        # Obtén los parámetros de la solicitud
+        region_id = request.query_params.get('region_id')
+        sector_id = request.query_params.get('sector_id')
+
+        # Filtrar competencias basadas en región o sector
+        if region_id:
+            queryset = Competencia.objects.filter(regiones__id=region_id)
+        elif sector_id:
+            queryset = Competencia.objects.filter(sectores__id=sector_id)
+        else:
+            # Devolver todas las competencias si no se especifica un filtro
+            queryset = Competencia.objects.all()
+
+        serializer = CompetenciaListAllSerializer(queryset, many=True)
+        return Response(serializer.data)
