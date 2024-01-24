@@ -29,7 +29,7 @@ def validar_rut(value):
         dv_esperado = 'k'
     # Comparar dígito verificador esperado con el ingresado
     if dv_esperado != verificador:
-        raise ValidationError('El RUT ingresado no es válido')
+        raise ValidationError('El RUT ingresado no existe')
 
     # Formatear RUT con guión y dígito verificador
     rut_formateado = rut + "-" + dv_esperado
@@ -66,6 +66,6 @@ def validar_rut_form(self):
     elif dv_calculated == 10:
         dv_calculated = 'k'
     if str(dv_calculated) != dv:
-        raise ValidationError('El RUT no es válido')
+        raise ValidationError('El RUT ingresado no existe')
     return rut + '-' + dv
 
