@@ -47,8 +47,18 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     queryset = Competencia.objects.all()
     filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomPageNumberPagination
-    search_fields = ['id', 'nombre', 'sectores__nombre', 'ambito_competencia', 'regiones__region', 'origen', 'usuarios_subdere__nombre_completo',
-                     'usuarios_dipres__nombre_completo', 'usuarios_sectoriales__nombre_completo', 'usuarios_gore__nombre_completo']
+    search_fields = [
+        'id',
+        'nombre',
+        'sectores__nombre',
+        'ambito_competencia__nombre',
+        'regiones__region',
+        'origen',
+        'usuarios_subdere__nombre_completo',
+        'usuarios_dipres__nombre_completo',
+        'usuarios_sectoriales__nombre_completo',
+        'usuarios_gore__nombre_completo'
+    ]
     ordering_fields = ['estado']
     permission_classes = [IsAuthenticated]
 
