@@ -1,6 +1,5 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.utils.timezone import make_naive
 
 from simple_history.models import HistoricalRecords
 

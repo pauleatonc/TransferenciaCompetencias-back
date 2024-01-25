@@ -1,7 +1,8 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.api.v1.serializers.base_serializer import CompetenciaSerializer
+from applications.competencias.api.v1.serializers import CompetenciaListAllSerializer
 from applications.users.models import User
 from django.contrib.auth.models import Group, Permission
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -15,6 +16,12 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     grupo_de_usuario = serializers.SerializerMethodField()
     competencias_asignadas = serializers.SerializerMethodField()
+    competencias_por_asignar = serializers.SerializerMethodField()
+    competencias_modificar = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
 
     class Meta:
         model = User
@@ -29,15 +36,50 @@ class UserSerializer(serializers.ModelSerializer):
             'region',
             'is_active',
             'grupo_de_usuario',
-            'competencias_asignadas'
+            'competencias_asignadas',
+            'competencias_por_asignar',
+            'competencias_modificar',
         )
 
+    def validate_rut(self, value):
+        # Verifica si el RUT ya existe en la base de datos
+        if User.objects.filter(rut=value).exists():
+            raise ValidationError("Este RUT ya está registrado en el sistema.")
+        return value
+
     def create(self, validated_data):
-        user = User(**validated_data)
-        password = validated_data.pop('password', None)  # Usa pop para evitar KeyError y manejar el caso si falta
-        if password:
-            user.set_password(password)
+        competencias_modificar = validated_data.pop('competencias_modificar', [])
+        user = User.objects.create(**validated_data)
+        if validated_data.get('password'):
+            user.set_password(validated_data['password'])
         user.save()
+
+        # Procesar competencias para modificar
+        for competencia_data in competencias_modificar:
+            competencia_id = competencia_data.get('id')
+            action = competencia_data.get('action')
+
+            try:
+                competencia = Competencia.objects.get(id=competencia_id)
+
+                if action == 'add':
+                    # Usuarios SUBDERE o DIPRES pueden ser asignados a cualquier competencia
+                    if user.perfil in ['SUBDERE', 'DIPRES']:
+                        competencia.usuarios_subdere.add(user)
+                        competencia.usuarios_dipres.add(user)
+
+                    # Usuarios Sectoriales solo a competencias con sectores coincidentes
+                    elif user.perfil == 'Usuario Sectorial' and user.sector in competencia.sectores.all():
+                        competencia.usuarios_sectoriales.add(user)
+
+                    # Usuarios GORE solo a competencias con regiones coincidentes
+                    elif user.perfil == 'GORE' and user.region in competencia.regiones.all():
+                        competencia.usuarios_gore.add(user)
+
+            except Competencia.DoesNotExist:
+                # Manejar el caso en que la competencia no exista
+                pass
+
         return user
 
     def get_grupo_de_usuario(self, obj):
@@ -66,10 +108,39 @@ class UserSerializer(serializers.ModelSerializer):
         elif perfil == 'GORE':
             competencias = Competencia.objects.filter(usuarios_gore=obj)
 
-        return CompetenciaSerializer(competencias, many=True).data
+        return CompetenciaListAllSerializer(competencias, many=True).data
+
+    def get_competencias_por_asignar(self, obj):
+        # Obtener todas las competencias
+        queryset = Competencia.objects.all()
+
+        # Filtrar según el tipo de usuario
+        if obj.groups.filter(name='SUBDERE').exists():
+            queryset = queryset.exclude(usuarios_subdere=obj)
+        elif obj.groups.filter(name='DIPRES').exists():
+            queryset = queryset.exclude(usuarios_dipres=obj)
+        elif obj.groups.filter(name='Usuario Sectorial').exists():
+            # Filtrar por sectores y excluir las competencias asignadas
+            queryset = queryset.filter(sectores=obj.sector).exclude(usuarios_sectoriales=obj)
+        elif obj.groups.filter(name='GORE').exists():
+            # Filtrar por regiones y excluir las competencias asignadas
+            queryset = queryset.filter(regiones=obj.region).exclude(usuarios_gore=obj)
+
+        return CompetenciaListAllSerializer(queryset, many=True).data
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
+    """
+    Enpoint para actualizar un usuario.
+
+    Se utiliza para modificar competencias asignadas. Deben enviarse en el siguiente formato:
+    {
+        "competencias_modificar": [
+            {"id": 90, "action": "add"},
+            {"id": 79, "action": "delete"}
+        ]
+    }
+    """
     competencias_modificar = serializers.ListField(
         child=serializers.DictField(),
         write_only=True,
