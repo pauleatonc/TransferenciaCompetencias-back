@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from applications.competencias.models import Competencia
 from applications.competencias.api.v1.serializers import CompetenciaListAllSerializer
@@ -39,6 +40,12 @@ class UserSerializer(serializers.ModelSerializer):
             'competencias_por_asignar',
             'competencias_modificar',
         )
+
+    def validate_rut(self, value):
+        # Verifica si el RUT ya existe en la base de datos
+        if User.objects.filter(rut=value).exists():
+            raise ValidationError("Este RUT ya está registrado en el sistema.")
+        return value
 
     def create(self, validated_data):
         competencias_modificar = validated_data.pop('competencias_modificar', [])

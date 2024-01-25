@@ -7,6 +7,9 @@ from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.formularios_gores.models import FormularioGORE
 
+from import_export.admin import ImportExportMixin
+from import_export.resources import ModelResource
+
 
 
 class Etapa1Inline(admin.TabularInline):  # O usa admin.StackedInline si prefieres ese estilo
@@ -44,8 +47,14 @@ class FormularioGOREInline(admin.TabularInline):  # O puedes usar admin.StackedI
     fields = ('region', 'nombre', 'formulario_enviado')
 
 
+class CompetenciaResource(ModelResource):
+    class Meta:
+        model = Competencia
+
+
 @admin.register(Competencia)
-class CompetenciaAdmin(admin.ModelAdmin):
+class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
+    resource_class = CompetenciaResource
     list_display = ('id', 'nombre', 'ambito_competencia', 'origen', 'estado', 'fecha_inicio', 'fecha_fin')
     search_fields = ('nombre', 'sectores__nombre', 'regiones__nombre')
     list_filter = ('ambito_competencia', 'origen', 'estado', 'sectores', 'regiones')

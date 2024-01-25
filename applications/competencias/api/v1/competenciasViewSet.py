@@ -47,8 +47,18 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     queryset = Competencia.objects.all()
     filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomPageNumberPagination
-    search_fields = ['id', 'nombre', 'sectores__nombre', 'ambito_competencia', 'regiones__region', 'origen', 'usuarios_subdere__nombre_completo',
-                     'usuarios_dipres__nombre_completo', 'usuarios_sectoriales__nombre_completo', 'usuarios_gore__nombre_completo']
+    search_fields = [
+        'id',
+        'nombre',
+        'sectores__nombre',
+        'ambito_competencia__nombre',
+        'regiones__region',
+        'origen',
+        'usuarios_subdere__nombre_completo',
+        'usuarios_dipres__nombre_completo',
+        'usuarios_sectoriales__nombre_completo',
+        'usuarios_gore__nombre_completo'
+    ]
     ordering_fields = ['estado']
     permission_classes = [IsAuthenticated]
 
@@ -78,8 +88,30 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         """
         Listado de Competencias
 
-        Devuelve una lista paginada de todas las competencias disponibles.
+        Devuelve una lista paginada(10) de todas las competencias disponibles.
         Acceso para usuarios autenticados.
+        Se puede usar search y ordering para filtrar y ordenar la lista. Los campos
+        permitidos son los siguientes:
+        - id
+        - nombre
+        - sectores__nombre
+        - ambito_competencia__nombre
+        - regiones__region
+        - origen
+        - usuarios_subdere__nombre_completo
+        - usuarios_dipres__nombre_completo
+        - usuarios_sectoriales__nombre_completo
+        - usuarios_gore__nombre_completo
+
+        Los campos permitidos para ordenamiento son los siguientes:
+        - estado
+
+        Ejemplo de uso:
+        GET /api/competencias/?search=nombre&ordering=estado
+        GET /api/competencias/?search=nombre&ordering=-estado
+        GET /api/competencias/?search=nombre&ordering=estado,-id
+        GET /api/competencias/?search=nombre&ordering=-estado,-id
+        GET /api/competencias/?search=nombre&ordering=estado,-id&page=2&page_size=5
         """
         queryset = self.filter_queryset(self.get_queryset())
 

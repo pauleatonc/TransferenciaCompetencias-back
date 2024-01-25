@@ -95,7 +95,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         """
         Endpoint para creación de nuevos usuarios.
 
@@ -112,10 +112,10 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({
                 'message': 'Usuario registrado correctamente.'
             }, status=status.HTTP_201_CREATED)
-        return Response({
-            'message': 'Hay errores en el registro',
-            'errors': user_serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                'errors': user_serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
     def retrieve(self, request, pk=None):
         """

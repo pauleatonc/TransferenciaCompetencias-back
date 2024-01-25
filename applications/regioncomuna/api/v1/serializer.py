@@ -20,7 +20,11 @@ class ComunaRegionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comuna
-        fields = ('comuna', 'region')
+        fields = (
+            'id',
+            'comuna',
+            'region'
+        )
 
 
 class RegionComunaSerializer(serializers.ModelSerializer):
