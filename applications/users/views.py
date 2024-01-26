@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 #
 from applications.users.api.v1.serializers import CustomTokenObtainPairSerializer, UserSerializer
 from applications.users.models import User
+from django.utils.timezone import now
 
 
 class Login(TokenObtainPairView):
@@ -27,6 +28,8 @@ class Login(TokenObtainPairView):
         )
 
         if user:
+            user.last_login = now()
+            user.save(update_fields=['last_login'])
             login_serializer = self.serializer_class(data = request.data)
             if login_serializer.is_valid():
                 user_serializer = UserSerializer(user)

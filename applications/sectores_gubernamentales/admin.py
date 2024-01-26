@@ -17,8 +17,10 @@ class MinisterioResource(ModelResource):
 @admin.register(SectorGubernamental)
 class SectorGubernamentalAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_class = SectorGubernamentalResource
+    list_display = ('id', 'nombre')
 
 
 @admin.register(Ministerio)
 class MinisterioAdmin(ImportExportMixin, admin.ModelAdmin):
     resource_class = MinisterioResource
+    list_display = ('id', 'nombre')

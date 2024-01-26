@@ -16,12 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
     grupo_de_usuario = serializers.SerializerMethodField()
     competencias_asignadas = serializers.SerializerMethodField()
-    competencias_por_asignar = serializers.SerializerMethodField()
-    competencias_modificar = serializers.ListField(
-        child=serializers.DictField(),
-        write_only=True,
-        required=False
-    )
+    created = serializers.DateTimeField(format="%d/%m/%Y", read_only=True)
+    last_login_display = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -37,8 +33,8 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'grupo_de_usuario',
             'competencias_asignadas',
-            'competencias_por_asignar',
-            'competencias_modificar',
+            'created',
+            'last_login_display',
         )
 
     def validate_rut(self, value):
@@ -110,83 +106,59 @@ class UserSerializer(serializers.ModelSerializer):
 
         return CompetenciaListAllSerializer(competencias, many=True).data
 
-    def get_competencias_por_asignar(self, obj):
-        # Obtener todas las competencias
-        queryset = Competencia.objects.all()
-
-        # Filtrar según el tipo de usuario
-        if obj.groups.filter(name='SUBDERE').exists():
-            queryset = queryset.exclude(usuarios_subdere=obj)
-        elif obj.groups.filter(name='DIPRES').exists():
-            queryset = queryset.exclude(usuarios_dipres=obj)
-        elif obj.groups.filter(name='Usuario Sectorial').exists():
-            # Filtrar por sectores y excluir las competencias asignadas
-            queryset = queryset.filter(sectores=obj.sector).exclude(usuarios_sectoriales=obj)
-        elif obj.groups.filter(name='GORE').exists():
-            # Filtrar por regiones y excluir las competencias asignadas
-            queryset = queryset.filter(regiones=obj.region).exclude(usuarios_gore=obj)
-
-        return CompetenciaListAllSerializer(queryset, many=True).data
+    def get_last_login_display(self, obj):
+        # Este método retorna el valor personalizado para el campo 'last_login_display'
+        if obj.last_login is None:
+            return "Aún no ha iniciado sesión"
+        else:
+            # Formatea last_login como deseas, por ejemplo, en 'dd/mm/yyyy'
+            return obj.last_login.strftime("%d/%m/%Y")
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
     """
     Enpoint para actualizar un usuario.
 
-    Se utiliza para modificar competencias asignadas. Deben enviarse en el siguiente formato:
-    {
-        "competencias_modificar": [
-            {"id": 90, "action": "add"},
-            {"id": 79, "action": "delete"}
-        ]
-    }
+    Se utiliza para modificar competencias asignadas. Deben enviarse un listado con los ids de las competencias por asignar
     """
-    competencias_modificar = serializers.ListField(
-        child=serializers.DictField(),
+    competencias_asignadas = serializers.ListField(
+        child=serializers.IntegerField(),  # Asume que recibirás un listado de IDs enteros
         write_only=True,
         required=False
     )
 
     class Meta:
         model = User
-        fields = ('nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region', 'competencias_modificar')
+        fields = ('nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region', 'competencias_asignadas')
 
     def update(self, instance, validated_data):
-        competencias_modificar = validated_data.pop('competencias_modificar', None)
+        competencias_asignadas_ids = validated_data.pop('competencias_asignadas', None)
 
         # Procesar la actualización normal del usuario
         instance = super(UpdateUserSerializer, self).update(instance, validated_data)
 
-        # Lógica para modificar competencias
-        if competencias_modificar:
-            perfil = instance.perfil
-            for competencia_data in competencias_modificar:
-                competencia_id = competencia_data.get('id')
-                action = competencia_data.get('action')  # 'add' o 'delete'
+        # Lógica para actualizar competencias asignadas
+        if competencias_asignadas_ids is not None:
+            # Limpia todas las relaciones existentes
+            instance.competencias_subdere.clear()
+            instance.competencias_dipres.clear()
+            instance.competencias_sectoriales.clear()
+            instance.competencias_gore.clear()
 
+            # Establece las nuevas relaciones basadas en el listado de IDs
+            for competencia_id in competencias_asignadas_ids:
                 try:
                     competencia = Competencia.objects.get(id=competencia_id)
 
-                    if action == 'delete':
-                        # Lógica para eliminar la competencia
-                        if perfil == 'SUBDERE':
-                            competencia.usuarios_subdere.remove(instance)
-                        if perfil == 'DIPRES':
-                            competencia.usuarios_dipres.remove(instance)
-                        if perfil == 'Usuario Sectorial':
-                            competencia.usuarios_sectoriales.remove(instance)
-                        if perfil == 'GORE':
-                            competencia.usuarios_gore.remove(instance)
-                    elif action == 'add':
-                        # Lógica para agregar la competencia
-                        if perfil == 'SUBDERE':
-                            competencia.usuarios_subdere.add(instance)
-                        if perfil == 'DIPRES':
-                            competencia.usuarios_dipres.add(instance)
-                        if perfil == 'Usuario Sectorial':
-                            competencia.usuarios_sectoriales.add(instance)
-                        if perfil == 'GORE':
-                            competencia.usuarios_gore.add(instance)
+                    # Añade el usuario a la relación apropiada basada en su perfil
+                    if instance.groups.filter(name='SUBDERE').exists():
+                        competencia.usuarios_subdere.add(instance)
+                    elif instance.groups.filter(name='DIPRES').exists():
+                        competencia.usuarios_dipres.add(instance)
+                    elif instance.groups.filter(name='Usuario Sectorial').exists():
+                        competencia.usuarios_sectoriales.add(instance)
+                    elif instance.groups.filter(name='GORE').exists():
+                        competencia.usuarios_gore.add(instance)
 
                 except Competencia.DoesNotExist:
                     # Manejar el caso en que la competencia no exista
