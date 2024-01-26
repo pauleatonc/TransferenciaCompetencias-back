@@ -145,6 +145,8 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object(pk)
         partial = kwargs.pop('partial', True)
 
+        print("Datos recibidos para PATCH:", request.data)
+
         user_serializer = UpdateUserSerializer(user, data=request.data, partial=partial)
         if user_serializer.is_valid():
             user_serializer.save()

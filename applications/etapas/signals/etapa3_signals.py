@@ -13,9 +13,9 @@ from applications.regioncomuna.models import Region
 @receiver(m2m_changed, sender=Competencia.usuarios_dipres.through)
 def actualizar_etapa3_al_modificar_usuarios_dipres(sender, instance, action, pk_set, **kwargs):
     if action in ['post_add', 'post_remove', 'post_clear']:
-        etapa3 = Etapa3.objects.filter(competencia=instance).first()
+        if isinstance(instance, Competencia):
+            etapa3 = Etapa3.objects.filter(competencia=instance).first()
+            if etapa3:
+                etapa3.usuario_notificado = instance.usuarios_dipres.exists()
+                etapa3.save()
 
-        if etapa3:
-            etapa3.usuario_notificado = instance.usuarios_dipres.exists()
-
-            etapa3.save()
