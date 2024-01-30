@@ -201,6 +201,31 @@ class UserViewSet(viewsets.ModelViewSet):
             'message': 'No existe el usuario que desea eliminar'
         }, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=False, methods=['get'], url_path='get-users-by-sector-region', permission_classes=[IsAuthenticated])
+    def get_users_by_sector_region(self, request):
+        """
+        Obtener usuarios por sector y region
+
+        Para utilizar este endpoint:
+        Para filtrar por región: http://tuservidor.com/users/get-users-by-sector-region/?region_id=ID_DE_LA_REGION
+        Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR
+        Para obtener todas las competencias: http://tuservidor.com/users/get-users-by-sector-region/
+        """
+        sector_id = request.query_params.get('sector_id')
+        region_id = request.query_params.get('region_id')
+
+        # Filtrar competencias basadas en región o sector
+        if region_id:
+            queryset = User.objects.filter(region__id=region_id)
+        elif sector_id:
+            queryset = User.objects.filter(sector__id=sector_id)
+        else:
+            # Devolver todas las competencias si no se especifica un filtro
+            queryset = User.objects.all()
+
+        serializer = UserListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
 
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all()

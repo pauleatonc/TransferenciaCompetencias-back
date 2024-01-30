@@ -33,6 +33,27 @@ def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
         return Response(serializer.data)
 
 
+def es_usuario_autorizado_para_sector(request, formulario_sectorial):
+    """
+        Verifica si el usuario pertenece al mismo sector que el formulario.
+        """
+    return request.user.sector == formulario_sectorial.sector
+
+
+def manejar_permiso_patch(request, formulario_sectorial, serializer_class):
+    """
+        Maneja los permisos para operaciones PATCH y la serialización.
+        """
+    if request.method == 'PATCH':
+        if not es_usuario_autorizado_para_sector(request, formulario_sectorial):
+            return Response({"detail": "No autorizado para editar este formulario sectorial."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        return manejar_formularios_pasos(request, formulario_sectorial, serializer_class)
+
+    return manejar_formularios_pasos(request, formulario_sectorial, serializer_class)
+
+
 class FormularioSectorialViewSet(viewsets.ModelViewSet):
     """
     ViewSet para manejar las operaciones CRUD de un Formulario Sectorial.
@@ -57,7 +78,6 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
 
-
     def retrieve(self, request, pk=None, *args, **kwargs):
         """
         Detalle de Competencia
@@ -68,7 +88,6 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         competencia = self.get_object()
         serializer = self.get_serializer(competencia)
         return Response(serializer.data)
-
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
@@ -101,31 +120,27 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         }
         """
         formulario_sectorial = self.get_object()
-        return manejar_formularios_pasos(request, formulario_sectorial, Paso1Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso1Serializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
     def paso_2(self, request, pk=None):
         formulario_sectorial = self.get_object()
-
-        return manejar_formularios_pasos(request, formulario_sectorial, Paso2Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso2Serializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-3')
     def paso_3(self, request, pk=None):
         formulario_sectorial = self.get_object()
-
-        return manejar_formularios_pasos(request, formulario_sectorial, Paso3Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso3Serializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-4')
     def paso_4(self, request, pk=None):
         formulario_sectorial = self.get_object()
-
-        return manejar_formularios_pasos(request, formulario_sectorial, Paso4Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso4Serializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
     def paso_5(self, request, pk=None):
         formulario_sectorial = self.get_object()
-
-        return manejar_formularios_pasos(request, formulario_sectorial, Paso5Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso5Serializer)
 
     @action(detail=True, methods=['get'], url_path='resumen')
     def resumen(self, request, pk=None):
@@ -139,5 +154,12 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get', 'patch'], url_path='observaciones-subdere-sectorial')
     def observaciones_sectoriales(self, request, pk=None):
         formulario_sectorial = self.get_object()
+        competencia = formulario_sectorial.competencia
+
+        # Verifica si el usuario es un usuario SUBDERE autorizado para la competencia del formulario sectorial
+        if request.method == 'PATCH' and not request.user in competencia.usuarios_subdere.all():
+            return Response({"detail": "No autorizado para editar las observaciones de SUBDERE."},
+                            status=status.HTTP_403_FORBIDDEN)
 
         return manejar_formularios_pasos(request, formulario_sectorial, ObservacionesSubdereSerializer)
+
