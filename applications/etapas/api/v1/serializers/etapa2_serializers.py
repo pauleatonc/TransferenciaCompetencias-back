@@ -127,17 +127,21 @@ class Etapa2Serializer(serializers.ModelSerializer):
             formulario_sectorial = FormularioSectorial.objects.filter(competencia=obj.competencia,
                                                                       sector=sector).first()
             if formulario_sectorial:
-                estado_revision = es_usuario_sectorial and obj.oficio_origen
+                # Verifica si el usuario es sectorial y si el sector del formulario coincide con el del usuario
+                usuario_sector_correcto = es_usuario_sectorial and user.sector == sector
+                estado_revision = usuario_sector_correcto and obj.oficio_origen
                 estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
-                accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if es_usuario_sectorial else 'Formulario pendiente'
+                accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if usuario_sector_correcto else 'Formulario pendiente'
                 detalle_formulario = {
                     "id": formulario_sectorial.id,
+                    "sector_id": sector.id,
                     "nombre": f"Completar formulario Sectorial - {sector.nombre}",
                     "estado": estado,
                     "accion": accion
                 }
                 if formulario_sectorial.formulario_enviado:
-                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj, formulario_sectorial.fecha_envio)
+                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj,
+                                                                                          formulario_sectorial.fecha_envio)
                 detalle.append(detalle_formulario)
 
         if len(sectores) <= 1:
