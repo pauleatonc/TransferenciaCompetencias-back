@@ -15,12 +15,12 @@ User = get_user_model()
 class SectorSerializer(serializers.ModelSerializer):
     class Meta:
         model = SectorGubernamental
-        fields = ('nombre',)
+        fields = ('id', 'nombre')
 
 class RegionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Region
-        fields = ('region',)
+        fields = ('id', 'region')
 
 class UsuarioSerializer(serializers.ModelSerializer):
     sector_nombre = serializers.SerializerMethodField()
