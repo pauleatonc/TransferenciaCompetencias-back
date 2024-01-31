@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import Group, Permission
 
@@ -214,14 +215,22 @@ class UserViewSet(viewsets.ModelViewSet):
         sector_id = request.query_params.get('sector_id')
         region_id = request.query_params.get('region_id')
 
-        # Filtrar competencias basadas en región o sector
-        if region_id:
-            queryset = User.objects.filter(region__id=region_id)
-        elif sector_id:
-            queryset = User.objects.filter(sector__id=sector_id)
-        else:
-            # Devolver todas las competencias si no se especifica un filtro
+        # Si no se proporcionan parámetros de filtro, devolver todos los usuarios
+        if not sector_id and not region_id:
             queryset = User.objects.all()
+        else:
+            # Inicialmente, incluir usuarios SUBDERE y DIPRES
+            base_query = User.objects.filter(Q(perfil='SUBDERE') | Q(perfil='DIPRES'))
+
+            # Filtros adicionales para usuarios sectoriales y GORE
+            if sector_id:
+                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id=sector_id)
+                base_query = base_query.union(sectorial_users)
+            if region_id:
+                gore_users = User.objects.filter(perfil='GORE', region__id=region_id)
+                base_query = base_query.union(gore_users)
+
+            queryset = base_query
 
         serializer = UserListSerializer(queryset, many=True)
         return Response(serializer.data)
