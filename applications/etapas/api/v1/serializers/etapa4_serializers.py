@@ -124,12 +124,17 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
         for region in regiones:
             formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
+
             if formulario_gore:
-                estado_revision = es_usuario_gore and obj.oficio_origen
+                # Verifica si el usuario es GORE y si el formulario está completo o está en revisión o está pendiente.
+                usuario_region_correcto = es_usuario_gore and region == obj.region
+                estado_revision = usuario_region_correcto and obj.oficio_origen
+
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
                 detalle_formulario = {
                     'id': formulario_gore.id,
+                    "region_id": region.id,
                     "nombre": f"Completar formulario GORE - {region.region}",
                     "estado": estado,
                     "accion": accion
