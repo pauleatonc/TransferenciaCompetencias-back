@@ -44,31 +44,6 @@ def actualizar_estado_y_fecha_competencia(sender, instance, **kwargs):
         competencia.save()
 
 
-# Receptor de señal para la validación de usuarios sectoriales y GORE
-@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
-@transaction.atomic
-def validar_usuarios_sector(sender, instance, action, pk_set, **kwargs):
-    if action == 'pre_add':
-        User = get_user_model()
-        for pk in pk_set:
-            usuario = User.objects.get(pk=pk)
-            # Asegurar que el usuario pertenece a un sector asignado a la competencia
-            if usuario.sector not in instance.sectores.all():
-                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece al o los sectores asignados a esta competencia.")
-
-
-@receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
-@transaction.atomic
-def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
-    if action == 'pre_add':
-        User = get_user_model()
-        for pk in pk_set:
-            usuario = User.objects.get(pk=pk)
-            # Asegurar que el usuario pertenece a una región asignada a la competencia
-            if usuario.region not in instance.regiones.all():
-                raise ValidationError(f"El usuario {usuario.nombre_completo} no pertenece a la o las regiones asignadas a esta competencia.")
-
-
 @receiver(post_save, sender=Etapa5)
 def actualizar_fecha_fin_y_estado_competencia(sender, instance, **kwargs):
     # Verifica si etapa5 ha sido aprobada

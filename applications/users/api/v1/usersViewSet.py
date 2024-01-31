@@ -224,10 +224,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
             # Filtros adicionales para usuarios sectoriales y GORE
             if sector_id:
-                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id=sector_id)
+                sector_ids = sector_id.split(',')
+                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id__in=sector_ids)
                 base_query = base_query.union(sectorial_users)
             if region_id:
-                gore_users = User.objects.filter(perfil='GORE', region__id=region_id)
+                region_ids = region_id.split(',')
+                gore_users = User.objects.filter(perfil='GORE', region__id__in=region_ids)
                 base_query = base_query.union(gore_users)
 
             queryset = base_query
