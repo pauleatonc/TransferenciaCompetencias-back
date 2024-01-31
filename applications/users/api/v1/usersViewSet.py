@@ -209,7 +209,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
         Para utilizar este endpoint:
         Para filtrar por región: http://tuservidor.com/users/get-users-by-sector-region/?region_id=ID_DE_LA_REGION
-        Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR
+        Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2
+        Para mezclar filtros: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2&?region_id=ID_DE_LA_REGION
         Para obtener todas las competencias: http://tuservidor.com/users/get-users-by-sector-region/
         """
         sector_id = request.query_params.get('sector_id')
