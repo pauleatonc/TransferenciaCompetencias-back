@@ -245,7 +245,7 @@ class Paso2Serializer(serializers.ModelSerializer):
         organismos_data = validated_data.pop('p_2_1_organismos_intervinientes', None)
         unidades_data = validated_data.pop('p_2_2_unidades_intervinientes', None)
         etapas_data = validated_data.pop('p_2_3_etapas_ejercicio_competencia', None)
-        plataformas_data = validated_data.pop('p_2_4_plataformas_y_softwares', None)
+        plataformas_data = validated_data.pop('p_2_4_plataformas_y_softwares', [])
         flujograma_data = validated_data.pop('p_2_5_flujograma_competencia', None)
 
         # Actualizar los atributos de FormularioSectorial
@@ -301,7 +301,25 @@ class Paso2Serializer(serializers.ModelSerializer):
                         proc_instance.unidades_intervinientes.set(unidades)
 
         if plataformas_data is not None:
-            self.update_or_create_nested_instances(PlataformasySoftwares, plataformas_data, instance)
+            for plataforma_data in plataformas_data:
+                plataforma_id = plataforma_data.pop('id', None)
+                delete_flag = plataforma_data.pop('DELETE', False)
+                etapas = plataforma_data.pop('etapas', [])
+
+                if delete_flag:
+                    PlataformasySoftwares.objects.filter(id=plataforma_id).delete()
+                    print(f"Plataforma eliminada: ID {plataforma_id}")
+                    continue
+
+                plataforma_instance, _ = PlataformasySoftwares.objects.update_or_create(
+                    id=plataforma_id,
+                    defaults=plataforma_data,
+                    formulario_sectorial=instance
+                )
+
+                if etapas is not None:
+                    plataforma_instance.etapas.set(etapas)  # Actualiza la lista de etapas en plataformas
+                    continue
 
         if flujograma_data is not None:
             self.update_or_create_nested_instances(FlujogramaCompetencia, flujograma_data, instance)
