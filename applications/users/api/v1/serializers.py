@@ -6,10 +6,12 @@ from applications.competencias.api.v1.serializers import CompetenciaListAllSeria
 from applications.users.models import User
 from django.contrib.auth.models import Group, Permission
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from applications.sectores_gubernamentales.api.v1.serializer import SectorGubernamentalSerializer
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     pass
+
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -194,10 +196,18 @@ class PasswordSerializer(serializers.Serializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
+    sector_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'rut', 'nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'region']
+        fields = ['id', 'rut', 'nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'sector_nombre', 'region']
+
+    def get_sector_nombre(self, obj):
+        # Verifica si el usuario tiene un sector asociado
+        if obj.sector:
+            return obj.sector.nombre
+        # Retorna None o un valor predeterminado si el usuario no tiene un sector asociado
+        return None
 
 
 class PermissionSerializer(serializers.ModelSerializer):

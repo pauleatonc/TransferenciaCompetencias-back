@@ -209,7 +209,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
         Para utilizar este endpoint:
         Para filtrar por región: http://tuservidor.com/users/get-users-by-sector-region/?region_id=ID_DE_LA_REGION
-        Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR
+        Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2
+        Para mezclar filtros: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2&?region_id=ID_DE_LA_REGION
         Para obtener todas las competencias: http://tuservidor.com/users/get-users-by-sector-region/
         """
         sector_id = request.query_params.get('sector_id')
@@ -224,10 +225,12 @@ class UserViewSet(viewsets.ModelViewSet):
 
             # Filtros adicionales para usuarios sectoriales y GORE
             if sector_id:
-                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id=sector_id)
+                sector_ids = sector_id.split(',')
+                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id__in=sector_ids)
                 base_query = base_query.union(sectorial_users)
             if region_id:
-                gore_users = User.objects.filter(perfil='GORE', region__id=region_id)
+                region_ids = region_id.split(',')
+                gore_users = User.objects.filter(perfil='GORE', region__id__in=region_ids)
                 base_query = base_query.union(gore_users)
 
             queryset = base_query
