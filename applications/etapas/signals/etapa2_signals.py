@@ -12,24 +12,6 @@ from applications.formularios_sectoriales.models import ObservacionesSubdereForm
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
-@receiver(m2m_changed, sender=Competencia.regiones.through)
-@transaction.atomic
-def crear_organigramas_regionales(sender, instance, action, pk_set, **kwargs):
-    if instance.pk and action == 'post_add':
-        for sector in instance.sectores.all():
-            formulario_sectorial, created = FormularioSectorial.objects.get_or_create(
-                competencia=instance,
-                sector=sector,
-                defaults={'nombre': f'Formulario Sectorial de {sector.nombre} - {instance.nombre}'}
-            )
-
-            if created:
-                # Crear OrganigramaRegional para cada región asociada a la competencia
-                for region_pk in pk_set:
-                    region = Region.objects.get(pk=region_pk)
-                    OrganigramaRegional.objects.create(formulario_sectorial=formulario_sectorial, region=region)
-
-
 @receiver(post_save, sender=Etapa1)
 def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
     # Obtener o crear la instancia de Etapa2 asociada
