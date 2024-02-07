@@ -118,7 +118,7 @@ class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
 
 
 class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
-    flujograma_competencia = serializers.FileField()
+    flujograma_competencia = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = FlujogramaCompetencia
