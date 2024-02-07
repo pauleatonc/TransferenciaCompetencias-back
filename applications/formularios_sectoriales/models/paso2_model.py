@@ -125,7 +125,7 @@ class PlataformasySoftwares(BaseModel):
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     funcion_plataforma = models.TextField(max_length=500, blank=True)
     etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set', blank=True)
-    capacitacion_plataforma = models.BooleanField(blank=True, default=False)
+    capacitacion_plataforma = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:
         ordering = ['id']
