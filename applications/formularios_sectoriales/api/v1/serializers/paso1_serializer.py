@@ -152,8 +152,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 internal_value[field_name] = internal_nested_data
     
         return internal_value
-    
-    
+
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
@@ -170,8 +169,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
                     )
             elif not delete_flag:
                 obj = model.objects.create(formulario_sectorial=instance, **data)
-    
-    
+
     def update(self, instance, validated_data):
         paso1 = validated_data.pop('paso1', None)
         marco_juridico_data = validated_data.pop('marcojuridico', None)

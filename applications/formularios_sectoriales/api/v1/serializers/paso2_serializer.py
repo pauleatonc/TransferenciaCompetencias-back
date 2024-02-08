@@ -54,14 +54,24 @@ class UnidadesIntervinientesSerializer(serializers.ModelSerializer):
 
 
 class ProcedimientosEtapasSerializer(serializers.ModelSerializer):
+    unidades_intervinientes_label_value = serializers.SerializerMethodField()
+
     class Meta:
         model = ProcedimientosEtapas
         fields = [
             'id',
             'etapa',
             'descripcion_procedimiento',
-            'unidades_intervinientes'
+            'unidades_intervinientes',
+            'unidades_intervinientes_label_value',  # Campo personalizado
         ]
+
+    def get_unidades_intervinientes_label_value(self, obj):
+        # Obtiene todas las unidades intervinientes y las transforma al formato {label, value}
+        return [{
+            'label': unidad.nombre_unidad,  # Suponiendo que 'nombre_unidad' es el campo de label deseado
+            'value': str(unidad.id)  # Convierte el ID de la unidad a string para el value
+        } for unidad in obj.unidades_intervinientes.all()]
 
 
 class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
