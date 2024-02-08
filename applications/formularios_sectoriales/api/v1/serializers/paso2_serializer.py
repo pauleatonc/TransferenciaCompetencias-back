@@ -101,6 +101,7 @@ class EtapasEjercicioCompetenciaSerializer(serializers.ModelSerializer):
 
 
 class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
+    etapas_label_value = serializers.SerializerMethodField()
     class Meta:
         model = PlataformasySoftwares
         fields = [
@@ -113,8 +114,16 @@ class PlataformasySoftwaresSerializer(serializers.ModelSerializer):
             'descripcion_tecnica',
             'funcion_plataforma',
             'etapas',
-            'capacitacion_plataforma'
+            'capacitacion_plataforma',
+            'etapas_label_value'
         ]
+
+    def get_etapas_label_value(self, obj):
+        # Obtiene todas las etapas asociadas y las transforma al formato {label, value}
+        return [{
+            'label': etapa.nombre_etapa,  # Usamos nombre_etapa para el label
+            'value': str(etapa.id)  # El ID de la etapa como value
+        } for etapa in obj.etapas.all()]
 
 
 class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
