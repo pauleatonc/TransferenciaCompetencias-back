@@ -13,7 +13,7 @@ User = get_user_model()
 
 
 class MarcoJuridicoSerializer(serializers.ModelSerializer):
-    documento = serializers.FileField()
+    documento = serializers.FileField(required=False, allow_null=True)
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -40,7 +40,7 @@ class MarcoJuridicoSerializer(serializers.ModelSerializer):
 
 class OrganigramaRegionalSerializer(serializers.ModelSerializer):
     region = serializers.SerializerMethodField()
-    documento = serializers.FileField()
+    documento = serializers.FileField(required=False, allow_null=True)
     documento_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -53,7 +53,6 @@ class OrganigramaRegionalSerializer(serializers.ModelSerializer):
         ]
 
     def get_region(self, obj):
-        # Asegurándote de que 'obj' sea un objeto OrganigramaRegional
         return obj.region.region if obj.region else None
 
     def get_documento_url(self, obj):
@@ -69,7 +68,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
     denominacion_organismo = serializers.SerializerMethodField()
-    organigrama_nacional = serializers.FileField()
+    organigrama_nacional = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = Paso1
@@ -153,8 +152,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 internal_value[field_name] = internal_nested_data
     
         return internal_value
-    
-    
+
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
@@ -171,8 +169,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
                     )
             elif not delete_flag:
                 obj = model.objects.create(formulario_sectorial=instance, **data)
-    
-    
+
     def update(self, instance, validated_data):
         paso1 = validated_data.pop('paso1', None)
         marco_juridico_data = validated_data.pop('marcojuridico', None)

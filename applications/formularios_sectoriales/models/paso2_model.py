@@ -98,6 +98,9 @@ class EtapasEjercicioCompetencia(BaseModel):
     nombre_etapa = models.TextField(max_length=500, blank=True)
     descripcion_etapa = models.TextField(max_length=500, blank=True)
 
+    class Meta:
+        ordering = ['id']
+
 
 class ProcedimientosEtapas(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -107,19 +110,25 @@ class ProcedimientosEtapas(BaseModel):
     descripcion_procedimiento = models.TextField(max_length=500, blank=True)
     unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, blank=True)
 
+    class Meta:
+        ordering = ['id']
+
 
 class PlataformasySoftwares(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_2_4_plataformas_y_softwares')
     nombre_plataforma = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
-    costo_adquisicion = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    costo_mantencion_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    costo_adquisicion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    costo_mantencion_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion_costos = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     funcion_plataforma = models.TextField(max_length=500, blank=True)
     etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set', blank=True)
-    capacitacion_plataforma = models.BooleanField(blank=True, default=False)
+    capacitacion_plataforma = models.BooleanField(blank=True, null=True, default=None)
+
+    class Meta:
+        ordering = ['id']
 
 
 class FlujogramaCompetencia(BaseModel):

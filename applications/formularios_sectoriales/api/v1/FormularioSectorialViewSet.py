@@ -1,3 +1,4 @@
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -5,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from applications.formularios_sectoriales.models import (
-    FormularioSectorial
+    FormularioSectorial, MarcoJuridico, OrganigramaRegional, FlujogramaCompetencia
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 from .serializers import (
@@ -16,7 +17,8 @@ from .serializers import (
     Paso4Serializer,
     Paso5Serializer,
     ResumenFormularioSerializer,
-    ObservacionesSubdereSerializer
+    ObservacionesSubdereSerializer,
+    MarcoJuridicoSerializer
 )
 
 
@@ -162,4 +164,114 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_403_FORBIDDEN)
 
         return manejar_formularios_pasos(request, formulario_sectorial, ObservacionesSubdereSerializer)
+
+    @action(detail=True, methods=['patch'], url_path='update-marco-juridico',
+            parser_classes=(MultiPartParser, FormParser))
+    def update_marco_juridico(self, request, pk=None):
+        """
+        Un endpoint dedicado para actualizar el documento de un MarcoJuridico específico
+        o crear uno nuevo si no se proporciona marco_juridico_id.
+
+        Se deben agregar en el body dos keys, marco_juridico_id: el valor del ID y documento: el archivo a subir. Si se
+        proporciona marco_juridico_id, el endpoint actualiza el documento existente. Si no se proporciona
+        marco_juridico_id, el endpoint crea un nuevo MarcoJuridico.
+        """
+        marco_juridico_id = request.data.get('marco_juridico_id')
+        documento_file = request.FILES.get('documento')
+
+        if not documento_file:
+            return Response({"error": "Documento es requerido."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        formulario_sectorial = self.get_object()
+
+        if marco_juridico_id:
+            # Intenta actualizar un MarcoJuridico existente
+            try:
+                marco_juridico = MarcoJuridico.objects.get(id=marco_juridico_id,
+                                                           formulario_sectorial=formulario_sectorial)
+            except MarcoJuridico.DoesNotExist:
+                return Response({"error": "MarcoJuridico no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            marco_juridico.documento = documento_file
+            marco_juridico.save()
+
+            return Response({"mensaje": "Documento actualizado con éxito."})
+        else:
+            # Crea un nuevo MarcoJuridico si no se proporciona ID
+            marco_juridico = MarcoJuridico.objects.create(
+                formulario_sectorial=formulario_sectorial,
+                documento=documento_file
+            )
+
+            return Response({"mensaje": "Documento creado con éxito.", "marco_juridico_id": marco_juridico.id},
+                            status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'], url_path='update-flujograma-competencia',
+            parser_classes=(MultiPartParser, FormParser))
+
+    def update_flujograma_competencia(self, request, pk=None):
+        """
+        Un endpoint dedicado para actualizar el documento de un FlujogramaCompetencia específico
+        o crear uno nuevo si no se proporciona flujograma_competencia_id.
+
+        Se deben agregar en el body dos keys, flujograma_competencia_id: el valor del ID y documento: el archivo a subir.
+        Si se proporciona flujograma_competencia_id, el endpoint actualiza el documento existente. Si no se proporciona
+        flujograma_competencia_id, el endpoint crea un nuevo FlujogramaCompetencia.
+        """
+        flujograma_competencia_id = request.data.get('flujograma_competencia_id')
+        documento_file = request.FILES.get('documento')
+
+        if not documento_file:
+            return Response({"error": "Documento es requerido."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        formulario_sectorial = self.get_object()
+
+        if flujograma_competencia_id:
+            # Intenta actualizar un FlujogramaCompetencia existente
+            try:
+                flujograma_competencia = FlujogramaCompetencia.objects.get(id=flujograma_competencia_id,
+                                                                            formulario_sectorial=formulario_sectorial)
+            except FlujogramaCompetencia.DoesNotExist:
+                return Response({"error": "FlujogramaCompetencia no encontrado."},
+                                status=status.HTTP_404_NOT_FOUND)
+            flujograma_competencia.documento = documento_file
+            flujograma_competencia.save()
+
+            return Response({"mensaje": "Documento actualizado con éxito."})
+        else:
+            # Crea un nuevo FlujogramaCompetencia si no se proporciona ID
+            flujograma_competencia = FlujogramaCompetencia.objects.create(
+                formulario_sectorial=formulario_sectorial,
+                documento=documento_file
+            )
+
+            return Response({"mensaje": "Documento creado con éxito.", "flujograma_competencia_id": flujograma_competencia.id},
+                            status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'], url_path='update-organigrama-regional',
+            parser_classes=(MultiPartParser, FormParser))
+    def update_organigrama_regional(self, request, pk=None):
+        """
+        Un endpoint dedicado para actualizar el documento de un OrganigramaRegional específico.
+
+        Se deben agregar en el body dos keys, organigrama_regional_id: el valor del ID y documento: el archivo a subir.
+        Si se proporciona organigrama_regional_id, el endpoint actualiza el documento existente.
+        """
+        organigrama_regional_id = request.data.get('organigrama_regional_id')
+        documento_file = request.FILES.get('documento')
+
+        if not organigrama_regional_id or not documento_file:
+            return Response({"error": "organigrama_regional_id y documento son requeridos."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            organigrama_regional = OrganigramaRegional.objects.get(id=organigrama_regional_id,
+                                                                    formulario_sectorial_id=pk)
+        except OrganigramaRegional.DoesNotExist:
+            return Response({"error": "OrganigramaRegional no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        organigrama_regional.documento = documento_file
+        organigrama_regional.save()
 
