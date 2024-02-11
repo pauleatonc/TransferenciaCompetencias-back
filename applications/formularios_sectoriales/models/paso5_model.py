@@ -147,9 +147,9 @@ class CostosDirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_a_costos_directos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_directos', blank=True)
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos', blank=True, null=True)
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    es_transversal = models.BooleanField(default=False, blank=True)
+    es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)
 
     def save(self, *args, **kwargs):
@@ -191,6 +191,9 @@ class CostosDirectos(BaseModel):
                                                        formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
             Sum('total_anual'))['total_anual__sum'] or 0
 
+    class Meta:
+        ordering = ['id']
+
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -198,7 +201,7 @@ class CostosIndirectos(BaseModel):
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos')
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    es_transversal = models.BooleanField(default=False, blank=True)
+    es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)
 
     def save(self, *args, **kwargs):
@@ -239,6 +242,9 @@ class CostosIndirectos(BaseModel):
         total_directos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
                                                          formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
             Sum('total_anual'))['total_anual__sum'] or 0
+
+    class Meta:
+        ordering = ['id']
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
@@ -307,6 +313,9 @@ class ResumenCostosPorSubtitulo(BaseModel):
     def __str__(self):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
+    class Meta:
+        ordering = ['id']
+
 
 class EvolucionGastoAsociado(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -338,11 +347,17 @@ class EvolucionGastoAsociado(BaseModel):
         else:
             cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
 
+    class Meta:
+        ordering = ['id']
+
 
 class CostoAnio(BaseModel):
     evolucion_gasto = models.ForeignKey(EvolucionGastoAsociado, on_delete=models.CASCADE, related_name='costo_anio')
     anio = models.IntegerField()
     costo = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
 
 
 class VariacionPromedio(BaseModel):
@@ -382,13 +397,22 @@ class VariacionPromedio(BaseModel):
         self.variacion = (self.gasto_n_5 or 0) - (self.gasto_n_1 or 0)
         self.save()
 
+    class Meta:
+        ordering = ['id']
+
 
 class Estamento(models.Model):
     estamento = models.CharField(max_length=100)
 
+    class Meta:
+        ordering = ['id']
+
 
 class CalidadJuridica(models.Model):
     calidad_juridica = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['id']
 
 
 class PersonalDirecto(BaseModel):
@@ -399,6 +423,9 @@ class PersonalDirecto(BaseModel):
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True)
 
+    class Meta:
+        ordering = ['id']
+
 
 class PersonalIndirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -408,3 +435,6 @@ class PersonalIndirecto(BaseModel):
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
