@@ -47,41 +47,93 @@ class ItemSubtituloSerializer(serializers.ModelSerializer):
 
 
 class CostosDirectosSerializer(serializers.ModelSerializer):
-    nombre_item_subtitulo = serializers.SerializerMethodField()
+    subtitulo_label_value = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
+    etapa_label_value = serializers.SerializerMethodField()
 
     class Meta:
         model = CostosDirectos
         fields = [
             'id',
-            'etapa',
+            'subtitulo_label_value',
             'item_subtitulo',
-            'nombre_item_subtitulo',
+            'item_subtitulo_label_value',
+            'etapa',
+            'etapa_label_value',
             'total_anual',
             'es_transversal',
             'descripcion',
         ]
 
-    def get_nombre_item_subtitulo(self, obj):
-        return obj.item_subtitulo.nombre_item if obj.item_subtitulo else None
+    def get_subtitulo_label_value(self, obj):
+        # obj es una instancia de CostosDirectos
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {
+                'label': obj.item_subtitulo.subtitulo.subtitulo,
+                'value': str(obj.item_subtitulo.subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_item_subtitulo_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.item_subtitulo:
+            return {
+                'label': obj.item_subtitulo.item,
+                'value': str(obj.item_subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_etapa_label_value(self, obj):
+        # Obtiene todas las etapas asociadas y las transforma al formato {label, value}
+        return [{
+            'label': etapa.nombre_etapa,  # Usamos nombre_etapa para el label
+            'value': str(etapa.id)  # El ID de la etapa como value
+        } for etapa in obj.etapa.all()]
 
 
 class CostosIndirectosSerializer(serializers.ModelSerializer):
-    nombre_item_subtitulo = serializers.SerializerMethodField()
+    subtitulo_label_value = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
+    etapa_label_value = serializers.SerializerMethodField()
 
     class Meta:
-        model = CostosIndirectos
+        model = CostosDirectos
         fields = [
             'id',
-            'etapa',
+            'subtitulo_label_value',
             'item_subtitulo',
-            'nombre_item_subtitulo',
+            'item_subtitulo_label_value',
+            'etapa',
+            'etapa_label_value',
             'total_anual',
             'es_transversal',
             'descripcion',
         ]
 
-    def get_nombre_item_subtitulo(self, obj):
-        return obj.item_subtitulo.nombre_item if obj.item_subtitulo else None
+    def get_subtitulo_label_value(self, obj):
+        # obj es una instancia de CostosDirectos
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {
+                'label': obj.item_subtitulo.subtitulo.subtitulo,
+                'value': str(obj.item_subtitulo.subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_item_subtitulo_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.item_subtitulo:
+            return {
+                'label': obj.item_subtitulo.item,
+                'value': str(obj.item_subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_etapa_label_value(self, obj):
+        # Obtiene todas las etapas asociadas y las transforma al formato {label, value}
+        return [{
+            'label': etapa.nombre_etapa,  # Usamos nombre_etapa para el label
+            'value': str(etapa.id)  # El ID de la etapa como value
+        } for etapa in obj.etapa.all()]
 
 
 class ResumenCostosPorSubtituloSerializer(serializers.ModelSerializer):
@@ -281,6 +333,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
         model = FormularioSectorial
         fields = [
             'paso5',
+            'formulario_enviado',
             'p_5_1_a_costos_directos',
             'p_5_1_b_costos_indirectos',
             'p_5_1_c_resumen_costos_por_subtitulo',
@@ -385,7 +438,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
                         item_data['id'] = item.get('id')
                         internal_nested_data.append(item_data)
                 internal_value[field_name] = internal_nested_data
-    
+
         return internal_value
     
     
@@ -428,7 +481,24 @@ class Paso5Serializer(WritableNestedModelSerializer):
     
         # Actualizar o crear CostosDirectos
         if costos_directos_data is not None:
-            self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance)
+            for costo_data in costos_directos_data:
+                costo_id = costo_data.pop('id', None)
+                delete_flag = costo_data.pop('DELETE', False)
+                etapa_ids = costo_data.pop('etapa', None)  # Asume que etapa_ids es una lista de IDs
+
+                if delete_flag and costo_id:
+                    CostosDirectos.objects.filter(id=costo_id).delete()
+                    continue
+
+                # Excluyendo 'etapa' de defaults porque no se puede asignar directamente
+                costo_instance, _ = CostosDirectos.objects.update_or_create(
+                    id=costo_id,
+                    defaults={key: value for key, value in costo_data.items() if key != 'etapa'},
+                    formulario_sectorial=instance)
+
+                if etapa_ids is not None:
+                    # Asegurarse de que etapa_ids solo contenga números (IDs)
+                    costo_instance.etapa.set(etapa_ids)
     
         # Actualizar o crear CostosIndirectos
         if costos_indirectos_data is not None:

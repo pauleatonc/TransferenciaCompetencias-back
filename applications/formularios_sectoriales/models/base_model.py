@@ -15,33 +15,36 @@ class FormularioSectorial(BaseModel):
     fecha_envio = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        if self.formulario_enviado and not self.todos_los_pasos_completados():
+            self.intento_envio = True
+            print(f"Actualizando intento_envio a {self.intento_envio}")  # Depuración
+            super(FormularioSectorial, self).save(update_fields=['intento_envio'])
+            print("intento_envio actualizado, lanzando excepción.")  # Depuración
+            raise ValueError("No se puede enviar el formulario hasta que todos los pasos estén completados.")
+
+        # Si el formulario está siendo enviado y todos los pasos están completados,
+        # entonces proceder normalmente con la lógica de guardado.
         if self.formulario_enviado:
             # Validar y guardar cada paso
-            for paso in [self.paso1.first(), self.paso2.first(), self.paso3.first(), self.paso4.first(), self.paso5.first()]:
+            pasos = [self.paso1, self.paso2, self.paso3, self.paso4, self.paso5]
+            for paso in pasos:
                 if paso is not None:
                     paso.save()
 
-            # Verificar si todos los pasos están completados
-            if not self.todos_los_pasos_completados():
-                self.intento_envio = True
-                self.save(update_fields=['intento_envio'])  # Guardar el cambio en intento_envio
-                raise ValueError("No se puede enviar el formulario hasta que todos los pasos estén completados.")
-
-            # Establecer la fecha de envío
+            # Establecer la fecha de envío si aún no se ha establecido
             if not self.fecha_envio:
                 self.fecha_envio = timezone.now()
+                kwargs['update_fields'] = ['fecha_envio'] if 'update_fields' in kwargs and kwargs[
+                    'update_fields'] is not None else None
 
+        # Finalmente, llamar al método save de la clase base para completar el guardado del modelo.
         super(FormularioSectorial, self).save(*args, **kwargs)
 
     def todos_los_pasos_completados(self):
-        # Verifica cada paso por su related_name
-        pasos_completados = (
-            all(paso.completado for paso in self.paso1.all()) and
-            all(paso.completado for paso in self.paso2.all()) and
-            all(paso.completado for paso in self.paso3.all()) and
-            all(paso.completado for paso in self.paso4.all()) and
-            all(paso.completado for paso in self.paso5.all())
-        )
+        pasos = [self.paso1, self.paso2, self.paso3, self.paso4, self.paso5]
+
+        pasos_completados = all(paso is not None and paso.completado for paso in pasos)
+
         return pasos_completados
 
     def __str__(self):
