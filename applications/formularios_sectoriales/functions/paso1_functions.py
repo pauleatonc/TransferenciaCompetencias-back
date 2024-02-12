@@ -6,7 +6,7 @@ def organigrama_regional_path(instance, filename):
 
     competencia_nombre = 'SinCompetencia'
     if instance.formulario_sectorial and instance.formulario_sectorial.competencia:
-        competencia_nombre = instance.formulario_sectorial.competencia.nombre
+        competencia_nombre = instance.formulario_sectorial.competencia.nombre[:30]
 
     new_filename = f"Organigrama-{region}-{competencia_nombre}.{ext}"
     return os.path.join('formulario_sectorial', new_filename)
