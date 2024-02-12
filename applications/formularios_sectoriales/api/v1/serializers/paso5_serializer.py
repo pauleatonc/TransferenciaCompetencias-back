@@ -92,22 +92,48 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
 
 
 class CostosIndirectosSerializer(serializers.ModelSerializer):
-    nombre_item_subtitulo = serializers.SerializerMethodField()
+    subtitulo_label_value = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
+    etapa_label_value = serializers.SerializerMethodField()
 
     class Meta:
-        model = CostosIndirectos
+        model = CostosDirectos
         fields = [
             'id',
-            'etapa',
+            'subtitulo_label_value',
             'item_subtitulo',
-            'nombre_item_subtitulo',
+            'item_subtitulo_label_value',
+            'etapa',
+            'etapa_label_value',
             'total_anual',
             'es_transversal',
             'descripcion',
         ]
 
-    def get_nombre_item_subtitulo(self, obj):
-        return obj.item_subtitulo.nombre_item if obj.item_subtitulo else None
+    def get_subtitulo_label_value(self, obj):
+        # obj es una instancia de CostosDirectos
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {
+                'label': obj.item_subtitulo.subtitulo.subtitulo,
+                'value': str(obj.item_subtitulo.subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_item_subtitulo_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.item_subtitulo:
+            return {
+                'label': obj.item_subtitulo.item,
+                'value': str(obj.item_subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_etapa_label_value(self, obj):
+        # Obtiene todas las etapas asociadas y las transforma al formato {label, value}
+        return [{
+            'label': etapa.nombre_etapa,  # Usamos nombre_etapa para el label
+            'value': str(etapa.id)  # El ID de la etapa como value
+        } for etapa in obj.etapa.all()]
 
 
 class ResumenCostosPorSubtituloSerializer(serializers.ModelSerializer):

@@ -231,7 +231,7 @@ class CostosIndirectos(BaseModel):
             total = CostosIndirectos.objects.filter(
                 formulario_sectorial_id=self.formulario_sectorial_id
             ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-            paso.total_costos_directos = total
+            paso.total_costos_indirectos = total
             paso.save()
         except Paso5.DoesNotExist:
             # Manejar la excepción, como registrar un error o simplemente pasar
@@ -239,7 +239,7 @@ class CostosIndirectos(BaseModel):
 
     def crear_o_actualizar_resumen_evolucion_variacion(self):
         subtitulo_id = self.item_subtitulo.subtitulo_id
-        total_directos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
+        total_indirectos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
                                                          formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
             Sum('total_anual'))['total_anual__sum'] or 0
 
