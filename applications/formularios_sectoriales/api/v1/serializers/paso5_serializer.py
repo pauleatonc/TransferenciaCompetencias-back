@@ -18,6 +18,7 @@ from applications.formularios_sectoriales.models import (
     PersonalIndirecto,
     EtapasEjercicioCompetencia
 )
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -293,6 +294,8 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
 
+    años = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Paso5
         fields = [
@@ -309,7 +312,17 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
+            'años'
         ]
+
+
+    def get_años(self, obj):
+        competencia = obj.formulario_sectorial.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            años = list(range(año_actual - 5, año_actual))
+            return años
+        return []
 
     def avance(self, obj):
         return obj.avance()
