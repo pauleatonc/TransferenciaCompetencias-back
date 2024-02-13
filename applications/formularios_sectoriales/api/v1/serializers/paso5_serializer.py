@@ -305,6 +305,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'total_costos_directos',
             'total_costos_indirectos',
             'costos_totales',
+            'descripcion_costos_totales',
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
@@ -313,6 +314,12 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     def avance(self, obj):
         return obj.avance()
 
+def eliminar_instancia_costo(modelo, instancia_id):
+        try:
+            instancia = modelo.objects.get(id=instancia_id)
+            instancia.delete()  # Esto disparará la señal post_delete
+        except modelo.DoesNotExist:
+            pass
 
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
@@ -412,6 +419,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
         else:
             Paso5.objects.create(formulario_sectorial=instance, **paso5_data)
 
+
+
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
@@ -432,7 +441,12 @@ class Paso5Serializer(WritableNestedModelSerializer):
                 for item in nested_data:
                     # Manejar la clave 'DELETE' si está presente
                     if 'DELETE' in item and item['DELETE'] == True:
-                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                        if field_name == 'p_5_1_a_costos_directos':
+                            eliminar_instancia_costo(CostosDirectos, item['id'])
+                        elif field_name == 'p_5_1_b_costos_indirectos':
+                            eliminar_instancia_costo(CostosIndirectos, item['id'])
+                        else:
+                            internal_nested_data.append({'id': item['id'], 'DELETE': True})
                     else:
                         item_data = self.fields[field_name].child.to_internal_value(item)
                         item_data['id'] = item.get('id')

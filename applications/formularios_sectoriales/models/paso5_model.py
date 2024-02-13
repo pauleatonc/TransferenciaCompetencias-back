@@ -110,6 +110,7 @@ class Paso5(PasoBase):
     total_costos_directos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_costos_indirectos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     costos_totales = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    descripcion_costos_totales = models.TextField(max_length=300, blank=True)
 
     """5.2 Costos asociados al ejercicio de la competencia"""
     glosas_especificas = models.TextField(max_length=500, blank=True)
@@ -208,6 +209,7 @@ class CostosIndirectos(BaseModel):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
         self.crear_o_actualizar_resumen_evolucion_variacion()
+        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
         ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
         EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(self.item_subtitulo.subtitulo_id,
                                                                   self.formulario_sectorial_id)
@@ -302,9 +304,14 @@ class ResumenCostosPorSubtitulo(BaseModel):
             else:
                 cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
 
-            # Actualizar el total en la instancia de Paso5
-            paso.costos_totales = total
-            paso.save()
+                # Actualizar el total en la instancia de Paso5
+                paso = Paso5.objects.get(formulario_sectorial_id=formulario_sectorial_id)
+                total = ResumenCostosPorSubtitulo.objects.filter(
+                    formulario_sectorial_id=formulario_sectorial_id
+                ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+                paso.costos_totales = total
+                paso.save()
 
         except Paso5.DoesNotExist:
             # Manejar la excepción, como registrar un error o simplemente pasar
@@ -314,7 +321,7 @@ class ResumenCostosPorSubtitulo(BaseModel):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class EvolucionGastoAsociado(BaseModel):
