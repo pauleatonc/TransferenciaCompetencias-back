@@ -355,7 +355,7 @@ class EvolucionGastoAsociado(BaseModel):
             cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
 
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class CostoAnio(BaseModel):
@@ -364,7 +364,7 @@ class CostoAnio(BaseModel):
     costo = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['anio']
 
 
 class VariacionPromedio(BaseModel):
@@ -405,7 +405,7 @@ class VariacionPromedio(BaseModel):
         self.save()
 
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class Estamento(models.Model):

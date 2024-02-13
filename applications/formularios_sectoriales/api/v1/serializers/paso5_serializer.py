@@ -445,6 +445,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
                             eliminar_instancia_costo(CostosDirectos, item['id'])
                         elif field_name == 'p_5_1_b_costos_indirectos':
                             eliminar_instancia_costo(CostosIndirectos, item['id'])
+                        elif field_name == 'p_5_2_evolucion_gasto_asociado':
+                            eliminar_instancia_costo(CostosIndirectos, item['id'])
                         else:
                             internal_nested_data.append({'id': item['id'], 'DELETE': True})
                     else:

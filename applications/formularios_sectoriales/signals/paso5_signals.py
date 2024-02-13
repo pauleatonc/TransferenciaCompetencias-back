@@ -54,14 +54,17 @@ def actualizar_resumen_costos_por_subtitulo(sender, instance, **kwargs):
 @receiver(post_save, sender=EvolucionGastoAsociado)
 def crear_costos_anios(sender, instance, created, **kwargs):
     if created:
-        año_actual = timezone.now().year
-        año_inicial = año_actual - 5
+        competencia = instance.formulario_sectorial.competencia
+        # Verificar si fecha_inicio está definida
+        if competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            año_inicial = año_actual - 5
 
-        for año in range(año_inicial, año_actual):
-            CostoAnio.objects.get_or_create(
-                evolucion_gasto=instance,
-                anio=año
-            )
+            for año in range(año_inicial, año_actual):
+                CostoAnio.objects.get_or_create(
+                    evolucion_gasto=instance,
+                    anio=año
+                )
 
 @receiver(post_save, sender=CostoAnio)
 def actualizar_variacion_promedio(sender, instance, **kwargs):
