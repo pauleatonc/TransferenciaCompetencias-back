@@ -14,13 +14,6 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=FormularioSectorial)
-def crear_relaciones_formulario(sender, instance, created, **kwargs):
-    if created:
-        # Crear una instancia de MarcoJuridico para el nuevo FormularioSectorial
-        MarcoJuridico.objects.create(formulario_sectorial=instance)
-
-
-@receiver(post_save, sender=FormularioSectorial)
 def crear_organigramas_regionales_para_formulario(sender, instance, created, **kwargs):
     if created:
         competencia = instance.competencia
