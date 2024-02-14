@@ -18,6 +18,7 @@ from applications.formularios_sectoriales.models import (
     PersonalIndirecto,
     EtapasEjercicioCompetencia
 )
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -164,6 +165,7 @@ class CostoAnioSerializer(serializers.ModelSerializer):
 
 
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
+    nombre_subtitulo = serializers.SerializerMethodField()
     costo_anio = CostoAnioSerializer(many=True)
 
     class Meta:
@@ -171,9 +173,13 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'subtitulo',
+            'nombre_subtitulo',
             'costo_anio',
             'descripcion',
         ]
+
+    def get_nombre_subtitulo(self, obj):
+        return obj.subtitulo.nombre_item if obj.subtitulo else None
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
@@ -293,6 +299,8 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
 
+    años = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Paso5
         fields = [
@@ -305,14 +313,31 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'total_costos_directos',
             'total_costos_indirectos',
             'costos_totales',
+            'descripcion_costos_totales',
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
+            'años'
         ]
+
+
+    def get_años(self, obj):
+        competencia = obj.formulario_sectorial.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            años = list(range(año_actual - 5, año_actual))
+            return años
+        return []
 
     def avance(self, obj):
         return obj.avance()
 
+def eliminar_instancia_costo(modelo, instancia_id):
+        try:
+            instancia = modelo.objects.get(id=instancia_id)
+            instancia.delete()  # Esto disparará la señal post_delete
+        except modelo.DoesNotExist:
+            pass
 
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
@@ -412,6 +437,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
         else:
             Paso5.objects.create(formulario_sectorial=instance, **paso5_data)
 
+
+
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
@@ -432,7 +459,14 @@ class Paso5Serializer(WritableNestedModelSerializer):
                 for item in nested_data:
                     # Manejar la clave 'DELETE' si está presente
                     if 'DELETE' in item and item['DELETE'] == True:
-                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                        if field_name == 'p_5_1_a_costos_directos':
+                            eliminar_instancia_costo(CostosDirectos, item['id'])
+                        elif field_name == 'p_5_1_b_costos_indirectos':
+                            eliminar_instancia_costo(CostosIndirectos, item['id'])
+                        elif field_name == 'p_5_2_evolucion_gasto_asociado':
+                            eliminar_instancia_costo(CostosIndirectos, item['id'])
+                        else:
+                            internal_nested_data.append({'id': item['id'], 'DELETE': True})
                     else:
                         item_data = self.fields[field_name].child.to_internal_value(item)
                         item_data['id'] = item.get('id')
