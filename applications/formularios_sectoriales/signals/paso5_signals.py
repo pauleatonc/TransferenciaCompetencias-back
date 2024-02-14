@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
@@ -11,7 +12,6 @@ from applications.formularios_sectoriales.models import (
     CostoAnio,
     FormularioSectorial
 )
-from django.utils import timezone
 
 
 @receiver(post_save, sender=FormularioSectorial)
@@ -21,34 +21,117 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         Paso5.objects.create(formulario_sectorial=instance)
 
 
-def gestionar_resumen_costos_por_subtitulo(instance):
-    subtitulo_id = instance.item_subtitulo.subtitulo_id
-    formulario_sectorial_id = instance.formulario_sectorial_id
-    costos_directos = CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).exists()
-    costos_indirectos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).exists()
+def regenerar_resumen_costos(formulario_sectorial_id):
+    # Obtener todos los subtitulos únicos para este formulario sectorial
+    subtitulos_directos = set(
+        CostosDirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id).values_list(
+            'item_subtitulo__subtitulo_id', flat=True))
+    subtitulos_indirectos = set(
+        CostosIndirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id).values_list(
+            'item_subtitulo__subtitulo_id', flat=True))
 
-    # Verificar si existe alguna instancia de costos asociada al subtitulo
-    if costos_directos or costos_indirectos:
-        # Si existe al menos una instancia de costos, asegurar que exista un resumen
-        ResumenCostosPorSubtitulo.objects.get_or_create(
+    subtitulos_unicos = subtitulos_directos.union(subtitulos_indirectos)
+
+    # Obtener o crear ResumenCostosPorSubtitulo para cada subtitulo único y actualizar el total_anual
+    for subtitulo_id in subtitulos_unicos:
+        total_directos = CostosDirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id,
+                                                       item_subtitulo__subtitulo_id=subtitulo_id).aggregate(
+            total=Sum('total_anual'))['total'] or 0
+        total_indirectos = CostosIndirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id,
+                                                           item_subtitulo__subtitulo_id=subtitulo_id).aggregate(
+            total=Sum('total_anual'))['total'] or 0
+        total_anual = total_directos + total_indirectos
+
+        resumen_costos, created = ResumenCostosPorSubtitulo.objects.get_or_create(
+            formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
+            defaults={'total_anual': total_anual}
         )
-    else:
-        # Si no existen instancias de costos, eliminar el resumen si existe
-        ResumenCostosPorSubtitulo.objects.filter(
+        if not created:
+            # Si la instancia ya existía, actualizamos solo el total_anual
+            ResumenCostosPorSubtitulo.objects.filter(id=resumen_costos.id).update(total_anual=total_anual)
+
+    # Identificar y eliminar cualquier ResumenCostosPorSubtitulo obsoleto
+    ResumenCostosPorSubtitulo.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id
+    ).exclude(
+        subtitulo_id__in=subtitulos_unicos
+    ).delete()
+
+
+def calcular_y_actualizar_variacion(formulario_sectorial_id):
+    subtitulos_ids = EvolucionGastoAsociado.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id
+    ).values_list('subtitulo_id', flat=True).distinct()
+
+    for subtitulo_id in subtitulos_ids:
+        evolucion_gasto = EvolucionGastoAsociado.objects.filter(
+            formulario_sectorial_id=formulario_sectorial_id,
+            subtitulo_id=subtitulo_id
+        ).first()
+
+        if evolucion_gasto:
+            costos = CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio')
+            if costos:
+                gasto_n_5 = costos.first().costo if costos.first() and costos.first().costo is not None else 0
+                gasto_n_1 = costos.last().costo if costos.last() and costos.last().costo is not None else 0
+                variacion = gasto_n_1 - gasto_n_5
+
+                VariacionPromedio.objects.update_or_create(
+                    formulario_sectorial_id=formulario_sectorial_id,
+                    subtitulo_id=subtitulo_id,
+                    defaults={
+                        'gasto_n_5': gasto_n_5,
+                        'gasto_n_1': gasto_n_1,
+                        'variacion': variacion,
+                        'descripcion': ''
+                    }
+                )
+
+
+def actualizar_evolucion_y_variacion(formulario_sectorial_id):
+    subtitulos_directos_ids = CostosDirectos.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id
+    ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
+
+    subtitulos_indirectos_ids = CostosIndirectos.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id
+    ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
+
+    subtitulos_unicos_ids = set(list(subtitulos_directos_ids) + list(subtitulos_indirectos_ids))
+
+    for subtitulo_id in subtitulos_unicos_ids:
+        # Asegura la existencia de EvolucionGastoAsociado
+        EvolucionGastoAsociado.objects.get_or_create(
+            formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).delete()
+            defaults={'descripcion': ''}
+        )
+
+        # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí)
+        VariacionPromedio.objects.get_or_create(
+            formulario_sectorial_id=formulario_sectorial_id,
+            subtitulo_id=subtitulo_id,
+            defaults={'descripcion': ''}
+        )
+
+    # Ahora llama a la función para calcular y actualizar la variación promedio
+    calcular_y_actualizar_variacion(formulario_sectorial_id)
+
+    # Eliminar instancias obsoletas de EvolucionGastoAsociado y VariacionPromedio
+    EvolucionGastoAsociado.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
+        subtitulo_id__in=subtitulos_unicos_ids).delete()
+    VariacionPromedio.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
+        subtitulo_id__in=subtitulos_unicos_ids).delete()
 
 
 @receiver(post_save, sender=CostosDirectos)
 @receiver(post_save, sender=CostosIndirectos)
 @receiver(post_delete, sender=CostosDirectos)
 @receiver(post_delete, sender=CostosIndirectos)
-def actualizar_resumen_costos_por_subtitulo(sender, instance, **kwargs):
-    # Lógica para crear o eliminar el ResumenCostosPorSubtitulo
-    gestionar_resumen_costos_por_subtitulo(instance)
+def actualizar_resumen_costos(sender, instance, **kwargs):
+    regenerar_resumen_costos(instance.formulario_sectorial_id)
+    actualizar_evolucion_y_variacion(instance.formulario_sectorial_id)
 
 
 @receiver(post_save, sender=EvolucionGastoAsociado)
@@ -65,29 +148,3 @@ def crear_costos_anios(sender, instance, created, **kwargs):
                     evolucion_gasto=instance,
                     anio=año
                 )
-
-@receiver(post_save, sender=CostoAnio)
-def actualizar_variacion_promedio(sender, instance, **kwargs):
-    # Obtener la instancia de EvolucionGastoAsociado asociada
-    evolucion_gasto = instance.evolucion_gasto
-
-    # Obtener el rango de años
-    costos_anio = CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio')
-    if costos_anio:
-        anio_mas_antiguo = costos_anio.first().anio
-        anio_mas_reciente = costos_anio.last().anio
-
-        # Obtener o crear la instancia de VariacionPromedio
-        variacion, created = VariacionPromedio.objects.get_or_create(
-            formulario_sectorial=evolucion_gasto.formulario_sectorial,
-            subtitulo=evolucion_gasto.subtitulo
-        )
-
-        # Actualizar los campos gasto_n_5 y gasto_n_1
-        variacion.gasto_n_5 = costos_anio.filter(anio=anio_mas_antiguo).first().costo
-        variacion.gasto_n_1 = costos_anio.filter(anio=anio_mas_reciente).first().costo
-        variacion.save()
-
-        # Llamada al método calcular_variacion
-        if variacion:
-            variacion.calcular_variacion()

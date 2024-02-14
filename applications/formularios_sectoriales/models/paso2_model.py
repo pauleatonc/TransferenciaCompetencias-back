@@ -55,6 +55,9 @@ class Paso2(PasoBase):
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
+    """2.5 Descripcion cualitativa del ejercicio de la competencia en la region"""
+    descripcion_cualitativa = models.TextField(max_length=500, blank=True)
+
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:
             self.completado = True
@@ -140,4 +143,3 @@ class FlujogramaCompetencia(BaseModel):
                                                     ['pdf'], message='Solo se permiten archivos PDF.'),
                                                 validate_file_size_twenty],
                                             verbose_name='Flujograma de ejercicio de la Competencia', blank=True, null=True)
-    descripcion_cualitativa = models.TextField(max_length=500, blank=True)

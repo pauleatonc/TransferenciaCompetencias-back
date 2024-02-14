@@ -143,8 +143,7 @@ class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
         model = FlujogramaCompetencia
         fields = [
             'id',
-            'flujograma_competencia',
-            'descripcion_cualitativa'
+            'flujograma_competencia'
         ]
 
 
@@ -164,6 +163,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
+            'descripcion_cualitativa'
         ]
 
     def avance(self, obj):

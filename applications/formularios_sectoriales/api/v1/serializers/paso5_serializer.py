@@ -165,6 +165,7 @@ class CostoAnioSerializer(serializers.ModelSerializer):
 
 
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
+    nombre_subtitulo = serializers.SerializerMethodField()
     costo_anio = CostoAnioSerializer(many=True)
 
     class Meta:
@@ -172,9 +173,13 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'subtitulo',
+            'nombre_subtitulo',
             'costo_anio',
             'descripcion',
         ]
+
+    def get_nombre_subtitulo(self, obj):
+        return obj.subtitulo.nombre_item if obj.subtitulo else None
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
