@@ -84,8 +84,7 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
                     defaults={
                         'gasto_n_5': gasto_n_5,
                         'gasto_n_1': gasto_n_1,
-                        'variacion': variacion,
-                        'descripcion': ''
+                        'variacion': variacion
                     }
                 )
 
@@ -177,6 +176,5 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
                 'gasto_n_5': gasto_n_5,
                 'gasto_n_1': gasto_n_1,
                 'variacion': variacion,
-                'descripcion': ''
             }
         )
