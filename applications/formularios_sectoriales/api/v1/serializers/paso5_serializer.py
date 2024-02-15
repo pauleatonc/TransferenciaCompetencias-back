@@ -199,16 +199,21 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
 
 
 class VariacionPromedioSerializer(serializers.ModelSerializer):
+    nombre_subtitulo = serializers.SerializerMethodField()
     class Meta:
         model = VariacionPromedio
         fields = [
             'id',
             'subtitulo',
+            'nombre_subtitulo',
             'gasto_n_5',
             'gasto_n_1',
             'variacion',
             'descripcion',
         ]
+
+    def get_nombre_subtitulo(self, obj):
+        return obj.subtitulo.nombre_item if obj.subtitulo else None
 
 
 class CalidadJuridicaSerializer(serializers.ModelSerializer):
@@ -300,6 +305,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     estado_stepper = serializers.ReadOnlyField()
 
     años = serializers.SerializerMethodField(read_only=True)
+    años_variacion = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Paso5
@@ -317,7 +323,8 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
-            'años'
+            'años',
+            'años_variacion'
         ]
 
 
@@ -328,6 +335,18 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             años = list(range(año_actual - 5, año_actual))
             return años
         return []
+
+    def get_años_variacion(self, obj):
+        competencia = obj.formulario_sectorial.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            n_5 = año_actual - 5
+            n_1 = año_actual - 1
+            return {
+                'n_5': n_5,
+                'n_1': n_1
+            }
+        return {}
 
     def avance(self, obj):
         return obj.avance()
