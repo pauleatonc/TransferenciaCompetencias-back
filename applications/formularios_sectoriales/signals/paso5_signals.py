@@ -1,6 +1,7 @@
 from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.db import transaction
 
 from applications.formularios_sectoriales.models import (
     CostosDirectos,
@@ -75,7 +76,7 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
             if costos:
                 gasto_n_5 = costos.first().costo if costos.first() and costos.first().costo is not None else 0
                 gasto_n_1 = costos.last().costo if costos.last() and costos.last().costo is not None else 0
-                variacion = gasto_n_1 - gasto_n_5
+                variacion = gasto_n_5 - gasto_n_1
 
                 VariacionPromedio.objects.update_or_create(
                     formulario_sectorial_id=formulario_sectorial_id,
@@ -135,16 +136,47 @@ def actualizar_resumen_costos(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=EvolucionGastoAsociado)
-def crear_costos_anios(sender, instance, created, **kwargs):
+def handle_evolucion_gasto_asociado_save(sender, instance, created, **kwargs):
+    # Crear CostoAnio para nuevos EvolucionGastoAsociado
     if created:
         competencia = instance.formulario_sectorial.competencia
-        # Verificar si fecha_inicio está definida
-        if competencia.fecha_inicio:
+        if competencia and competencia.fecha_inicio:
             año_actual = competencia.fecha_inicio.year
             año_inicial = año_actual - 5
-
             for año in range(año_inicial, año_actual):
                 CostoAnio.objects.get_or_create(
                     evolucion_gasto=instance,
                     anio=año
                 )
+
+
+@receiver(post_save, sender=CostoAnio)
+def handle_costo_anio_save(sender, instance, **kwargs):
+    # Llamar a la función para calcular y actualizar la variación después de cada guardado
+    # pero solo después de que la transacción actual se haya confirmado.
+    def calcular_y_actualizar_wrapper():
+        calcular_y_actualizar_variacion_para_costo_anio(instance.evolucion_gasto_id)
+
+    transaction.on_commit(calcular_y_actualizar_wrapper)
+
+
+def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
+    costos = CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio')
+    if costos.exists():
+        evolucion_gasto = EvolucionGastoAsociado.objects.get(id=evolucion_gasto_id)
+        gasto_n_5 = costos.first().costo if costos.first().costo is not None else 0
+        gasto_n_1 = costos.last().costo if costos.last().costo is not None else 0
+        variacion = gasto_n_1 - gasto_n_5
+
+        print('gasto_n_5: ' + str(gasto_n_5) + ' gasto_n_1: ' + str(gasto_n_1) + ' ' + str(variacion))
+
+        VariacionPromedio.objects.update_or_create(
+            formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
+            subtitulo_id=evolucion_gasto.subtitulo_id,
+            defaults={
+                'gasto_n_5': gasto_n_5,
+                'gasto_n_1': gasto_n_1,
+                'variacion': variacion,
+                'descripcion': ''
+            }
+        )
