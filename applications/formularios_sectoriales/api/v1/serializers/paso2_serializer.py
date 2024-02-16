@@ -266,6 +266,13 @@ class Paso2Serializer(serializers.ModelSerializer):
         etapas_data = validated_data.pop('p_2_3_etapas_ejercicio_competencia', None)
         plataformas_data = validated_data.pop('p_2_4_plataformas_y_softwares', [])
         flujograma_data = validated_data.pop('p_2_5_flujograma_competencia', None)
+        paso2_data = validated_data.pop('paso2', None)
+        if paso2_data is not None:
+            paso2_instance, created = Paso2.objects.update_or_create(
+                formulario_sectorial=instance, 
+                defaults=paso2_data
+            )
+            instance.paso2 = paso2_instance
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
