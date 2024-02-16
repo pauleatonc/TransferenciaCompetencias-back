@@ -45,7 +45,7 @@ class Paso2(PasoBase):
 
         # Verificar FlujogramaCompetencia
         flujograma_completo = any(
-            flujograma.flujograma_competencia and flujograma.descripcion_cualitativa
+            flujograma.flujograma_competencia
             for flujograma in self.formulario_sectorial.p_2_5_flujograma_competencia.all()
         )
         if flujograma_completo:
@@ -54,6 +54,9 @@ class Paso2(PasoBase):
         return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
+
+    """2.5 Descripcion cualitativa del ejercicio de la competencia en la region"""
+    descripcion_cualitativa = models.TextField(max_length=500, blank=True)
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:
@@ -140,4 +143,3 @@ class FlujogramaCompetencia(BaseModel):
                                                     ['pdf'], message='Solo se permiten archivos PDF.'),
                                                 validate_file_size_twenty],
                                             verbose_name='Flujograma de ejercicio de la Competencia', blank=True, null=True)
-    descripcion_cualitativa = models.TextField(max_length=500, blank=True)

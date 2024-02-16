@@ -208,8 +208,7 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['patch'], url_path='update-flujograma-competencia',
-            parser_classes=(MultiPartParser, FormParser))
-
+        parser_classes=(MultiPartParser, FormParser))
     def update_flujograma_competencia(self, request, pk=None):
         """
         Un endpoint dedicado para actualizar el documento de un FlujogramaCompetencia específico
@@ -220,23 +219,21 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         flujograma_competencia_id, el endpoint crea un nuevo FlujogramaCompetencia.
         """
         flujograma_competencia_id = request.data.get('flujograma_competencia_id')
-        documento_file = request.FILES.get('documento')
+        documento_file = request.FILES.get('documento')  # Esta es la línea que extrae el archivo del request
 
         if not documento_file:
-            return Response({"error": "Documento es requerido."},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Documento es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
         formulario_sectorial = self.get_object()
 
         if flujograma_competencia_id:
             # Intenta actualizar un FlujogramaCompetencia existente
             try:
-                flujograma_competencia = FlujogramaCompetencia.objects.get(id=flujograma_competencia_id,
-                                                                            formulario_sectorial=formulario_sectorial)
+                flujograma_competencia = FlujogramaCompetencia.objects.get(id=flujograma_competencia_id, formulario_sectorial=formulario_sectorial)
             except FlujogramaCompetencia.DoesNotExist:
-                return Response({"error": "FlujogramaCompetencia no encontrado."},
-                                status=status.HTTP_404_NOT_FOUND)
-            flujograma_competencia.documento = documento_file
+                return Response({"error": "FlujogramaCompetencia no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+            
+            flujograma_competencia.flujograma_competencia = documento_file  # Asegúrate de usar el campo correcto aquí
             flujograma_competencia.save()
 
             return Response({"mensaje": "Documento actualizado con éxito."})
@@ -244,11 +241,12 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
             # Crea un nuevo FlujogramaCompetencia si no se proporciona ID
             flujograma_competencia = FlujogramaCompetencia.objects.create(
                 formulario_sectorial=formulario_sectorial,
-                documento=documento_file
+                flujograma_competencia=documento_file  # Asegúrate de usar el campo correcto aquí también
             )
 
             return Response({"mensaje": "Documento creado con éxito.", "flujograma_competencia_id": flujograma_competencia.id},
                             status=status.HTTP_201_CREATED)
+
 
     @action(detail=True, methods=['patch'], url_path='update-organigrama-regional',
             parser_classes=(MultiPartParser, FormParser))

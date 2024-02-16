@@ -76,6 +76,10 @@ class CostosDirectosInLine(admin.TabularInline):
     model = CostosDirectos
     extra = 0
 
+class EvolucionGastoAsociadoInLine(admin.TabularInline):
+    model = EvolucionGastoAsociado
+    extra = 0
+
 
 @admin.register(FormularioSectorial)
 class FormularioSectorialAdmin(admin.ModelAdmin):
@@ -99,7 +103,8 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         Paso4Inline,
         Paso5Inline,
         CostosDirectosInLine,
-        ObservacionesSubdereInline
+        ObservacionesSubdereInline,
+        EvolucionGastoAsociadoInLine
     ]
 
     def get_competencia_nombre(self, obj):

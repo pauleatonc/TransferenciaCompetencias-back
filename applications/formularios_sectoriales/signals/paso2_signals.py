@@ -18,9 +18,6 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         # Crear instancia de PlataformasySoftwares
         PlataformasySoftwares.objects.create(formulario_sectorial=instance)
 
-        # Crear instancia de FlujogramaCompetencia
-        FlujogramaCompetencia.objects.create(formulario_sectorial=instance)
-
 
 @receiver(post_save, sender=OrganismosIntervinientes)
 def create_related_unidad(sender, instance, created, **kwargs):

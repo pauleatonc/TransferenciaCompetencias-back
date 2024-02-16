@@ -110,6 +110,7 @@ class Paso5(PasoBase):
     total_costos_directos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_costos_indirectos = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     costos_totales = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    descripcion_costos_totales = models.TextField(max_length=300, blank=True)
 
     """5.2 Costos asociados al ejercicio de la competencia"""
     glosas_especificas = models.TextField(max_length=500, blank=True)
@@ -155,23 +156,12 @@ class CostosDirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        self.crear_o_actualizar_resumen_evolucion_variacion()
-        ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
-        EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                                  self.formulario_sectorial_id)
-        VariacionPromedio.actualizar_variacion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                             self.formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def delete(self, *args, **kwargs):
-        subtitulo_id = self.item_subtitulo.subtitulo_id
-        formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
-        EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                                  self.formulario_sectorial_id)
-        VariacionPromedio.actualizar_variacion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                             self.formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def actualizar_resumen_costos(self):
         try:
@@ -184,12 +174,6 @@ class CostosDirectos(BaseModel):
         except Paso5.DoesNotExist:
             # Manejar la excepción, como registrar un error o simplemente pasar
             pass
-
-    def crear_o_actualizar_resumen_evolucion_variacion(self):
-        subtitulo_id = self.item_subtitulo.subtitulo_id
-        total_directos = CostosDirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
-                                                       formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
-            Sum('total_anual'))['total_anual__sum'] or 0
 
     class Meta:
         ordering = ['id']
@@ -207,23 +191,12 @@ class CostosIndirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        self.crear_o_actualizar_resumen_evolucion_variacion()
-        ResumenCostosPorSubtitulo.actualizar_total_anual(self.item_subtitulo.subtitulo_id, self.formulario_sectorial_id)
-        EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                                  self.formulario_sectorial_id)
-        VariacionPromedio.actualizar_variacion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                             self.formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def delete(self, *args, **kwargs):
-        subtitulo_id = self.item_subtitulo.subtitulo_id
-        formulario_sectorial_id = self.formulario_sectorial_id
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_total_anual(subtitulo_id, formulario_sectorial_id)
-        EvolucionGastoAsociado.actualizar_evolucion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                                  self.formulario_sectorial_id)
-        VariacionPromedio.actualizar_variacion_por_subtitulo(self.item_subtitulo.subtitulo_id,
-                                                             self.formulario_sectorial_id)
+        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def actualizar_resumen_costos(self):
         try:
@@ -236,12 +209,6 @@ class CostosIndirectos(BaseModel):
         except Paso5.DoesNotExist:
             # Manejar la excepción, como registrar un error o simplemente pasar
             pass
-
-    def crear_o_actualizar_resumen_evolucion_variacion(self):
-        subtitulo_id = self.item_subtitulo.subtitulo_id
-        total_indirectos = CostosIndirectos.objects.filter(item_subtitulo__subtitulo_id=subtitulo_id,
-                                                         formulario_sectorial_id=self.formulario_sectorial_id).aggregate(
-            Sum('total_anual'))['total_anual__sum'] or 0
 
     class Meta:
         ordering = ['id']
@@ -271,50 +238,11 @@ class ResumenCostosPorSubtitulo(BaseModel):
             # Manejar la excepción, como registrar un error o simplemente pasar
             pass
 
-    @classmethod
-    def actualizar_total_anual(cls, subtitulo_id, formulario_sectorial_id):
-        try:
-            # Intentar obtener la instancia de Paso5
-            paso = Paso5.objects.get(formulario_sectorial_id=formulario_sectorial_id)
-
-            # Calcular el total de costos directos e indirectos
-            total_directos = CostosDirectos.objects.filter(
-                item_subtitulo__subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id
-            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-            total_indirectos = CostosIndirectos.objects.filter(
-                item_subtitulo__subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id
-            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-            # Calcular el total y actualizar o crear el ResumenCostosPorSubtitulo
-            total = total_directos + total_indirectos
-            if total > 0:
-                resumen, created = cls.objects.get_or_create(
-                    subtitulo_id=subtitulo_id,
-                    formulario_sectorial_id=formulario_sectorial_id,
-                    defaults={'total_anual': total}
-                )
-                if not created:
-                    resumen.total_anual = total
-                    resumen.save()
-            else:
-                cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
-
-            # Actualizar el total en la instancia de Paso5
-            paso.costos_totales = total
-            paso.save()
-
-        except Paso5.DoesNotExist:
-            # Manejar la excepción, como registrar un error o simplemente pasar
-            pass
-
     def __str__(self):
         return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class EvolucionGastoAsociado(BaseModel):
@@ -323,32 +251,8 @@ class EvolucionGastoAsociado(BaseModel):
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='evolucion_gasto_asociado')
     descripcion = models.TextField(max_length=500, blank=True)
 
-    @classmethod
-    def actualizar_evolucion_por_subtitulo(cls, subtitulo_id, formulario_sectorial_id):
-        total_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-        total_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-        total = total_directos + total_indirectos
-
-        if total > 0:
-            evolucion, created = cls.objects.get_or_create(
-                subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id,
-            )
-            if not created:
-                evolucion.save()
-        else:
-            cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
-
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class CostoAnio(BaseModel):
@@ -357,7 +261,7 @@ class CostoAnio(BaseModel):
     costo = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['anio']
 
 
 class VariacionPromedio(BaseModel):
@@ -369,36 +273,8 @@ class VariacionPromedio(BaseModel):
     variacion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
-    @classmethod
-    def actualizar_variacion_por_subtitulo(cls, subtitulo_id, formulario_sectorial_id):
-        total_directos = CostosDirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-        total_indirectos = CostosIndirectos.objects.filter(
-            item_subtitulo__subtitulo_id=subtitulo_id,
-            formulario_sectorial_id=formulario_sectorial_id
-        ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-
-        total = total_directos + total_indirectos
-
-        if total > 0:
-            variacion, created = cls.objects.get_or_create(
-                subtitulo_id=subtitulo_id,
-                formulario_sectorial_id=formulario_sectorial_id,
-            )
-            if not created:
-                variacion.save()
-        else:
-            cls.objects.filter(subtitulo_id=subtitulo_id, formulario_sectorial_id=formulario_sectorial_id).delete()
-
-    def calcular_variacion(self):
-        self.variacion = (self.gasto_n_5 or 0) - (self.gasto_n_1 or 0)
-        self.save()
-
     class Meta:
-        ordering = ['id']
+        ordering = ['subtitulo']
 
 
 class Estamento(models.Model):
