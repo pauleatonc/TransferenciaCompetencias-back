@@ -45,7 +45,7 @@ class Paso2(PasoBase):
 
         # Verificar FlujogramaCompetencia
         flujograma_completo = any(
-            flujograma.flujograma_competencia and flujograma.descripcion_cualitativa
+            flujograma.flujograma_competencia
             for flujograma in self.formulario_sectorial.p_2_5_flujograma_competencia.all()
         )
         if flujograma_completo:
