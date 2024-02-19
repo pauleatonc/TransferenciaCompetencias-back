@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 
-def populate_models_from_excel(apps=None, schema_editor=None):
+def populate_sectores_from_excel(apps=None, schema_editor=None):
     if apps is None:
         from applications.sectores_gubernamentales.models import Ministerio, SectorGubernamental
     else:
@@ -33,5 +33,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(populate_models_from_excel)
+        migrations.RunPython(populate_sectores_from_excel)
     ]

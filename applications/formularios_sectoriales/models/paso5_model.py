@@ -128,6 +128,7 @@ class Paso5(PasoBase):
 
 
 class Subtitulos(models.Model):
+    """ Para poblar la base de datos se debe correr el comando python manage.py populate_from_excel"""
     subtitulo = models.CharField(max_length=10, unique=True)
 
     @property
@@ -269,7 +270,11 @@ class VariacionPromedio(BaseModel):
                                              related_name='p_5_2_variacion_promedio')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='variacion_promedio')
     gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_4 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_3 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_2 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     variacion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
@@ -297,7 +302,7 @@ class PersonalDirecto(BaseModel):
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo')
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo')
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True)
+    grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['id']
@@ -310,7 +315,7 @@ class PersonalIndirecto(BaseModel):
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto')
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True)
+    grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['id']

@@ -72,20 +72,21 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
         ).first()
 
         if evolucion_gasto:
-            costos = CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio')
-            if costos:
-                gasto_n_5 = costos.first().costo if costos.first() and costos.first().costo is not None else 0
-                gasto_n_1 = costos.last().costo if costos.last() and costos.last().costo is not None else 0
-                variacion = gasto_n_5 - gasto_n_1
+            costos = list(CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio'))
+            if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
+                gasto_n_1 = costos[-1].costo if costos[-1] and costos[-1].costo is not None else 0
+                variaciones = {}
+
+                # Calcular variaciones desde el primero hasta el penúltimo costo
+                for i in range(len(costos) - 1):
+                    costo_actual = costos[i].costo if costos[i] and costos[i].costo is not None else 0
+                    variacion = costo_actual - gasto_n_1
+                    variaciones[f'variacion_gasto_n_{5-i}'] = variacion
 
                 VariacionPromedio.objects.update_or_create(
                     formulario_sectorial_id=formulario_sectorial_id,
                     subtitulo_id=subtitulo_id,
-                    defaults={
-                        'gasto_n_5': gasto_n_5,
-                        'gasto_n_1': gasto_n_1,
-                        'variacion': variacion
-                    }
+                    defaults=variaciones
                 )
 
 
@@ -160,21 +161,20 @@ def handle_costo_anio_save(sender, instance, **kwargs):
 
 
 def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
-    costos = CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio')
-    if costos.exists():
+    costos = list(CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio'))
+    if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
+        gasto_n_1 = costos[-1].costo if costos[-1].costo is not None else 0
+        variaciones = {}
+
+        # Calcular variaciones desde el primero hasta el penúltimo costo
+        for i in range(len(costos) - 1):
+            costo_actual = costos[i].costo if costos[i].costo is not None else 0
+            variacion = costo_actual - gasto_n_1
+            variaciones[f'variacion_gasto_n_{5-i}'] = variacion
+
         evolucion_gasto = EvolucionGastoAsociado.objects.get(id=evolucion_gasto_id)
-        gasto_n_5 = costos.first().costo if costos.first().costo is not None else 0
-        gasto_n_1 = costos.last().costo if costos.last().costo is not None else 0
-        variacion = gasto_n_1 - gasto_n_5
-
-        print('gasto_n_5: ' + str(gasto_n_5) + ' gasto_n_1: ' + str(gasto_n_1) + ' ' + str(variacion))
-
         VariacionPromedio.objects.update_or_create(
             formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
             subtitulo_id=evolucion_gasto.subtitulo_id,
-            defaults={
-                'gasto_n_5': gasto_n_5,
-                'gasto_n_1': gasto_n_1,
-                'variacion': variacion,
-            }
+            defaults=variaciones
         )
