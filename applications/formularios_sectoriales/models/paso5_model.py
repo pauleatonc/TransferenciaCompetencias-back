@@ -269,13 +269,10 @@ class VariacionPromedio(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_2_variacion_promedio')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='variacion_promedio')
-    gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     variacion_gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     variacion_gasto_n_4 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     variacion_gasto_n_3 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     variacion_gasto_n_2 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    variacion_gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    variacion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
     class Meta:

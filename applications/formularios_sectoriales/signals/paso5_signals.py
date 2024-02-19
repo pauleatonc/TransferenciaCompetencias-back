@@ -106,14 +106,12 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
         EvolucionGastoAsociado.objects.get_or_create(
             formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            defaults={'descripcion': ''}
         )
 
         # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí)
         VariacionPromedio.objects.get_or_create(
             formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            defaults={'descripcion': ''}
         )
 
     # Ahora llama a la función para calcular y actualizar la variación promedio
