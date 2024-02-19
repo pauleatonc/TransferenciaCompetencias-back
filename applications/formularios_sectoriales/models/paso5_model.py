@@ -118,6 +118,15 @@ class Paso5(PasoBase):
     """5.3 Costos asociados al ejercicio de la competencia"""
     descripcion_funciones_personal_directo = models.TextField(max_length=1100, blank=True)
     descripcion_funciones_personal_indirecto = models.TextField(max_length=1100, blank=True)
+    sub21_total_personal_planta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_planta_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_planta_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_personal_contrata = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_contrata_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_contrata_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_resto = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_resto_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_resto_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:
