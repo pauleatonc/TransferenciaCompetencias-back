@@ -343,7 +343,16 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
             'años',
-            'años_variacion'
+            'años_variacion',
+            'sub21_total_personal_planta',
+            'sub21_personal_planta_justificado',
+            'sub21_personal_planta_justificar',
+            'sub21_total_personal_contrata',
+            'sub21_personal_contrata_justificado',
+            'sub21_personal_contrata_justificar',
+            'sub21_total_resto',
+            'sub21_resto_justificado',
+            'sub21_resto_justificar'
         ]
 
 
