@@ -46,17 +46,15 @@ def actualizar_coberturas_anuales(sender, instance, **kwargs):
             año_actual = instance.fecha_inicio.year
             año_inicial = año_actual - 5
 
-        formularios_sectoriales = FormularioSectorial.objects.filter(competencia=instance)
+            formularios_sectoriales = FormularioSectorial.objects.filter(competencia=instance)
 
-        for formulario in formularios_sectoriales:
-            # Eliminar todas las coberturas anuales existentes
-            coberturas_eliminadas = CoberturaAnual.objects.filter(formulario_sectorial=formulario).delete()
+            for formulario in formularios_sectoriales:
+                # Eliminar todas las coberturas anuales existentes
+                CoberturaAnual.objects.filter(formulario_sectorial=formulario).delete()
 
-            # Crear nuevas coberturas anuales basadas en la nueva fecha de inicio
-            for año in range(año_inicial, año_actual):
-                CoberturaAnual.objects.create(
-                    formulario_sectorial=formulario,
-                    anio=año
-                )
-    else:
-        print("No se detectaron cambios en la fecha de inicio.")
+                # Crear nuevas coberturas anuales basadas en la nueva fecha de inicio
+                for año in range(año_inicial, año_actual):
+                    CoberturaAnual.objects.create(
+                        formulario_sectorial=formulario,
+                        anio=año
+                    )
