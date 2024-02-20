@@ -240,6 +240,7 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
     nombre_estamento = serializers.SerializerMethodField()
     calidad_juridica_label_value = serializers.SerializerMethodField()
+    nombre_calidad_juridica = serializers.SerializerMethodField()
     estamento_label_value = serializers.SerializerMethodField()
 
     class Meta:
@@ -250,6 +251,7 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
             'nombre_estamento',
             'estamento_label_value',
             'calidad_juridica',
+            'nombre_calidad_juridica',
             'calidad_juridica_label_value',
             'renta_bruta',
             'grado',
@@ -266,6 +268,9 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
                 'value': str(obj.estamento.id)
             }
         return {'label': '', 'value': ''}
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
 
     def get_calidad_juridica_label_value(self, obj):
         if obj.calidad_juridica:
@@ -281,6 +286,7 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
     nombre_estamento = serializers.SerializerMethodField()
     calidad_juridica_label_value = serializers.SerializerMethodField()
+    nombre_calidad_juridica = serializers.SerializerMethodField()
     estamento_label_value = serializers.SerializerMethodField()
 
     class Meta:
@@ -291,6 +297,7 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
             'nombre_estamento',
             'estamento_label_value',
             'calidad_juridica',
+            'nombre_calidad_juridica',
             'calidad_juridica_label_value',
             'renta_bruta',
             'grado',
@@ -307,6 +314,9 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
                 'value': str(obj.estamento.id)
             }
         return {'label': '', 'value': ''}
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
 
     def get_calidad_juridica_label_value(self, obj):
         if obj.calidad_juridica:

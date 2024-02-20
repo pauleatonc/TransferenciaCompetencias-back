@@ -324,4 +324,4 @@ class PersonalIndirecto(BaseModel):
     grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['calidad_juridica']
