@@ -118,6 +118,15 @@ class Paso5(PasoBase):
     """5.3 Costos asociados al ejercicio de la competencia"""
     descripcion_funciones_personal_directo = models.TextField(max_length=1100, blank=True)
     descripcion_funciones_personal_indirecto = models.TextField(max_length=1100, blank=True)
+    sub21_total_personal_planta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_planta_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_planta_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_personal_contrata = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_contrata_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_personal_contrata_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_resto = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_resto_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_resto_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.campos_obligatorios_completados:
@@ -128,6 +137,7 @@ class Paso5(PasoBase):
 
 
 class Subtitulos(models.Model):
+    """ Para poblar la base de datos se debe correr el comando python manage.py populate_from_excel"""
     subtitulo = models.CharField(max_length=10, unique=True)
 
     @property
@@ -268,9 +278,10 @@ class VariacionPromedio(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_2_variacion_promedio')
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='variacion_promedio')
-    gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    gasto_n_1 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    variacion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_5 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_4 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_3 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    variacion_gasto_n_2 = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
     class Meta:
@@ -297,7 +308,7 @@ class PersonalDirecto(BaseModel):
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo')
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo')
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True)
+    grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['id']
@@ -310,7 +321,7 @@ class PersonalIndirecto(BaseModel):
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto')
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True)
+    grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['calidad_juridica']

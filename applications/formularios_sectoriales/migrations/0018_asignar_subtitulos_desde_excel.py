@@ -3,9 +3,12 @@ import pandas as pd
 from pathlib import Path
 
 
-def populate_models_from_excel(apps, schema_editor):
-    Subtitulos = apps.get_model('formularios_sectoriales', 'Subtitulos')
-    ItemSubtitulo = apps.get_model('formularios_sectoriales', 'ItemSubtitulo')
+def populate_subtitulos_e_items_from_excel(apps=None, schema_editor=None):
+    if apps is None:
+        from applications.formularios_sectoriales.models import Subtitulos, ItemSubtitulo
+    else:
+        Subtitulos = apps.get_model('formularios_sectoriales', 'Subtitulos')
+        ItemSubtitulo = apps.get_model('formularios_sectoriales', 'ItemSubtitulo')
 
     file_path = Path(__file__).resolve().parent.parent / 'Clasificador_Presupuestario.xlsx'
     df = pd.read_excel(file_path, header=None)
@@ -30,5 +33,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-       migrations.RunPython(populate_models_from_excel)
+       migrations.RunPython(populate_subtitulos_e_items_from_excel)
     ]
