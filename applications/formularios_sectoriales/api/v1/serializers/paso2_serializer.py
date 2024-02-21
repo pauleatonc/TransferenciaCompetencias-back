@@ -172,6 +172,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso2Serializer(serializers.ModelSerializer):
     paso2 = Paso2EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     p_2_1_organismos_intervinientes = OrganismosIntervinientesSerializer(many=True, read_only=False)
     p_2_2_unidades_intervinientes = UnidadesIntervinientesSerializer(many=True, read_only=False)
     p_2_3_etapas_ejercicio_competencia = EtapasEjercicioCompetenciaSerializer(many=True, read_only=False)
@@ -185,6 +186,7 @@ class Paso2Serializer(serializers.ModelSerializer):
         model = FormularioSectorial
         fields = [
             'paso2',
+            'solo_lectura',
             'p_2_1_organismos_intervinientes',
             'p_2_2_unidades_intervinientes',
             'p_2_3_etapas_ejercicio_competencia',
@@ -194,6 +196,15 @@ class Paso2Serializer(serializers.ModelSerializer):
             'listado_etapas',
             'listado_organismos',
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
 
     def get_listado_unidades(self, obj):
         unidades = UnidadesIntervinientes.objects.filter(formulario_sectorial=obj)
