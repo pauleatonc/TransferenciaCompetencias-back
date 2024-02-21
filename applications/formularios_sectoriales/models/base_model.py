@@ -17,9 +17,7 @@ class FormularioSectorial(BaseModel):
     def save(self, *args, **kwargs):
         if self.formulario_enviado and not self.todos_los_pasos_completados():
             self.intento_envio = True
-            print(f"Actualizando intento_envio a {self.intento_envio}")  # Depuración
             super(FormularioSectorial, self).save(update_fields=['intento_envio'])
-            print("intento_envio actualizado, lanzando excepción.")  # Depuración
             raise ValueError("No se puede enviar el formulario hasta que todos los pasos estén completados.")
 
         # Si el formulario está siendo enviado y todos los pasos están completados,
