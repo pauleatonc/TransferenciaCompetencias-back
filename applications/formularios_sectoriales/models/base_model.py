@@ -14,7 +14,7 @@ class FormularioSectorial(BaseModel):
     intento_envio = models.BooleanField(default=False)
     fecha_envio = models.DateTimeField(null=True, blank=True)
 
-    def save(self, *args, **kwargs):
+    """def save(self, *args, **kwargs):
         if self.formulario_enviado and not self.todos_los_pasos_completados():
             self.intento_envio = True
             super(FormularioSectorial, self).save(update_fields=['intento_envio'])
@@ -43,7 +43,7 @@ class FormularioSectorial(BaseModel):
 
         pasos_completados = all(paso is not None and paso.completado for paso in pasos)
 
-        return pasos_completados
+        return pasos_completados"""
 
     def __str__(self):
         return f"{self.nombre} - {self.sector.nombre}"

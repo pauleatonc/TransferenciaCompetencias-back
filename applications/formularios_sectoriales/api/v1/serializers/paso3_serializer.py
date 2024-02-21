@@ -55,6 +55,7 @@ class Paso3EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso3Serializer(WritableNestedModelSerializer):
     paso3 = Paso3EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     cobertura_anual = CoberturaAnualSerializer(many=True)
 
     class Meta:
@@ -62,8 +63,18 @@ class Paso3Serializer(WritableNestedModelSerializer):
         fields = [
             'id',
             'paso3',
+            'solo_lectura',
             'cobertura_anual',
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
