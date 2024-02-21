@@ -402,6 +402,7 @@ def eliminar_instancia_costo(modelo, instancia_id):
 
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     listado_subtitulos = serializers.SerializerMethodField()
     listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
@@ -419,7 +420,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
         model = FormularioSectorial
         fields = [
             'paso5',
-            'formulario_enviado',
+            'solo_lectura',
             'p_5_1_a_costos_directos',
             'p_5_1_b_costos_indirectos',
             'p_5_1_c_resumen_costos_por_subtitulo',
@@ -433,6 +434,15 @@ class Paso5Serializer(WritableNestedModelSerializer):
             'listado_calidades_juridicas',
             'listado_etapas'
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
 
     def get_listado_subtitulos(self, obj):
         # Obtener todos los registros de Subtitulos y serializarlos
