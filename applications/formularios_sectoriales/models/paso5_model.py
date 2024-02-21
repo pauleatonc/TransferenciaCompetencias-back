@@ -305,7 +305,7 @@ class CalidadJuridica(models.Model):
 class PersonalDirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_a_personal_directo')
-    estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo')
+    estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo')
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
@@ -317,7 +317,7 @@ class PersonalDirecto(BaseModel):
 class PersonalIndirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_b_personal_indirecto')
-    estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto')
+    estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto')
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
