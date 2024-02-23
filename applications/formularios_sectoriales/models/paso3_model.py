@@ -66,9 +66,12 @@ class CoberturaAnual(BaseModel):
 
     @property
     def total_cobertura_efectiva(self):
-        if self.cobertura_efectivamente_abordada and self.cobertura_efectivamente_abordada != 0:
+        # Comprueba si ambos, cobertura_efectivamente_abordada y recursos_ejecutados,
+        # tienen valores válidos y diferentes de cero.
+        if self.cobertura_efectivamente_abordada and self.recursos_ejecutados and \
+                self.cobertura_efectivamente_abordada != 0 and self.recursos_ejecutados != 0:
             return round(self.recursos_ejecutados / self.cobertura_efectivamente_abordada, 2)
-        return _('No calculado')
+        return 'No calculado'
 
     def __str__(self):
         return f"{self.formulario_sectorial} - {self.anio}"

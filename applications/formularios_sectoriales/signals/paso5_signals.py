@@ -11,7 +11,9 @@ from applications.formularios_sectoriales.models import (
     EvolucionGastoAsociado,
     VariacionPromedio,
     CostoAnio,
-    FormularioSectorial
+    FormularioSectorial,
+    PersonalDirecto,
+    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica
 )
 
 
@@ -72,20 +74,21 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
         ).first()
 
         if evolucion_gasto:
-            costos = CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio')
-            if costos:
-                gasto_n_5 = costos.first().costo if costos.first() and costos.first().costo is not None else 0
-                gasto_n_1 = costos.last().costo if costos.last() and costos.last().costo is not None else 0
-                variacion = gasto_n_5 - gasto_n_1
+            costos = list(CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio'))
+            if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
+                gasto_n_1 = costos[-1].costo if costos[-1] and costos[-1].costo is not None else 0
+                variaciones = {}
+
+                # Calcular variaciones desde el primero hasta el penúltimo costo
+                for i in range(len(costos) - 1):
+                    costo_actual = costos[i].costo if costos[i] and costos[i].costo is not None else 0
+                    variacion = costo_actual - gasto_n_1
+                    variaciones[f'variacion_gasto_n_{5-i}'] = variacion
 
                 VariacionPromedio.objects.update_or_create(
                     formulario_sectorial_id=formulario_sectorial_id,
                     subtitulo_id=subtitulo_id,
-                    defaults={
-                        'gasto_n_5': gasto_n_5,
-                        'gasto_n_1': gasto_n_1,
-                        'variacion': variacion
-                    }
+                    defaults=variaciones
                 )
 
 
@@ -105,14 +108,12 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
         EvolucionGastoAsociado.objects.get_or_create(
             formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            defaults={'descripcion': ''}
         )
 
         # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí)
         VariacionPromedio.objects.get_or_create(
             formulario_sectorial_id=formulario_sectorial_id,
             subtitulo_id=subtitulo_id,
-            defaults={'descripcion': ''}
         )
 
     # Ahora llama a la función para calcular y actualizar la variación promedio
@@ -160,21 +161,152 @@ def handle_costo_anio_save(sender, instance, **kwargs):
 
 
 def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
-    costos = CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio')
-    if costos.exists():
+    costos = list(CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio'))
+    if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
+        gasto_n_1 = costos[-1].costo if costos[-1].costo is not None else 0
+        variaciones = {}
+
+        # Calcular variaciones desde el primero hasta el penúltimo costo
+        for i in range(len(costos) - 1):
+            costo_actual = costos[i].costo if costos[i].costo is not None else 0
+            variacion = costo_actual - gasto_n_1
+            variaciones[f'variacion_gasto_n_{5-i}'] = variacion
+
         evolucion_gasto = EvolucionGastoAsociado.objects.get(id=evolucion_gasto_id)
-        gasto_n_5 = costos.first().costo if costos.first().costo is not None else 0
-        gasto_n_1 = costos.last().costo if costos.last().costo is not None else 0
-        variacion = gasto_n_1 - gasto_n_5
-
-        print('gasto_n_5: ' + str(gasto_n_5) + ' gasto_n_1: ' + str(gasto_n_1) + ' ' + str(variacion))
-
         VariacionPromedio.objects.update_or_create(
             formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
             subtitulo_id=evolucion_gasto.subtitulo_id,
-            defaults={
-                'gasto_n_5': gasto_n_5,
-                'gasto_n_1': gasto_n_1,
-                'variacion': variacion,
-            }
+            defaults=variaciones
         )
+
+
+@receiver([post_save, post_delete], sender=CostosDirectos)
+@receiver([post_save, post_delete], sender=CostosIndirectos)
+@receiver([post_save, post_delete], sender=PersonalDirecto)
+@receiver([post_save, post_delete], sender=PersonalIndirecto)
+def actualizar_campos_paso5(sender, instance, **kwargs):
+    """
+    Actualiza los campos en Paso5 cada vez que se guarden o eliminen instancias
+    de los modelos relacionados.
+    """
+    # Asegurarse de que no estamos actualizando desde una instancia de Paso5
+    if isinstance(instance, Paso5):
+        return
+
+    # Obtén la instancia de Paso5 relacionada
+    paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
+
+    """ Cálculos para sumar Subtítulo 21 en Costos Directos e indirectos"""
+    personal_de_planta_item = ItemSubtitulo.objects.get(item="01 - Personal de Planta")
+    personal_de_contrata_item = ItemSubtitulo.objects.get(item="02 - Personal de Contrata")
+
+    # Calcula 'sub21_total_personal_planta'
+    total_personal_planta = sum(
+        item.total_anual for item in CostosDirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo=personal_de_planta_item
+        )
+    ) + sum(
+        item.total_anual for item in CostosIndirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo=personal_de_planta_item
+        )
+    )
+    paso5_instance.sub21_total_personal_planta = total_personal_planta
+
+    # Calcula 'sub21_total_personal_contrata'
+    total_personal_contrata = sum(
+        item.total_anual for item in CostosDirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo=personal_de_contrata_item
+        )
+    ) + sum(
+        item.total_anual for item in CostosIndirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo=personal_de_contrata_item
+        )
+    )
+    paso5_instance.sub21_total_personal_contrata = total_personal_contrata
+
+    # Calcula 'sub21_total_resto'
+    sub_21 = Subtitulos.objects.get(subtitulo='Sub. 21')
+
+    total_sub_21 = sum(
+        item.total_anual for item in CostosDirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo__subtitulo=sub_21
+        )
+    ) + sum(
+        item.total_anual for item in CostosIndirectos.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            item_subtitulo__subtitulo=sub_21
+        )
+    )
+    # Resta los ítems de 'Personal de Planta' y 'Personal de Contrata'
+    total_personal_planta_contrata = paso5_instance.sub21_total_personal_planta + paso5_instance.sub21_total_personal_contrata
+    paso5_instance.sub21_total_resto = total_sub_21 - total_personal_planta_contrata
+
+    """ Calcula los subtotales de Personal Directo e Indirecto por calidad jurídica"""
+    personal_de_planta = CalidadJuridica.objects.get(calidad_juridica="Planta")
+    personal_a_contrata = CalidadJuridica.objects.get(calidad_juridica="Contrata")
+
+    # Calcula 'sub21_personal_planta_justificado'
+    personal_justificado = sum(
+        (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            calidad_juridica=personal_de_planta
+        )
+    ) + sum(
+        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            calidad_juridica=personal_de_planta
+        )
+    )
+    paso5_instance.sub21_personal_planta_justificado = personal_justificado
+
+    # Calcula 'sub21_personal_contrata_justificado'
+    personal_contrata_justificado = sum(
+        (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            calidad_juridica=personal_a_contrata
+        )
+    ) + sum(
+        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial,
+            calidad_juridica=personal_a_contrata
+        )
+    )
+    paso5_instance.sub21_personal_contrata_justificado = personal_contrata_justificado
+
+    # Calcula 'sub21_resto_justificado'
+    total_renta_bruta = sum(
+        (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial
+        )
+    ) + sum(
+        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial
+        )
+    )
+    # Resta la renta bruta de 'Planta' y 'Contrata'
+    total_renta_planta_contrata = paso5_instance.sub21_personal_planta_justificado + paso5_instance.sub21_personal_contrata_justificado
+    paso5_instance.sub21_resto_justificado = total_renta_bruta - total_renta_planta_contrata
+
+    """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
+    # Calcula 'sub21_personal_planta_justificar'
+    paso5_instance.sub21_personal_planta_justificar = (
+            paso5_instance.sub21_total_personal_planta - paso5_instance.sub21_personal_planta_justificado
+    )
+
+    # Calcula 'sub21_personal_contrata_justificar'
+    paso5_instance.sub21_personal_contrata_justificar = (
+        paso5_instance.sub21_total_personal_contrata - paso5_instance.sub21_personal_contrata_justificado
+    )
+
+    # Calcula 'sub21_resto_justificar'
+    paso5_instance.sub21_resto_justificar = (
+            paso5_instance.sub21_total_resto - paso5_instance.sub21_resto_justificado
+    )
+
+    # Guarda la instancia de Paso5
+    paso5_instance.save()

@@ -108,6 +108,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso1Serializer(WritableNestedModelSerializer):
     paso1 = Paso1EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     marcojuridico = MarcoJuridicoSerializer(many=True)
     organigramaregional = OrganigramaRegionalSerializer(many=True)
 
@@ -116,9 +117,19 @@ class Paso1Serializer(WritableNestedModelSerializer):
         fields = [
             'id',
             'paso1',
+            'solo_lectura',
             'marcojuridico',
             'organigramaregional'
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
         
     def update_paso1_instance(self, instance, paso1_data):
         paso1_instance = getattr(instance, 'paso1', None)

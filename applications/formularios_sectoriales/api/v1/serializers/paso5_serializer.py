@@ -206,9 +206,10 @@ class VariacionPromedioSerializer(serializers.ModelSerializer):
             'id',
             'subtitulo',
             'nombre_subtitulo',
-            'gasto_n_5',
-            'gasto_n_1',
-            'variacion',
+            'variacion_gasto_n_5',
+            'variacion_gasto_n_4',
+            'variacion_gasto_n_3',
+            'variacion_gasto_n_2',
             'descripcion',
         ]
 
@@ -237,8 +238,10 @@ class EstamentoSerializer(serializers.ModelSerializer):
 class PersonalDirectoSerializer(serializers.ModelSerializer):
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
-    nombre_calidad_juridica = serializers.SerializerMethodField()
     nombre_estamento = serializers.SerializerMethodField()
+    calidad_juridica_label_value = serializers.SerializerMethodField()
+    nombre_calidad_juridica = serializers.SerializerMethodField()
+    estamento_label_value = serializers.SerializerMethodField()
 
     class Meta:
         model = PersonalDirecto
@@ -246,30 +249,45 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
             'id',
             'estamento',
             'nombre_estamento',
+            'estamento_label_value',
             'calidad_juridica',
             'nombre_calidad_juridica',
+            'calidad_juridica_label_value',
             'renta_bruta',
             'grado',
         ]
 
-    def get_nombre_calidad_juridica(self, obj):
-        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
-
     def get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
 
-    def to_representation(self, instance):
-        # Representación original del objeto
-        representation = super(PersonalDirectoSerializer, self).to_representation(instance)
-        estamento = instance.estamento.estamento if instance.estamento else None
-        return {estamento: representation}
+    def get_estamento_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.estamento:
+            return {
+                'label': obj.estamento.estamento,
+                'value': str(obj.estamento.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
+
+    def get_calidad_juridica_label_value(self, obj):
+        if obj.calidad_juridica:
+
+            return {
+                'label': obj.calidad_juridica.calidad_juridica,
+                'value': str(obj.calidad_juridica.id)
+            }
 
 
 class PersonalIndirectoSerializer(serializers.ModelSerializer):
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
-    nombre_calidad_juridica = serializers.SerializerMethodField()
     nombre_estamento = serializers.SerializerMethodField()
+    calidad_juridica_label_value = serializers.SerializerMethodField()
+    nombre_calidad_juridica = serializers.SerializerMethodField()
+    estamento_label_value = serializers.SerializerMethodField()
 
     class Meta:
         model = PersonalIndirecto
@@ -277,24 +295,35 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
             'id',
             'estamento',
             'nombre_estamento',
+            'estamento_label_value',
             'calidad_juridica',
             'nombre_calidad_juridica',
-            'numero_personas',
+            'calidad_juridica_label_value',
             'renta_bruta',
             'grado',
         ]
 
-    def get_nombre_calidad_juridica(self, obj):
-        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
-
     def get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
 
-    def to_representation(self, instance):
-        # Representación original del objeto
-        representation = super(PersonalIndirectoSerializer, self).to_representation(instance)
-        estamento = instance.estamento.estamento if instance.estamento else None
-        return {estamento: representation}
+    def get_estamento_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.estamento:
+            return {
+                'label': obj.estamento.estamento,
+                'value': str(obj.estamento.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_nombre_calidad_juridica(self, obj):
+        return obj.calidad_juridica.calidad_juridica if obj.calidad_juridica else None
+
+    def get_calidad_juridica_label_value(self, obj):
+        if obj.calidad_juridica:
+            return {
+                'label': obj.calidad_juridica.calidad_juridica,
+                'value': str(obj.calidad_juridica.id)
+            }
 
 
 class Paso5EncabezadoSerializer(serializers.ModelSerializer):
@@ -324,7 +353,16 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
             'años',
-            'años_variacion'
+            'años_variacion',
+            'sub21_total_personal_planta',
+            'sub21_personal_planta_justificado',
+            'sub21_personal_planta_justificar',
+            'sub21_total_personal_contrata',
+            'sub21_personal_contrata_justificado',
+            'sub21_personal_contrata_justificar',
+            'sub21_total_resto',
+            'sub21_resto_justificado',
+            'sub21_resto_justificar'
         ]
 
 
@@ -341,10 +379,14 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
         if competencia and competencia.fecha_inicio:
             año_actual = competencia.fecha_inicio.year
             n_5 = año_actual - 5
-            n_1 = año_actual - 1
+            n_4 = año_actual - 4
+            n_3 = año_actual - 3
+            n_2 = año_actual - 2
             return {
                 'n_5': n_5,
-                'n_1': n_1
+                'n_4': n_4,
+                'n_3': n_3,
+                'n_2': n_2,
             }
         return {}
 
@@ -360,6 +402,7 @@ def eliminar_instancia_costo(modelo, instancia_id):
 
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     listado_subtitulos = serializers.SerializerMethodField()
     listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
@@ -377,7 +420,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
         model = FormularioSectorial
         fields = [
             'paso5',
-            'formulario_enviado',
+            'solo_lectura',
             'p_5_1_a_costos_directos',
             'p_5_1_b_costos_indirectos',
             'p_5_1_c_resumen_costos_por_subtitulo',
@@ -391,6 +434,15 @@ class Paso5Serializer(WritableNestedModelSerializer):
             'listado_calidades_juridicas',
             'listado_etapas'
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
 
     def get_listado_subtitulos(self, obj):
         # Obtener todos los registros de Subtitulos y serializarlos
@@ -421,30 +473,6 @@ class Paso5Serializer(WritableNestedModelSerializer):
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
-
-    def to_representation(self, instance):
-        representation = super(Paso5Serializer, self).to_representation(instance)
-        personal_directo_agrupado = {}
-        personal_indirecto_agrupado = {}
-
-        # Agrupar Personal Directo por Estamento
-        for personal in representation.get('p_5_3_a_personal_directo', []):
-            for estamento, datos in personal.items():
-                if estamento not in personal_directo_agrupado:
-                    personal_directo_agrupado[estamento] = []
-                personal_directo_agrupado[estamento].append(datos)
-
-        # Agrupar Personal Indirecto por Estamento
-        for personal in representation.get('p_5_3_b_personal_indirecto', []):
-            for estamento, datos in personal.items():
-                if estamento not in personal_indirecto_agrupado:
-                    personal_indirecto_agrupado[estamento] = []
-                personal_indirecto_agrupado[estamento].append(datos)
-
-        representation['p_5_3_a_personal_directo'] = personal_directo_agrupado
-        representation['p_5_3_b_personal_indirecto'] = personal_indirecto_agrupado
-
-        return representation
     
     def update_paso5_instance(self, instance, paso5_data):
         # Asume que 'paso5_data' contiene los datos del objeto relacionado
@@ -455,8 +483,6 @@ class Paso5Serializer(WritableNestedModelSerializer):
             paso5_instance.save()
         else:
             Paso5.objects.create(formulario_sectorial=instance, **paso5_data)
-
-
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados

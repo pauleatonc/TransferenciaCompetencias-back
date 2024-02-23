@@ -25,14 +25,17 @@ from .serializers import (
 def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
     if request.method == 'PATCH':
         print("Datos recibidos para PATCH:", request.data)
-        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True)
+        # Asegúrate de pasar el contexto aquí
+        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:  # GET
-        serializer = serializer_class(formulario_sectorial)
+        # Y también aquí
+        serializer = serializer_class(formulario_sectorial, context={'request': request})
         return Response(serializer.data)
+
 
 
 def es_usuario_autorizado_para_sector(request, formulario_sectorial):

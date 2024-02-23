@@ -57,8 +57,8 @@ class Paso4EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso4Serializer(serializers.ModelSerializer):
-
     paso4 = Paso4EncabezadoSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     indicador_desempeno = IndicadorDesempenoSerializer(many=True)
     lista_indicadores = serializers.SerializerMethodField()
 
@@ -66,9 +66,19 @@ class Paso4Serializer(serializers.ModelSerializer):
         model = FormularioSectorial
         fields = [
             'paso4',
+            'solo_lectura',
             'indicador_desempeno',
             'lista_indicadores',
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
+        if obj.formulario_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
+            return user.perfil != 'Usuario Sectorial'
 
     def get_lista_indicadores(self, obj):
         # Retornar clave y valor para choices INDICADOR
