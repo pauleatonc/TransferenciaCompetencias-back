@@ -20,7 +20,7 @@ class Paso2(PasoBase):
     def numero_paso(self):
         return 2
 
-    def avance(self):
+    def avance_numerico(self):
         completados = 0
         total_campos = 3
 
@@ -51,19 +51,16 @@ class Paso2(PasoBase):
         if flujograma_completo:
             completados += 1
 
+        return completados, total_campos
+
+    def avance(self):
+        completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
     """2.5 Descripcion cualitativa del ejercicio de la competencia en la region"""
     descripcion_cualitativa = models.TextField(max_length=500, blank=True)
-
-    def save(self, *args, **kwargs):
-        if self.campos_obligatorios_completados:
-            self.completado = True
-        else:
-            self.completado = False
-        super(Paso2, self).save(*args, **kwargs)
 
 
 class OrganismosIntervinientes(BaseModel):
