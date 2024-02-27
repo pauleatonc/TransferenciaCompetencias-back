@@ -15,7 +15,7 @@ class Paso3(PasoBase):
     def numero_paso(self):
         return 3
 
-    def avance(self):
+    def avance_numerico(self):
         # Lista de todos los campos obligatorios
         campos_obligatorios = [
             'universo_cobertura', 'descripcion_cobertura'
@@ -38,6 +38,10 @@ class Paso3(PasoBase):
         # Actualizar el total de campos para incluir 'coberturas_anuales_completados'
         total_campos += 1
 
+        return completados, total_campos
+
+    def avance(self):
+        completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
@@ -45,13 +49,6 @@ class Paso3(PasoBase):
     """Campos descripción Cobertura de la Competencia"""
     universo_cobertura = models.TextField(max_length=800, blank=True)
     descripcion_cobertura = models.TextField(max_length=800, blank=True)
-
-    def save(self, *args, **kwargs):
-        if self.campos_obligatorios_completados:
-            self.completado = True
-        else:
-            self.completado = False
-        super(Paso3, self).save(*args, **kwargs)
 
 
 class CoberturaAnual(BaseModel):

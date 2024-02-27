@@ -17,7 +17,6 @@ class PasoBaseSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
-    campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
 
     class Meta:
@@ -27,7 +26,7 @@ class PasoBaseSerializer(serializers.ModelSerializer):
             'nombre_paso',
             'numero_paso',
             'avance',
-            'campos_obligatorios_completados',
+            'completado',
             'estado_stepper',
         ]
 

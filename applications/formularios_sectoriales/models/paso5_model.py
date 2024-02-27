@@ -57,7 +57,7 @@ class Paso5(PasoBase):
             renta_bruta__isnull=False
         ).exists()
 
-    def avance(self):
+    def avance_numerico(self):
         # Lista de todos los campos obligatorios del modelo Paso5
         campos_obligatorios_paso5 = [
             'descripcion_funciones_personal_directo', 'descripcion_funciones_personal_indirecto',
@@ -102,6 +102,10 @@ class Paso5(PasoBase):
         total_campos = 8
         completados = completados_paso5 + completados_costos_directos + completados_costos_indirectos + completados_evolucion_gasto + completados_variacion_promedio + completado_personal_directo + completado_personal_indirecto
 
+        return completados, total_campos
+
+    def avance(self):
+        completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
@@ -127,13 +131,6 @@ class Paso5(PasoBase):
     sub21_total_resto = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_resto_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_resto_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-
-    def save(self, *args, **kwargs):
-        if self.campos_obligatorios_completados:
-            self.completado = True
-        else:
-            self.completado = False
-        super(Paso5, self).save(*args, **kwargs)
 
 
 class Subtitulos(models.Model):

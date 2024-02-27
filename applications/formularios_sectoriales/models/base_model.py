@@ -50,11 +50,15 @@ class FormularioSectorial(BaseModel):
 
 
 class PasoBase(BaseModel):
-    completado = models.BooleanField(default=False)
+
+    @property
+    def completado(self):
+        return self.campos_obligatorios_completados
 
     @property
     def campos_obligatorios_completados(self):
-        return self.avance()[0] == self.avance()[1]
+        completados, total_campos = self.avance_numerico()
+        return completados == total_campos
 
     @property
     def estado_stepper(self):
