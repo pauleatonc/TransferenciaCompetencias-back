@@ -472,30 +472,32 @@ class Paso5Serializer(WritableNestedModelSerializer):
         return EstamentoSerializer(estamentos, many=True).data
 
     def get_filtered_calidades_juridicas(self, obj, modelo_costos):
+        # Mapeo de items a calidades jurídicas
         mapeo_items_calidades = {
-            '01 - Personal de Planta': 'Planta',
-            '02 - Personal de Contrata': 'Contrata',
-            '03 - Otras Remuneraciones': 'Honorario a suma alzada',
+            '01 - Personal de Planta': ['Planta'],
+            '02 - Personal de Contrata': ['Contrata'],
+            '03 - Otras Remuneraciones': ['Honorario a suma alzada'],
+            '04 - Otros Gastos en Personal': ['Honorario asimilado a grado', 'Comisión de servicio', 'Otro'],
         }
 
+        # Obtener los items usados en el modelo de costos para el formulario sectorial actual
         items_usados = modelo_costos.objects.filter(
             formulario_sectorial=obj
         ).values_list('item_subtitulo__item', flat=True).distinct()
 
-        calidades_filtradas = []
-        for item, calidad in mapeo_items_calidades.items():
-            if item in items_usados:
-                calidades_filtradas.append(calidad)
+        # Inicializar el conjunto para recoger las calidades jurídicas basadas en los items usados
+        calidades_incluidas = set()
 
-        if '04 - Otros Gastos en Personal' in items_usados:
-            calidades_adicionales = CalidadJuridica.objects.exclude(
-                calidad_juridica__in=list(mapeo_items_calidades.values())
-            ).values('id', 'calidad_juridica')
-            calidades_filtradas.extend(list(calidades_adicionales))
-        else:
-            calidades_filtradas = CalidadJuridica.objects.filter(
-                calidad_juridica__in=calidades_filtradas
-            ).values('id', 'calidad_juridica')
+        # Iterar sobre los items usados y agregar las calidades jurídicas correspondientes
+        for item_usado in items_usados:
+            for item, calidades in mapeo_items_calidades.items():
+                if item == item_usado:
+                    calidades_incluidas.update(calidades)
+
+        # Filtrar las calidades jurídicas basadas en el conjunto de calidades incluidas
+        calidades_filtradas = list(CalidadJuridica.objects.filter(
+            calidad_juridica__in=calidades_incluidas
+        ).values('id', 'calidad_juridica'))
 
         return calidades_filtradas
 
