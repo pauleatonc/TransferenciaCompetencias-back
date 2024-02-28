@@ -180,133 +180,158 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
         )
 
 
+def get_item_subtitulo(item):
+    return ItemSubtitulo.objects.get(item=item)
+
+def get_calidad_juridica(calidad):
+    return CalidadJuridica.objects.get(calidad_juridica=calidad)
+
+def calcular_total_por_item(modelo, paso5_instance, item_subtitulo):
+    return sum((item.total_anual or 0) for item in modelo.objects.filter(
+        formulario_sectorial=paso5_instance.formulario_sectorial,
+        item_subtitulo=item_subtitulo
+    ))
+
+
+def calcular_costos_por_justificar(paso5_instance, campos):
+    """
+    Calcula los costos por justificar y actualiza la instancia de Paso5.
+
+    :param paso5_instance: La instancia de Paso5 que se está actualizando.
+    :param campos: Diccionario con la configuración de los campos a calcular.
+    """
+    for campo_total, campo_justificado, campo_por_justificar in campos:
+        total = getattr(paso5_instance, campo_total) or 0
+        justificado = getattr(paso5_instance, campo_justificado) or 0
+        por_justificar = total - justificado
+        setattr(paso5_instance, campo_por_justificar, por_justificar)
+
+
+def calcular_total_por_calidad_directo(modelo, paso5_instance, calidad_juridica):
+    return sum((personal.renta_bruta or 0) for personal in modelo.objects.filter(
+        formulario_sectorial=paso5_instance.formulario_sectorial,
+        calidad_juridica=calidad_juridica
+    ))
+
+items_y_campos_directos = {
+    "01 - Personal de Planta": "sub21_total_personal_planta",
+    "02 - Personal de Contrata": "sub21_total_personal_contrata",
+    "03 - Otras Remuneraciones": "sub21_total_otras_remuneraciones",
+    "04 - Otros Gastos en Personal": "sub21_total_gastos_en_personal",
+}
+
+calidades_y_campos_directos = {
+    "Planta": "sub21_personal_planta_justificado",
+    "Contrata": "sub21_personal_contrata_justificado",
+    "Honorario a suma alzada": "sub21_personal_otras_remuneraciones_justificado",
+}
+
 @receiver([post_save, post_delete], sender=CostosDirectos)
-@receiver([post_save, post_delete], sender=CostosIndirectos)
 @receiver([post_save, post_delete], sender=PersonalDirecto)
-@receiver([post_save, post_delete], sender=PersonalIndirecto)
 def actualizar_campos_paso5(sender, instance, **kwargs):
-    """
-    Actualiza los campos en Paso5 cada vez que se guarden o eliminen instancias
-    de los modelos relacionados.
-    """
-    # Asegurarse de que no estamos actualizando desde una instancia de Paso5
     if isinstance(instance, Paso5):
         return
 
-    # Obtén la instancia de Paso5 relacionada
     paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
+    total_especifico = 0
 
-    """ Cálculos para sumar Subtítulo 21 en Costos Directos e indirectos"""
-    personal_de_planta_item = ItemSubtitulo.objects.get(item="01 - Personal de Planta")
-    personal_de_contrata_item = ItemSubtitulo.objects.get(item="02 - Personal de Contrata")
+    for item, campo in items_y_campos_directos.items():
+        item_subtitulo = get_item_subtitulo(item)
+        total = calcular_total_por_item(CostosDirectos, paso5_instance, item_subtitulo)
+        setattr(paso5_instance, campo, total)
 
-    # Calcula 'sub21_total_personal_planta'
-    total_personal_planta = sum(
-        item.total_anual for item in CostosDirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo=personal_de_planta_item
-        )
-    ) + sum(
-        item.total_anual for item in CostosIndirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo=personal_de_planta_item
-        )
-    )
-    paso5_instance.sub21_total_personal_planta = total_personal_planta
+    for calidad, campo in calidades_y_campos_directos.items():
+        calidad_juridica = get_calidad_juridica(calidad)
+        total = calcular_total_por_calidad_directo(PersonalDirecto, paso5_instance, calidad_juridica)
+        setattr(paso5_instance, campo, total)
+        total_especifico += total  # Acumula los totales específicos
 
-    # Calcula 'sub21_total_personal_contrata'
-    total_personal_contrata = sum(
-        item.total_anual for item in CostosDirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo=personal_de_contrata_item
-        )
-    ) + sum(
-        item.total_anual for item in CostosIndirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo=personal_de_contrata_item
-        )
-    )
-    paso5_instance.sub21_total_personal_contrata = total_personal_contrata
-
-    # Calcula 'sub21_total_resto'
-    sub_21 = Subtitulos.objects.get(subtitulo='Sub. 21')
-
-    total_sub_21 = sum(
-        item.total_anual for item in CostosDirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo__subtitulo=sub_21
-        )
-    ) + sum(
-        item.total_anual for item in CostosIndirectos.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            item_subtitulo__subtitulo=sub_21
-        )
-    )
-    # Resta los ítems de 'Personal de Planta' y 'Personal de Contrata'
-    total_personal_planta_contrata = paso5_instance.sub21_total_personal_planta + paso5_instance.sub21_total_personal_contrata
-    paso5_instance.sub21_total_resto = total_sub_21 - total_personal_planta_contrata
-
-    """ Calcula los subtotales de Personal Directo e Indirecto por calidad jurídica"""
-    personal_de_planta = CalidadJuridica.objects.get(calidad_juridica="Planta")
-    personal_a_contrata = CalidadJuridica.objects.get(calidad_juridica="Contrata")
-
-    # Calcula 'sub21_personal_planta_justificado'
-    personal_justificado = sum(
-        (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            calidad_juridica=personal_de_planta
-        )
-    ) + sum(
-        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            calidad_juridica=personal_de_planta
-        )
-    )
-    paso5_instance.sub21_personal_planta_justificado = personal_justificado
-
-    # Calcula 'sub21_personal_contrata_justificado'
-    personal_contrata_justificado = sum(
-        (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            calidad_juridica=personal_a_contrata
-        )
-    ) + sum(
-        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial,
-            calidad_juridica=personal_a_contrata
-        )
-    )
-    paso5_instance.sub21_personal_contrata_justificado = personal_contrata_justificado
-
-    # Calcula 'sub21_resto_justificado'
-    total_renta_bruta = sum(
+    # Calcular el total general de todas las calidades
+    total_general = sum(
         (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
             formulario_sectorial=paso5_instance.formulario_sectorial
         )
-    ) + sum(
-        (personal.renta_bruta or 0) for personal in PersonalIndirecto.objects.filter(
-            formulario_sectorial=paso5_instance.formulario_sectorial
-        )
     )
-    # Resta la renta bruta de 'Planta' y 'Contrata'
-    total_renta_planta_contrata = paso5_instance.sub21_personal_planta_justificado + paso5_instance.sub21_personal_contrata_justificado
-    paso5_instance.sub21_resto_justificado = total_renta_bruta - total_renta_planta_contrata
+
+    # Calcular el total de "otras calidades"
+    total_otras_calidades = total_general - total_especifico
+    paso5_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
 
     """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
-    # Calcula 'sub21_personal_planta_justificar'
-    paso5_instance.sub21_personal_planta_justificar = (
-            paso5_instance.sub21_total_personal_planta - paso5_instance.sub21_personal_planta_justificado
+
+    campos_directos = [
+        ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
+        ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado', 'sub21_personal_contrata_justificar'),
+        ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
+         'sub21_personal_otras_remuneraciones_justificar'),
+        ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
+         'sub21_gastos_en_personal_justificar'),
+    ]
+
+    calcular_costos_por_justificar(paso5_instance, campos_directos)
+
+    paso5_instance.save()
+    
+def calcular_total_por_calidad_indirecto(modelo, paso5_instance, calidad_juridica):
+    return sum((personal.total_rentas or 0) for personal in modelo.objects.filter(
+        formulario_sectorial=paso5_instance.formulario_sectorial,
+        calidad_juridica=calidad_juridica
+    ))
+
+items_y_campos_indirectos = {
+    "01 - Personal de Planta": "sub21b_total_personal_planta",
+    "02 - Personal de Contrata": "sub21b_total_personal_contrata",
+    "03 - Otras Remuneraciones": "sub21b_total_otras_remuneraciones",
+    "04 - Otros Gastos en Personal": "sub21b_total_gastos_en_personal",
+}
+
+calidades_y_campos_indirectos = {
+    "Planta": "sub21b_personal_planta_justificado",
+    "Contrata": "sub21b_personal_contrata_justificado",
+    "Honorario a suma alzada": "sub21b_personal_otras_remuneraciones_justificado",
+}
+
+@receiver([post_save, post_delete], sender=CostosIndirectos)
+@receiver([post_save, post_delete], sender=PersonalIndirecto)
+def actualizar_campos_paso5(sender, instance, **kwargs):
+    if isinstance(instance, Paso5):
+        return
+
+    paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
+    total_especifico = 0
+
+    for item, campo in items_y_campos_indirectos.items():
+        item_subtitulo = get_item_subtitulo(item)
+        total = calcular_total_por_item(CostosIndirectos, paso5_instance, item_subtitulo)
+        setattr(paso5_instance, campo, total)
+
+    for calidad, campo in calidades_y_campos_indirectos.items():
+        calidad_juridica = get_calidad_juridica(calidad)
+        total = calcular_total_por_calidad_indirecto(PersonalIndirecto, paso5_instance, calidad_juridica)
+        setattr(paso5_instance, campo, total)
+        total_especifico += total  # Acumula los totales específicos
+
+    # Calcular el total general de todas las calidades
+    total_general = sum(
+        (personal.total_rentas or 0) for personal in PersonalIndirecto.objects.filter(
+            formulario_sectorial=paso5_instance.formulario_sectorial
+        )
     )
 
-    # Calcula 'sub21_personal_contrata_justificar'
-    paso5_instance.sub21_personal_contrata_justificar = (
-        paso5_instance.sub21_total_personal_contrata - paso5_instance.sub21_personal_contrata_justificado
-    )
+    # Calcular el total de "otras calidades"
+    total_otras_calidades = total_general - total_especifico
+    paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
 
-    # Calcula 'sub21_resto_justificar'
-    paso5_instance.sub21_resto_justificar = (
-            paso5_instance.sub21_total_resto - paso5_instance.sub21_resto_justificado
-    )
+    """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
+    
+    campos_indirectos = [
+        ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
+        ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado', 'sub21b_personal_contrata_justificar'),
+        ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
+         'sub21b_personal_otras_remuneraciones_justificar'),
+        ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
+         'sub21b_gastos_en_personal_justificar'),
+    ]
 
-    # Guarda la instancia de Paso5
+    calcular_costos_por_justificar(paso5_instance, campos_indirectos)
     paso5_instance.save()
