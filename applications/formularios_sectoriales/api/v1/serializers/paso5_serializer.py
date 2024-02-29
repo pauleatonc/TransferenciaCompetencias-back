@@ -299,7 +299,9 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
             'calidad_juridica',
             'nombre_calidad_juridica',
             'calidad_juridica_label_value',
+            'numero_personas',
             'renta_bruta',
+            'total_rentas',
             'grado',
         ]
 
@@ -665,6 +667,14 @@ class Paso5Serializer(WritableNestedModelSerializer):
     
         # Actualizar o crear PersonalIndirecto
         if personal_indirecto_data is not None:
-            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
-    
+            for personal_data in personal_indirecto_data:
+                personal_id = personal_data.get('id', None)
+                if personal_id:  # Si tiene ID, es una actualización
+                    personal_instance = PersonalIndirecto.objects.get(id=personal_id)
+                    for attr, value in personal_data.items():
+                        setattr(personal_instance, attr, value)
+                    personal_instance.save()  # Aquí se invoca explícitamente el método save del modelo
+                else:  # Si no tiene ID, es una creación
+                    PersonalIndirecto.objects.create(**personal_data, formulario_sectorial=instance)
+
         return instance

@@ -339,7 +339,7 @@ class PersonalIndirecto(BaseModel):
     grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['calidad_juridica']
+        ordering = ['id']
 
     def save(self, *args, **kwargs):
         if self.renta_bruta is not None and self.numero_personas is not None:

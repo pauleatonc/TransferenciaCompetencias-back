@@ -1,5 +1,5 @@
 from django.db.models import Sum
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.db import transaction
 
@@ -291,6 +291,7 @@ calidades_y_campos_indirectos = {
     "Honorario a suma alzada": "sub21b_personal_otras_remuneraciones_justificado",
 }
 
+
 @receiver([post_save, post_delete], sender=CostosIndirectos)
 @receiver([post_save, post_delete], sender=PersonalIndirecto)
 def actualizar_campos_paso5(sender, instance, **kwargs):
@@ -323,7 +324,7 @@ def actualizar_campos_paso5(sender, instance, **kwargs):
     paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
 
     """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
-    
+
     campos_indirectos = [
         ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
         ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado', 'sub21b_personal_contrata_justificar'),
