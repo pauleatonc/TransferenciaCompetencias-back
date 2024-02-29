@@ -223,7 +223,7 @@ items_y_campos_directos = {
 calidades_y_campos_directos = {
     "Planta": "sub21_personal_planta_justificado",
     "Contrata": "sub21_personal_contrata_justificado",
-    "Honorario a suma alzada": "sub21_personal_otras_remuneraciones_justificado",
+    "Honorario a suma alzada": "sub21_otras_remuneraciones_justificado",
 }
 
 @receiver([post_save, post_delete], sender=CostosDirectos)
@@ -263,7 +263,7 @@ def actualizar_campos_paso5(sender, instance, **kwargs):
         ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
         ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado', 'sub21_personal_contrata_justificar'),
         ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
-         'sub21_personal_otras_remuneraciones_justificar'),
+         'sub21_otras_remuneraciones_justificar'),
         ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
          'sub21_gastos_en_personal_justificar'),
     ]
