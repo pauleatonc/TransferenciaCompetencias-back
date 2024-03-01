@@ -336,3 +336,68 @@ def actualizar_campos_paso5(sender, instance, **kwargs):
 
     calcular_costos_por_justificar(paso5_instance, campos_indirectos)
     paso5_instance.save()
+
+
+# Mapeo entre ItemSubtitulo y CalidadJuridica
+relacion_item_calidad = {
+    "01 - Personal de Planta": "Planta",
+    "02 - Personal de Contrata": "Contrata",
+    "03 - Otras Remuneraciones": "Honorario a suma alzada",
+    "04 - Otros Gastos en Personal": ["Honorario asimilado a grado", "Comisión de servicio", "Otro"],
+}
+
+
+def crear_instancias_personal(modelo_costos, modelo_personal, instance, created):
+    if created:
+        item_subtitulo_texto = instance.item_subtitulo.item
+        calidades = relacion_item_calidad.get(item_subtitulo_texto)
+
+        if item_subtitulo_texto == "04 - Otros Gastos en Personal":
+            return  # No se crean instancias para este caso
+
+        if calidades:
+            if not isinstance(calidades, list):
+                calidades = [calidades]
+
+            for calidad in calidades:
+                calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
+                if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial, calidad_juridica=calidad_juridica_obj).exists():
+                    modelo_personal.objects.create(
+                        formulario_sectorial=instance.formulario_sectorial,
+                        calidad_juridica=calidad_juridica_obj
+                    )
+
+def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
+    item_subtitulo_texto = instance.item_subtitulo.item
+    calidades = relacion_item_calidad.get(item_subtitulo_texto)
+
+    if calidades:
+        if not isinstance(calidades, list):
+            calidades = [calidades]
+
+        for calidad in calidades:
+            calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
+            existe_costo = modelo_costos.objects.filter(formulario_sectorial=instance.formulario_sectorial, item_subtitulo=instance.item_subtitulo).exists()
+
+            if not existe_costo:
+                modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial, calidad_juridica=calidad_juridica_obj).delete()
+
+
+@receiver(post_save, sender=CostosDirectos)
+def post_save_costos_directos(sender, instance, created, **kwargs):
+    crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
+
+
+@receiver(post_delete, sender=CostosDirectos)
+def post_delete_costos_directos(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+
+
+@receiver(post_save, sender=CostosIndirectos)
+def post_save_costos_indirectos(sender, instance, created, **kwargs):
+    crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
+
+
+@receiver(post_delete, sender=CostosIndirectos)
+def post_delete_costos_indirectos(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
