@@ -228,6 +228,7 @@ calidades_y_campos_directos = {
 
 @receiver([post_save, post_delete], sender=CostosDirectos)
 @receiver([post_save, post_delete], sender=PersonalDirecto)
+# Realiza los cálculos de los campos directos y los costos por justificar
 def actualizar_campos_paso5(sender, instance, **kwargs):
     if isinstance(instance, Paso5):
         return
@@ -294,6 +295,7 @@ calidades_y_campos_indirectos = {
 
 @receiver([post_save, post_delete], sender=CostosIndirectos)
 @receiver([post_save, post_delete], sender=PersonalIndirecto)
+# Realiza los cálculos de los campos indirectos y los costos por justificar
 def actualizar_campos_paso5(sender, instance, **kwargs):
     if isinstance(instance, Paso5):
         return
@@ -348,6 +350,8 @@ relacion_item_calidad = {
 
 
 def crear_instancias_personal(modelo_costos, modelo_personal, instance, created):
+    # Crea instancias para los modelos de PersonalDirecto y PersonalIndirecto en relación con la creación de
+    # Costos Directos e Indirectos
     if created:
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto)
