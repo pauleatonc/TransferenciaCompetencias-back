@@ -2,6 +2,7 @@ from django.db.models import Sum
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.db import transaction
+import time
 
 from applications.formularios_sectoriales.models import (
     CostosDirectos,
@@ -365,8 +366,11 @@ def crear_instancias_personal(modelo_costos, modelo_personal, instance, created)
 
             for calidad in calidades:
                 calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
-                if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial, calidad_juridica=calidad_juridica_obj).exists():
+                if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
+                                                      calidad_juridica=calidad_juridica_obj).exists():
+                    id_generado = int(time.time())  # Obtiene el timestamp actual en segundos
                     modelo_personal.objects.create(
+                        id=id_generado,
                         formulario_sectorial=instance.formulario_sectorial,
                         calidad_juridica=calidad_juridica_obj
                     )
