@@ -23,7 +23,7 @@ from .serializers import (
     Etapa5Serializer,
 )
 
-from applications.users.permissions import IsSUBDEREOrSuperuser
+from applications.users.permissions import IsSUBDEREOrSuperuser, is_DIPRES
 
 
 class Etapa1ViewSet(viewsets.ModelViewSet):
@@ -41,7 +41,7 @@ class  Etapa2ViewSet(viewsets.ModelViewSet):
 class Etapa3ViewSet(viewsets.ModelViewSet):
     queryset = Etapa3.objects.all()
     serializer_class = Etapa3Serializer
-    permission_classes = [IsSUBDEREOrSuperuser]
+    permission_classes = [IsSUBDEREOrSuperuser, is_DIPRES]
 
 
 class  Etapa4ViewSet(viewsets.ModelViewSet):
@@ -53,4 +53,4 @@ class  Etapa4ViewSet(viewsets.ModelViewSet):
 class Etapa5ViewSet(viewsets.ModelViewSet):
     queryset = Etapa5.objects.all()
     serializer_class = Etapa5Serializer
-    permission_classes = [IsSUBDEREOrSuperuser]
+    permission_classes = [IsSUBDEREOrSuperuser, is_DIPRES]

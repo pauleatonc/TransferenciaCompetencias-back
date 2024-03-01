@@ -122,15 +122,32 @@ class Paso5(PasoBase):
     """5.3 Costos asociados al ejercicio de la competencia"""
     descripcion_funciones_personal_directo = models.TextField(max_length=1100, blank=True)
     descripcion_funciones_personal_indirecto = models.TextField(max_length=1100, blank=True)
+    """5.3a Costos Directos asociados al ejercicio de la competencia"""
     sub21_total_personal_planta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_personal_planta_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_personal_planta_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_total_personal_contrata = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_personal_contrata_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21_personal_contrata_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    sub21_total_resto = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    sub21_resto_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    sub21_resto_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_otras_remuneraciones = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_otras_remuneraciones_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_otras_remuneraciones_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_total_gastos_en_personal = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_gastos_en_personal_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    """5.3b Costos Indirectos asociados al ejercicio de la competencia"""
+    sub21b_total_personal_planta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_personal_planta_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_personal_planta_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_total_personal_contrata = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_personal_contrata_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_personal_contrata_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_total_otras_remuneraciones = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_otras_remuneraciones_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_otras_remuneraciones_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_total_gastos_en_personal = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_gastos_en_personal_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
 
 class Subtitulos(models.Model):
@@ -318,7 +335,15 @@ class PersonalIndirecto(BaseModel):
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto')
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+    total_rentas = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['calidad_juridica']
+        ordering = ['id']
+
+    def save(self, *args, **kwargs):
+        if self.renta_bruta is not None and self.numero_personas is not None:
+            self.total_rentas = self.renta_bruta * self.numero_personas
+        else:
+            self.total_rentas = None
+        super().save(*args, **kwargs)

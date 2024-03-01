@@ -299,7 +299,9 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
             'calidad_juridica',
             'nombre_calidad_juridica',
             'calidad_juridica_label_value',
+            'numero_personas',
             'renta_bruta',
+            'total_rentas',
             'grado',
         ]
 
@@ -360,9 +362,24 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'sub21_total_personal_contrata',
             'sub21_personal_contrata_justificado',
             'sub21_personal_contrata_justificar',
-            'sub21_total_resto',
-            'sub21_resto_justificado',
-            'sub21_resto_justificar'
+            'sub21_total_otras_remuneraciones',
+            'sub21_otras_remuneraciones_justificado',
+            'sub21_otras_remuneraciones_justificar',
+            'sub21_total_gastos_en_personal',
+            'sub21_gastos_en_personal_justificado',
+            'sub21_gastos_en_personal_justificar',
+            'sub21b_total_personal_planta',
+            'sub21b_personal_planta_justificado',
+            'sub21b_personal_planta_justificar',
+            'sub21b_total_personal_contrata',
+            'sub21b_personal_contrata_justificado',
+            'sub21b_personal_contrata_justificar',
+            'sub21b_total_otras_remuneraciones',
+            'sub21b_otras_remuneraciones_justificado',
+            'sub21b_otras_remuneraciones_justificar',
+            'sub21b_total_gastos_en_personal',
+            'sub21b_gastos_en_personal_justificado',
+            'sub21b_gastos_en_personal_justificar'
         ]
 
 
@@ -406,7 +423,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
     listado_subtitulos = serializers.SerializerMethodField()
     listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
-    listado_calidades_juridicas = serializers.SerializerMethodField()
+    listado_calidades_juridicas_directas = serializers.SerializerMethodField()
+    listado_calidades_juridicas_indirectas = serializers.SerializerMethodField()
     listado_etapas = serializers.SerializerMethodField()
     p_5_1_a_costos_directos = CostosDirectosSerializer(many=True, read_only=False)
     p_5_1_b_costos_indirectos = CostosIndirectosSerializer(many=True, read_only=False)
@@ -431,7 +449,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
             'listado_subtitulos',
             'listado_item_subtitulos',
             'listado_estamentos',
-            'listado_calidades_juridicas',
+            'listado_calidades_juridicas_directas',
+            'listado_calidades_juridicas_indirectas',
             'listado_etapas'
         ]
 
@@ -454,10 +473,41 @@ class Paso5Serializer(WritableNestedModelSerializer):
         estamentos = Estamento.objects.all()
         return EstamentoSerializer(estamentos, many=True).data
 
-    def get_listado_calidades_juridicas(self, obj):
-        # Obtener todos los registros de CalidadJuridica y serializarlos
-        calidades_juridicas = CalidadJuridica.objects.all()
-        return CalidadJuridicaSerializer(calidades_juridicas, many=True).data
+    def get_filtered_calidades_juridicas(self, obj, modelo_costos):
+        # Mapeo de items a calidades jurídicas
+        mapeo_items_calidades = {
+            '01 - Personal de Planta': ['Planta'],
+            '02 - Personal de Contrata': ['Contrata'],
+            '03 - Otras Remuneraciones': ['Honorario a suma alzada'],
+            '04 - Otros Gastos en Personal': ['Honorario asimilado a grado', 'Comisión de servicio', 'Otro'],
+        }
+
+        # Obtener los items usados en el modelo de costos para el formulario sectorial actual
+        items_usados = modelo_costos.objects.filter(
+            formulario_sectorial=obj
+        ).values_list('item_subtitulo__item', flat=True).distinct()
+
+        # Inicializar el conjunto para recoger las calidades jurídicas basadas en los items usados
+        calidades_incluidas = set()
+
+        # Iterar sobre los items usados y agregar las calidades jurídicas correspondientes
+        for item_usado in items_usados:
+            for item, calidades in mapeo_items_calidades.items():
+                if item == item_usado:
+                    calidades_incluidas.update(calidades)
+
+        # Filtrar las calidades jurídicas basadas en el conjunto de calidades incluidas
+        calidades_filtradas = list(CalidadJuridica.objects.filter(
+            calidad_juridica__in=calidades_incluidas
+        ).values('id', 'calidad_juridica'))
+
+        return calidades_filtradas
+
+    def get_listado_calidades_juridicas_directas(self, obj):
+        return self.get_filtered_calidades_juridicas(obj, CostosDirectos)
+
+    def get_listado_calidades_juridicas_indirectas(self, obj):
+        return self.get_filtered_calidades_juridicas(obj, CostosIndirectos)
 
     def get_listado_item_subtitulos(self, obj):
         # Agrupar ItemSubtitulo por Subtitulos
@@ -617,6 +667,14 @@ class Paso5Serializer(WritableNestedModelSerializer):
     
         # Actualizar o crear PersonalIndirecto
         if personal_indirecto_data is not None:
-            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
-    
+            for personal_data in personal_indirecto_data:
+                personal_id = personal_data.get('id', None)
+                if personal_id:  # Si tiene ID, es una actualización
+                    personal_instance = PersonalIndirecto.objects.get(id=personal_id)
+                    for attr, value in personal_data.items():
+                        setattr(personal_instance, attr, value)
+                    personal_instance.save()  # Aquí se invoca explícitamente el método save del modelo
+                else:  # Si no tiene ID, es una creación
+                    PersonalIndirecto.objects.create(**personal_data, formulario_sectorial=instance)
+
         return instance
