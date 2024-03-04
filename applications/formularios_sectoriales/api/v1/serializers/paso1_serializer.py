@@ -168,18 +168,20 @@ class Paso1Serializer(WritableNestedModelSerializer):
         for data in nested_data:
             item_id = data.pop('id', None)
             delete_flag = data.pop('DELETE', False)
-    
-            if item_id is not None:
-                if delete_flag:
-                    model.objects.filter(id=item_id).delete()
-                else:
-                    obj, created = model.objects.update_or_create(
-                        id=item_id,
-                        formulario_sectorial=instance,
-                        defaults=data
-                    )
-            elif not delete_flag:
-                obj = model.objects.create(formulario_sectorial=instance, **data)
+
+            if item_id is not None and not delete_flag:
+                obj = model.objects.get(id=item_id)
+                for attr, value in data.items():
+                    setattr(obj, attr, value)
+                obj.formulario_sectorial = instance  # Asegurar que la instancia está correctamente asociada
+                obj.save()  # Invoca explícitamente el método save para aplicar la validación
+            elif item_id is None and not delete_flag:
+                # Crear una nueva instancia y guardarla explícitamente para invocar el método save
+                new_obj = model(**data)
+                new_obj.formulario_sectorial = instance  # Asegurar que la instancia está correctamente asociada
+                new_obj.save()
+            elif delete_flag:
+                model.objects.filter(id=item_id).delete()
 
     def update(self, instance, validated_data):
         paso1 = validated_data.pop('paso1', None)
