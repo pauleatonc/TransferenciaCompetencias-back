@@ -76,6 +76,6 @@ class FlujogramaEjercicioCompetencia(BaseModel):
 
         if existing_files_count >= 3:
             # No permitir guardar si ya hay 3 o más archivos
-            raise ValidationError('No se pueden añadir más de 5 flujogramas por formulario.')
+            raise ValidationError('No se pueden añadir más de 3 flujogramas por formulario.')
 
         super().save(*args, **kwargs)
