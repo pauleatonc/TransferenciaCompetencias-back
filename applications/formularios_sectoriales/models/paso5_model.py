@@ -24,7 +24,7 @@ class Paso5(PasoBase):
 
     def es_instancia_costos_completa(self, instancia):
         campos_requeridos = [
-            'formulario_sectorial', 'item_subtitulo', 'total_anual', 'descripcion'
+            'item_subtitulo', 'total_anual', 'es_transversal', 'descripcion'
         ]
         return all(getattr(instancia, campo, None) for campo in campos_requeridos)
 
@@ -44,7 +44,6 @@ class Paso5(PasoBase):
         return PersonalDirecto.objects.filter(
             formulario_sectorial=self.formulario_sectorial,
             estamento__isnull=False,
-            calidad_juridica__isnull=False,
             renta_bruta__isnull=False
         ).exists()
 
@@ -52,7 +51,6 @@ class Paso5(PasoBase):
         return PersonalIndirecto.objects.filter(
             formulario_sectorial=self.formulario_sectorial,
             estamento__isnull=False,
-            calidad_juridica__isnull=False,
             numero_personas__isnull=False,
             renta_bruta__isnull=False
         ).exists()
@@ -66,41 +64,37 @@ class Paso5(PasoBase):
         completados_paso5 = sum([1 for campo in campos_obligatorios_paso5 if getattr(self, campo, None)])
 
         # Verifica instancias de CostosDirectos y CostosIndirectos
-        total_costos_directos = CostosDirectos.objects.filter(
-            formulario_sectorial_id=self.formulario_sectorial_id).count()
-        completados_costos_directos = sum(
-            [1 for costo in CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id) if
-             self.es_instancia_costos_completa(costo)])
+        costos_directos = CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id)
+        total_costos_directos = costos_directos.count()
+        completados_costos_directos = sum([1 for costo in costos_directos if self.es_instancia_costos_completa(costo)])
 
-        total_costos_indirectos = CostosIndirectos.objects.filter(
-            formulario_sectorial_id=self.formulario_sectorial_id).count()
+        costos_indirectos = CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id)
+        total_costos_indirectos = costos_indirectos.count()
         completados_costos_indirectos = sum(
-            [1 for costo in CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id) if
-             self.es_instancia_costos_completa(costo)])
+            [1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo)])
 
         # Verificar EvolucionGastoAsociado y CostoAnio
+        evolucion_gasto = EvolucionGastoAsociado.objects.filter(formulario_sectorial=self.formulario_sectorial)
+        total_evolucion_gasto = evolucion_gasto.count()
         completados_evolucion_gasto = sum(
-            1 for evolucion in EvolucionGastoAsociado.objects.filter(formulario_sectorial=self.formulario_sectorial)
-            if self.es_evolucion_gasto_completa(evolucion)
-        )
-        total_evolucion_gasto = EvolucionGastoAsociado.objects.filter(
-            formulario_sectorial=self.formulario_sectorial).count()
+            1 for evolucion in evolucion_gasto if self.es_evolucion_gasto_completa(evolucion))
 
         # Verificar VariacionPromedio
+        variacion_promedio = VariacionPromedio.objects.filter(formulario_sectorial=self.formulario_sectorial)
+        total_variacion_promedio = variacion_promedio.count()
         completados_variacion_promedio = sum(
-            1 for variacion in VariacionPromedio.objects.filter(formulario_sectorial=self.formulario_sectorial)
-            if self.es_variacion_promedio_completa(variacion)
-        )
-        total_variacion_promedio = VariacionPromedio.objects.filter(
-            formulario_sectorial=self.formulario_sectorial).count()
+            1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
 
-        # Verificar PersonalDirecto y PersonalIndirecto
+        # Verificar PersonalDirecto y PersonalIndirecto (estos cuentan como un campo cada uno, sin importar la cantidad de instancias)
         completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
         completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
 
-        # Total de campos y completados
-        total_campos = 8
-        completados = completados_paso5 + completados_costos_directos + completados_costos_indirectos + completados_evolucion_gasto + completados_variacion_promedio + completado_personal_directo + completado_personal_indirecto
+        # Total de campos y completados se ajusta para incluir el número de instancias
+        total_campos = (total_campos_paso5 + total_costos_directos + total_costos_indirectos +
+                        total_evolucion_gasto + total_variacion_promedio + 2)  # +2 por PersonalDirecto e Indirecto como categorías
+        completados = (completados_paso5 + completados_costos_directos + completados_costos_indirectos +
+                       completados_evolucion_gasto + completados_variacion_promedio +
+                       completado_personal_directo + completado_personal_indirecto)
 
         return completados, total_campos
 
