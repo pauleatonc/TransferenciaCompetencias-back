@@ -10,7 +10,8 @@ from applications.formularios_gores.models import(
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 from .serializers import (
-    FormularioGOREDetailSerializer
+    FormularioGOREDetailSerializer,
+    Paso1Serializer
 )
 
 
@@ -77,23 +78,23 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, pk=None, *args, **kwargs):
         """
-        Detalle de Competencia
+        Detalle de Formulario GORE
 
-        Devuelve el detalle de una competencia específica.
+        Devuelve el detalle de un formulario gore específico.
         Acceso para usuarios autenticados.
         """
         competencia = self.get_object()
         serializer = self.get_serializer(competencia)
         return Response(serializer.data)
 
-    '''@action(detail=True, methods=['get', 'patch'], url_path='paso-1')
+    @action(detail=True, methods=['get', 'patch'], url_path='paso-1')
     def paso_1(self, request, pk=None):
         """
         API Paso 1 - Descripción de la Institución de Formulario Sectorial
         """
         formulario_gore = self.get_object()
         return manejar_permiso_patch(request, formulario_gore, Paso1Serializer)
-
+    '''
     @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
     def paso_2(self, request, pk=None):
         formulario_gore = self.get_object()

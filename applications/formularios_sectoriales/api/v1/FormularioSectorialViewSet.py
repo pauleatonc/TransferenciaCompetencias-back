@@ -85,9 +85,9 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, pk=None, *args, **kwargs):
         """
-        Detalle de Competencia
+        Detalle de Formulario Sectorial
 
-        Devuelve el detalle de una competencia específica.
+        Devuelve el detalle de un formulario sectorial específico.
         Acceso para usuarios autenticados.
         """
         competencia = self.get_object()

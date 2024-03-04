@@ -27,10 +27,10 @@ class PasoBase(BaseModel):
     def completado(self):
         return self.campos_obligatorios_completados
 
-    '''@property
+    @property
     def campos_obligatorios_completados(self):
         completados, total_campos = self.avance_numerico()
-        return completados == total_campos'''
+        return completados == total_campos
 
     @property
     def estado_stepper(self):

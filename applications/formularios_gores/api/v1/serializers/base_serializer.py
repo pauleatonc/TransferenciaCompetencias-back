@@ -1,12 +1,9 @@
 from rest_framework import serializers
-from applications.competencias.models import Competencia
-from applications.formularios_gores.models import FormularioGORE
+
 from applications.formularios_sectoriales.models import FormularioSectorial
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
 
 User = get_user_model()
 
