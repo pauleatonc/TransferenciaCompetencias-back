@@ -36,13 +36,36 @@ def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
         serializer = serializer_class(formulario_sectorial, context={'request': request})
         return Response(serializer.data)
 
+def es_usuario_autorizado_para_region(request, formulario_gore):
+    """
+    Verifica si el usuario pertenece a la misma región que el formulario y
+    si es un usuario del sector relacionado con usuarios_gore de la competencia.
+    """
+    # Asegurarse de que el usuario está en la misma región que el formulario
+    misma_region = request.user.region == formulario_gore.region
 
+    # Comprobar si el usuario pertenece al grupo de usuarios sectoriales
+    es_usuario_gore = request.user.groups.filter(name='GORE').exists()
+
+    # Obtener la competencia asociada al formulario
+    competencia = formulario_gore.competencia
+
+    # Comprobar si el usuario es uno de los usuarios_gore relacionados con la competencia
+    es_usuario_gore_de_competencia = competencia.usuarios_gore.filter(id=request.user.id).exists()
+
+    # La condición final para ser un usuario autorizado es cumplir con todas las verificaciones anteriores
+    return misma_region and es_usuario_gore and es_usuario_gore_de_competencia
 
 def es_usuario_autorizado_para_sector(request, formulario_sectorial):
     """
         Verifica si el usuario pertenece al mismo sector que el formulario.
         """
-    return request.user.sector == formulario_sectorial.sector
+    mismo_sector = request.user.sector == formulario_sectorial.sector
+    es_usuario_sectorial = request.user.groups.filter(name='Usuario Sectorial').exists()
+    competencia = formulario_sectorial.competencia
+    es_usuario_sectorial_de_competencia = competencia.usuarios_sectoriales.filter(id=request.user.id).exists()
+
+    return mismo_sector and es_usuario_sectorial and es_usuario_sectorial_de_competencia
 
 
 def manejar_permiso_patch(request, formulario_sectorial, serializer_class):

@@ -4,6 +4,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.conf import settings
+from django.db.models import Q
 
 from applications.formularios_gores.models import(
     FormularioGORE, FlujogramaEjercicioCompetencia
@@ -33,9 +35,23 @@ def manejar_formularios_pasos(request, formulario_gore, serializer_class):
 
 def es_usuario_autorizado_para_region(request, formulario_gore):
     """
-        Verifica si el usuario pertenece a la misma region que el formulario.
-        """
-    return request.user.region == formulario_gore.sector
+    Verifica si el usuario pertenece a la misma región que el formulario y
+    si es un usuario del sector relacionado con usuarios_gore de la competencia.
+    """
+    # Asegurarse de que el usuario está en la misma región que el formulario
+    misma_region = request.user.region == formulario_gore.region
+
+    # Comprobar si el usuario pertenece al grupo de usuarios sectoriales
+    es_usuario_gore = request.user.groups.filter(name='GORE').exists()
+
+    # Obtener la competencia asociada al formulario
+    competencia = formulario_gore.competencia
+
+    # Comprobar si el usuario es uno de los usuarios_gore relacionados con la competencia
+    es_usuario_gore_de_competencia = competencia.usuarios_gore.filter(id=request.user.id).exists()
+
+    # La condición final para ser un usuario autorizado es cumplir con todas las verificaciones anteriores
+    return misma_region and es_usuario_gore and es_usuario_gore_de_competencia
 
 
 def manejar_permiso_patch(request, formulario_gore, serializer_class):
