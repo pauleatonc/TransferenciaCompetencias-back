@@ -23,10 +23,21 @@ class Paso5(PasoBase):
         return 5
 
     def es_instancia_costos_completa(self, instancia):
+        # Mantén la lista de campos requeridos, excepto 'es_transversal'
         campos_requeridos = [
-            'item_subtitulo', 'total_anual', 'es_transversal', 'descripcion'
+            'item_subtitulo', 'total_anual', 'descripcion'
         ]
-        return all(getattr(instancia, campo, None) for campo in campos_requeridos)
+
+        # Verifica primero que los campos distintos a 'es_transversal' no sean None
+        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
+
+        # Luego verifica específicamente 'es_transversal' para asegurar que no sea None
+        es_transversal_completo = getattr(instancia, 'es_transversal', None) is not None
+
+        # Un ítem está completo si todos los campos están completos y 'es_transversal' no es None
+        completa = campos_completos and es_transversal_completo
+
+        return completa
 
     def es_evolucion_gasto_completa(self, instancia):
         return all([
