@@ -3,7 +3,7 @@ from .models import FormularioGORE
 
 @admin.register(FormularioGORE)
 class FormularioSectorialAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'get_competencia_nombre', 'formulario_enviado')
+    list_display = ('id', 'nombre', 'get_competencia_nombre', 'formulario_enviado')
     list_filter = ('formulario_enviado', 'competencia')
     search_fields = ('nombre', 'competencia__nombre')
     ordering = ('nombre',)

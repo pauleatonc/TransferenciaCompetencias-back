@@ -7,8 +7,6 @@ from django.db import models
 from applications.base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
 from django.core.exceptions import ValidationError
-from applications.regioncomuna.models import Region
-from applications.competencias.models import Ambito
 
 
 class Paso1(PasoBase):
