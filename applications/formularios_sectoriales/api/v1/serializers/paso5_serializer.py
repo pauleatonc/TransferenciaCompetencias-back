@@ -631,7 +631,23 @@ class Paso5Serializer(WritableNestedModelSerializer):
     
         # Actualizar o crear CostosIndirectos
         if costos_indirectos_data is not None:
-            self.update_or_create_nested_instances(CostosIndirectos, costos_indirectos_data, instance)
+            for costo_data in costos_indirectos_data:
+                costo_id = costo_data.pop('id', None)
+                delete_flag = costo_data.pop('DELETE', False)
+                etapa_ids = costo_data.pop('etapa', None)
+
+                if delete_flag and costo_id:
+                    CostosIndirectos.objects.filter(id=costo_id).delete()
+                    continue
+
+                costo_instance, _ = CostosIndirectos.objects.update_or_create(
+                    id=costo_id,
+                    defaults={key: value for key, value in costo_data.items() if key != 'etapa'},
+                    formulario_sectorial=instance)
+
+                if etapa_ids is not None:
+                    costo_instance.etapa.set(etapa_ids)  # Asume que etapa_ids es una lista de IDs
+
     
         # Actualizar o crear ResumenCostosPorSubtitulo
         if resumen_costos_data is not None:
