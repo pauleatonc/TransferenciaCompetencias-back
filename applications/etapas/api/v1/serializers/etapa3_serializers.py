@@ -41,6 +41,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'observacion_minuta_sectorial',
             'oficio_origen',
             'tipo_usuario',
+            'omitida',
 
             # Campos DIPRES etapa 3
             'comentario_minuta_etapa3',

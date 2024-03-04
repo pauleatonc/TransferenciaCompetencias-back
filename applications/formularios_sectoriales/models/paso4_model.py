@@ -21,7 +21,7 @@ class Paso4(PasoBase):
     def numero_paso(self):
         return 4
 
-    def avance(self):
+    def avance_numerico(self):
         # Campos obligatorios en IndicadorDesempeno
         campos_obligatorios_indicador = [
             'indicador', 'formula_calculo', 'descripcion_indicador',
@@ -37,17 +37,17 @@ class Paso4(PasoBase):
             for indicador in indicadores
         )
 
-        # Devuelve '1/1' si todos los indicadores están completos, de lo contrario '0/1'
-        return "1/1" if todos_indicadores_completos else "0/1"
+        # Devuelve valores numéricos
+        completados = 1 if todos_indicadores_completos else 0
+        total_campos = 1
+
+        return completados, total_campos
+
+    def avance(self):
+        completados, total_campos = self.avance_numerico()
+        return f"{completados}/{total_campos}"
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
-
-    def save(self, *args, **kwargs):
-        if self.campos_obligatorios_completados:
-            self.completado = True
-        else:
-            self.completado = False
-        super(Paso4, self).save(*args, **kwargs)
 
 
 class IndicadorDesempeno(BaseModel):
