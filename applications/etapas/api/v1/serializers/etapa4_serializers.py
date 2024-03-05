@@ -127,7 +127,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
             if formulario_gore:
                 # Verifica si el usuario es GORE y si el formulario está completo o está en revisión o está pendiente.
-                usuario_region_correcto = es_usuario_gore and region == obj.region
+                usuario_region_correcto = es_usuario_gore and region == user.region
                 estado_revision = usuario_region_correcto and obj.oficio_origen
 
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'

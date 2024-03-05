@@ -569,13 +569,12 @@ class Paso5Serializer(WritableNestedModelSerializer):
                 internal_value[field_name] = internal_nested_data
 
         return internal_value
-    
-    
+
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.pop('id', None)
             delete_flag = data.pop('DELETE', False)
-    
+
             if item_id is not None:
                 if delete_flag:
                     model.objects.filter(id=item_id).delete()
@@ -585,10 +584,15 @@ class Paso5Serializer(WritableNestedModelSerializer):
                         formulario_sectorial=instance,
                         defaults=data
                     )
+                    # Llamar explícitamente a save() si es una instancia de PersonalIndirecto
+                    if model == PersonalIndirecto:
+                        obj.save()
             elif not delete_flag:
                 obj = model.objects.create(formulario_sectorial=instance, **data)
-    
-    
+                # Llamar explícitamente a save() si es una instancia de PersonalIndirecto
+                if model == PersonalIndirecto:
+                    obj.save()
+
     def update(self, instance, validated_data):
         paso5 = validated_data.pop('paso5', None)
         costos_directos_data = validated_data.pop('p_5_1_a_costos_directos', None)
@@ -683,14 +687,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
     
         # Actualizar o crear PersonalIndirecto
         if personal_indirecto_data is not None:
-            for personal_data in personal_indirecto_data:
-                personal_id = personal_data.get('id', None)
-                if personal_id:  # Si tiene ID, es una actualización
-                    personal_instance = PersonalIndirecto.objects.get(id=personal_id)
-                    for attr, value in personal_data.items():
-                        setattr(personal_instance, attr, value)
-                    personal_instance.save()  # Aquí se invoca explícitamente el método save del modelo
-                else:  # Si no tiene ID, es una creación
-                    PersonalIndirecto.objects.create(**personal_data, formulario_sectorial=instance)
+            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
+
 
         return instance
