@@ -128,7 +128,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='lista-home')
     def lista_home(self, request):
         user = request.user
-        queryset = Competencia.objects.all().order_by('-created_date')
+        queryset = Competencia.objects.all().order_by('-modified_date')
 
         # Filtrar según el tipo de usuario
         if user.groups.filter(name='SUBDERE').exists():
