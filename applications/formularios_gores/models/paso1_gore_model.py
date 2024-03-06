@@ -40,7 +40,7 @@ class Paso1(PasoBase):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
-    formulario_gore = models.OneToOneField(FormularioGORE, on_delete=models.CASCADE, related_name='paso1')
+    formulario_gore = models.OneToOneField(FormularioGORE, on_delete=models.CASCADE, related_name='paso1_gore')
 
     """1.1 Descripción del ejercicio de la competencia en el Gobierno Regional"""
     descripcion_ejercicio_competencia = models.TextField(max_length=8800, blank=True)

@@ -4,34 +4,62 @@ from rest_framework import serializers
 
 from applications.formularios_gores.models import (
     FormularioGORE,
-    FlujogramaEjercicioCompetencia,
-    Paso1
+    Paso2,
+    CostosDirectosGore as CostosDirectosGORE,
+    CostosIndirectosGore as CostosIndirectosGORE,
 )
 
 User = get_user_model()
 
-class FlujogramaEjercicioCompetenciaSerializer(serializers.ModelSerializer):
-    documento = serializers.FileField(required=False, allow_null=True)
+
+class CostosDirectosGORESerializer(serializers.ModelSerializer):
+    subtitulo_label_value = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
 
     class Meta:
-        model = FlujogramaEjercicioCompetencia
+        model = CostosDirectosGORE
         fields = [
             'id',
-            'documento',
+            'sector',
+            'subtitulo_label_value',
+            'item_subtitulo',
+            'item_subtitulo_label_value',
+            'total_anual_sector',
+            'total_anual_gore',
+            'diferencia_monto',
+            'es_transitorio',
+            'descripcion',
         ]
 
+    def get_subtitulo_label_value(self, obj):
+        # obj es una instancia de CostosDirectos
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {
+                'label': obj.item_subtitulo.subtitulo.subtitulo,
+                'value': str(obj.item_subtitulo.subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
 
-class Paso1EncabezadoSerializer(serializers.ModelSerializer):
+    def get_item_subtitulo_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.item_subtitulo:
+            return {
+                'label': obj.item_subtitulo.item,
+                'value': str(obj.item_subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+
+class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
     denominacion_region = serializers.SerializerMethodField()
-    organigrama_gore = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
-        model = Paso1
+        model = Paso2
         fields = [
             'id',
             'nombre_paso',
@@ -50,23 +78,31 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
 
     def get_denominacion_region(self, obj):
         # Asegúrate de que obj es una instancia de Paso1
-        if isinstance(obj, Paso1) and obj.formulario_gore:
+        if isinstance(obj, Paso2) and obj.formulario_gore:
             return obj.formulario_gore.region.region
         return None
 
 
-class Paso1Serializer(WritableNestedModelSerializer):
-    paso1_gore = Paso1EncabezadoSerializer()
+def eliminar_instancia_costo(modelo, instancia_id):
+    try:
+        instancia = modelo.objects.get(id=instancia_id)
+        instancia.delete()  # Esto disparará la señal post_delete
+    except modelo.DoesNotExist:
+        pass
+
+
+class Paso2Serializer(WritableNestedModelSerializer):
+    paso2_gore = Paso2EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
-    flujograma_ejercicio_competencia = FlujogramaEjercicioCompetenciaSerializer(many=True)
+    p_2_1_a_costos_directos = CostosDirectosGORESerializer(many=True, read_only=False)
 
     class Meta:
         model = FormularioGORE
         fields = [
             'id',
-            'paso1_gore',
+            'paso2_gore',
             'solo_lectura',
-            'flujograma_ejercicio_competencia',
+            'p_2_1_a_costos_directos',
         ]
 
     def get_solo_lectura(self, obj):
@@ -78,14 +114,14 @@ class Paso1Serializer(WritableNestedModelSerializer):
             # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario GORE' pueden editar
             return user.perfil != 'GORE'
 
-    def update_paso1_instance(self, instance, paso1_data):
-        paso1_instance = getattr(instance, 'paso1', None)
-        if paso1_instance:
-            for attr, value in paso1_data.items():
-                setattr(paso1_instance, attr, value)
-            paso1_instance.save()
+    def update_paso2_instance(self, instance, paso2_data):
+        paso2_instance = getattr(instance, 'paso2', None)
+        if paso2_instance:
+            for attr, value in paso2_data.items():
+                setattr(paso2_instance, attr, value)
+            paso2_instance.save()
         else:
-            Paso1.objects.create(formulario_gore=instance, **paso1_data)
+            Paso2.objects.create(formulario_gore=instance, **paso2_data)
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
@@ -93,7 +129,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
 
         # Procesar campos anidados
         for field_name in [
-            'flujograma_ejercicio_competencia',
+            'p_2_1_a_costos_directos',
         ]:
             if field_name in data:
                 nested_data = data[field_name]
@@ -101,7 +137,10 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 for item in nested_data:
                     # Manejar la clave 'DELETE' si está presente
                     if 'DELETE' in item and item['DELETE'] == True:
-                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                        if field_name == 'p_2_1_a_costos_directos':
+                            eliminar_instancia_costo(CostosDirectosGORE, item['id'])
+                        else:
+                            internal_nested_data.append({'id': item['id'], 'DELETE': True})
                     else:
                         item_data = self.fields[field_name].child.to_internal_value(item)
                         item_data['id'] = item.get('id')
@@ -130,8 +169,8 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 model.objects.filter(id=item_id).delete()
 
     def update(self, instance, validated_data):
-        paso1 = validated_data.pop('paso1', None)
-        flujograma_competencia_data = validated_data.pop('flujogramaejerciciocompetencia', None)
+        paso2 = validated_data.pop('paso2', None)
+        costos_directos_data = validated_data.pop('p_2_1_a_costos_directos', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -139,11 +178,11 @@ class Paso1Serializer(WritableNestedModelSerializer):
         instance.save()
 
         # Actualizar o crear Paso1
-        if paso1 is not None:
-            self.update_paso1_instance(instance, paso1)
+        if paso2 is not None:
+            self.update_paso2_instance(instance, paso2)
 
-        # Actualizar o crear FlujogramaCompetencia
-        if flujograma_competencia_data is not None:
-            self.update_or_create_nested_instances(FlujogramaEjercicioCompetencia, flujograma_competencia_data, instance)
+        # Actualizar o crear CostosDirectos
+        if costos_directos_data is not None:
+            self.update_or_create_nested_instances(CostosDirectosGORE, costos_directos_data, instance)
 
         return instance
