@@ -5,8 +5,11 @@ from rest_framework import serializers
 from applications.formularios_gores.models import (
     FormularioGORE,
     Paso2,
-    CostosDirectosGore as CostosDirectosGORE,
-    CostosIndirectosGore as CostosIndirectosGORE,
+    CostosDirectosGore,
+    CostosIndirectosGore,
+    ResumenCostosGore,
+    FluctuacionPresupuestaria,
+    CostoAnioGore
 )
 
 User = get_user_model()
@@ -18,7 +21,7 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
     item_subtitulo_label_value = serializers.SerializerMethodField()
 
     class Meta:
-        model = CostosDirectosGORE
+        model = CostosDirectosGore
         fields = [
             'id',
             'sector',
@@ -58,6 +61,102 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
         return ''
 
 
+class CostosIndirectosGORESerializer(serializers.ModelSerializer):
+    subtitulo_label_value = serializers.SerializerMethodField()
+    sector_nombre = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CostosIndirectosGore
+        fields = [
+            'id',
+            'sector',
+            'sector_nombre',
+            'subtitulo_label_value',
+            'item_subtitulo',
+            'item_subtitulo_label_value',
+            'total_anual_sector',
+            'total_anual_gore',
+            'diferencia_monto',
+            'es_transitorio',
+            'descripcion',
+        ]
+
+    def get_subtitulo_label_value(self, obj):
+        # obj es una instancia de CostosDirectos
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {
+                'label': obj.item_subtitulo.subtitulo.subtitulo,
+                'value': str(obj.item_subtitulo.subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_item_subtitulo_label_value(self, obj):
+        # Método para el campo personalizado de item_subtitulo
+        if obj.item_subtitulo:
+            return {
+                'label': obj.item_subtitulo.item,
+                'value': str(obj.item_subtitulo.id)
+            }
+        return {'label': '', 'value': ''}
+
+    def get_sector_nombre(self, obj):
+        # Método para el campo personalizado de sector
+        if obj.sector:
+            return obj.sector.nombre
+        return ''
+
+
+class ResumenCostosGORESerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResumenCostosGore
+        fields = '__all__'
+        extra_kwargs = {'field_name': {'read_only': True} for field_name in ResumenCostosGore._meta.fields}
+
+
+class CostoAnioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CostoAnioGore
+        fields = [
+            'id',
+            'anio',
+            'costo',
+        ]
+
+
+class FluctuacionPresupuestariaSerializer(serializers.ModelSerializer):
+    nombre_subtitulo = serializers.SerializerMethodField()
+    costo_anio_gore = CostoAnioSerializer(many=True)
+    class Meta:
+        model = FluctuacionPresupuestaria
+        fields = [
+            'id',
+            'subtitulo',
+            'nombre_subtitulo',
+            'costo_anio_gore',
+            'descripcion',
+        ]
+
+    def get_nombre_subtitulo(self, obj):
+        return obj.subtitulo.nombre_item if obj.subtitulo else None
+
+    def to_internal_value(self, data):
+        # Maneja primero los campos no anidados
+        internal_value = super().to_internal_value(data)
+
+        if 'costo_anio' in data:
+            costo_anio = data.get('costo_anio')
+            internal_costo_anio = []
+            for item in costo_anio:
+                costo_anio_id = item.get('id')  # Extraer el ID
+                costo_anio_data = self.fields['costo_anio'].child.to_internal_value(item)
+                costo_anio_data['id'] = costo_anio_id  # Asegurarse de que el ID se incluya
+                internal_costo_anio.append(costo_anio_data)
+            internal_value['costo_anio'] = internal_costo_anio
+
+        return internal_value
+
+
 class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
@@ -65,6 +164,8 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
     denominacion_region = serializers.SerializerMethodField()
+
+    años = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Paso2
@@ -75,7 +176,8 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
-            'denominacion_region'
+            'denominacion_region',
+            'años',
         ]
 
     def avance(self, obj):
@@ -86,6 +188,14 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
         if isinstance(obj, Paso2) and obj.formulario_gore:
             return obj.formulario_gore.region.region
         return None
+
+    def get_años(self, obj):
+        competencia = obj.formulario_gore.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            años = list(range(año_actual + 5, año_actual))
+            return años
+        return []
 
 
 def eliminar_instancia_costo(modelo, instancia_id):
@@ -100,6 +210,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
     paso2_gore = Paso2EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
     p_2_1_a_costos_directos = CostosDirectosGORESerializer(many=True, read_only=False)
+    p_2_1_b_costos_indirectos = CostosIndirectosGORESerializer(many=True, read_only=False)
+    resumen_costos = ResumenCostosGORESerializer(many=True)
+    p_2_1_c_fluctuaciones_presupuestarias = FluctuacionPresupuestariaSerializer(many=True, read_only=False)
 
     class Meta:
         model = FormularioGORE
@@ -108,6 +221,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
             'paso2_gore',
             'solo_lectura',
             'p_2_1_a_costos_directos',
+            'p_2_1_b_costos_indirectos',
+            'resumen_costos',
+            'p_2_1_c_fluctuaciones_presupuestarias',
         ]
 
     def get_solo_lectura(self, obj):
@@ -135,6 +251,8 @@ class Paso2Serializer(WritableNestedModelSerializer):
         # Procesar campos anidados
         for field_name in [
             'p_2_1_a_costos_directos',
+            'p_2_1_b_costos_indirectos',
+            'p_2_1_c_fluctuaciones_presupuestarias',
         ]:
             if field_name in data:
                 nested_data = data[field_name]
@@ -143,7 +261,11 @@ class Paso2Serializer(WritableNestedModelSerializer):
                     # Manejar la clave 'DELETE' si está presente
                     if 'DELETE' in item and item['DELETE'] == True:
                         if field_name == 'p_2_1_a_costos_directos':
-                            eliminar_instancia_costo(CostosDirectosGORE, item['id'])
+                            eliminar_instancia_costo(CostosDirectosGore, item['id'])
+                        elif field_name == 'p_2_1_b_costos_indirectos':
+                            eliminar_instancia_costo(CostosIndirectosGore, item['id'])
+                        elif field_name == 'p_2_1_c_fluctuaciones_presupuestarias':
+                            eliminar_instancia_costo(FluctuacionPresupuestaria, item['id'])
                         else:
                             internal_nested_data.append({'id': item['id'], 'DELETE': True})
                     else:
@@ -176,6 +298,8 @@ class Paso2Serializer(WritableNestedModelSerializer):
     def update(self, instance, validated_data):
         paso2 = validated_data.pop('paso2', None)
         costos_directos_data = validated_data.pop('p_2_1_a_costos_directos', None)
+        costos_indirectos_data = validated_data.pop('p_2_1_b_costos_indirectos', None)
+        fluctuaciones_presupuestarias_data = validated_data.pop('p_2_1_c_fluctuaciones_presupuestarias', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -188,6 +312,30 @@ class Paso2Serializer(WritableNestedModelSerializer):
 
         # Actualizar o crear CostosDirectos
         if costos_directos_data is not None:
-            self.update_or_create_nested_instances(CostosDirectosGORE, costos_directos_data, instance)
+            self.update_or_create_nested_instances(CostosDirectosGore, costos_directos_data, instance)
+
+        # Actualizar o crear CostosIndirectos
+        if costos_indirectos_data is not None:
+            self.update_or_create_nested_instances(CostosIndirectosGore, costos_indirectos_data, instance)
+
+        # Actualizar o crear FluctuacionPresupuestaria
+        if fluctuaciones_presupuestarias_data is not None:
+            for fluctuacion_data in fluctuaciones_presupuestarias_data:
+                fluctuacion_id = fluctuacion_data.pop('id', None)
+                costo_anio_data = fluctuacion_data.pop('costo_anio_gore', [])
+
+                fluctuacion_instance, _ = FluctuacionPresupuestaria.objects.update_or_create(
+                    id=fluctuacion_id,
+                    defaults=fluctuacion_data,
+                    formulario_sectorial=instance
+                )
+
+                for costo_data in costo_anio_data:
+                    costo_id = costo_data.pop('id', None)
+                    costo_data['evolucion_gasto'] = fluctuacion_instance
+                    CostoAnioGore.objects.update_or_create(
+                        id=costo_id,
+                        defaults=costo_data
+                    )
 
         return instance

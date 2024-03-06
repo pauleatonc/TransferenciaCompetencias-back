@@ -39,10 +39,10 @@ class Paso2(PasoBase):
     def es_fluctuacion_completa(self, instancia):
         return all([
             instancia.subtitulo_id,
-            CostoAnioGore.objects.filter(fluctuacion_presupuestaria=instancia).exists()
+            CostoAnioGore.objects.filter(evolucion_gasto=instancia).exists()
         ]) and all(
             getattr(anio, 'costo', None) is not None
-            for anio in CostoAnioGore.objects.filter(fluctuacion_presupuestaria=instancia)
+            for anio in CostoAnioGore.objects.filter(evolucion_gasto=instancia)
         )
 
     def avance_numerico(self):

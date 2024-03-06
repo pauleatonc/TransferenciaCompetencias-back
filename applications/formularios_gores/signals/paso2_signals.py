@@ -5,7 +5,9 @@ from applications.formularios_gores.models import (
     FormularioGORE,
     Paso2,
     CostosDirectosGore,
-    CostosIndirectosGore
+    CostosIndirectosGore,
+    FluctuacionPresupuestaria,
+    CostoAnioGore
 )
 
 from applications.formularios_sectoriales.models import (
@@ -83,4 +85,49 @@ def eliminar_costos_gore_correspondiente(sender, instance, **kwargs):
         eliminar_instancias_gore_correspondientes(CostosIndirectosGore, instance)
 
 
+def actualizar_fluctuaciones_presupuestarias(formulario_gore_id):
+    subtitulos_directos_ids = CostosDirectosGore.objects.filter(
+        formulario_gore_id=formulario_gore_id
+    ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
 
+    subtitulos_indirectos_ids = CostosIndirectosGore.objects.filter(
+        formulario_gore_id=formulario_gore_id
+    ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
+
+    subtitulos_unicos_ids = set(list(subtitulos_directos_ids) + list(subtitulos_indirectos_ids))
+
+    for subtitulo_id in subtitulos_unicos_ids:
+        # Asegura la existencia de EvolucionGastoAsociado
+        FluctuacionPresupuestaria.objects.get_or_create(
+            formulario_gore_id=formulario_gore_id,
+            subtitulo_id=subtitulo_id,
+        )
+
+    # Eliminar instancias obsoletas de EvolucionGastoAsociado y VariacionPromedio
+    FluctuacionPresupuestaria.objects.filter(formulario_gore_id=formulario_gore_id).exclude(
+        subtitulo_id__in=subtitulos_unicos_ids).delete()
+
+
+@receiver(post_save, sender=CostosDirectosGore)
+@receiver(post_save, sender=CostosIndirectosGore)
+@receiver(post_delete, sender=CostosDirectosGore)
+@receiver(post_delete, sender=CostosIndirectosGore)
+def actualizar_resumen_costos(sender, instance, **kwargs):
+    #regenerar_resumen_costos(instance.formulario_gore_id)
+    actualizar_fluctuaciones_presupuestarias(instance.formulario_gore_id)
+    
+    
+@receiver(post_save, sender=FluctuacionPresupuestaria)
+def handle_fluctuacion_presupuestaria_save(sender, instance, created, **kwargs):
+    # Crear CostoAnioGore para FluctuacionPresupuestaria
+    if created:
+        competencia = instance.formulario_gore.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            # Ajuste para crear instancias para los 5 años siguientes al año_actual
+            año_final = año_actual + 5  # Esto incluirá desde el año siguiente al actual hasta 5 años después
+            for año in range(año_actual + 1, año_final + 1):  # +1 para empezar en el siguiente año y +1 para incluir el año final en el rango
+                CostoAnioGore.objects.get_or_create(
+                    evolucion_gasto=instance,
+                    anio=año
+                )
