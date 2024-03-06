@@ -56,7 +56,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso1Serializer(WritableNestedModelSerializer):
-    paso1 = Paso1EncabezadoSerializer()
+    paso1_gore = Paso1EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
     flujograma_ejercicio_competencia = FlujogramaEjercicioCompetenciaSerializer(many=True)
 
@@ -64,7 +64,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
         model = FormularioGORE
         fields = [
             'id',
-            'paso1',
+            'paso1_gore',
             'solo_lectura',
             'flujograma_ejercicio_competencia',
         ]

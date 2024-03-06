@@ -1,13 +1,33 @@
 from django.contrib import admin
 from .models import *
 
+
 class Paso1Inline(admin.TabularInline):
     model = Paso1
     extra = 0
 
+
+class Paso2Inline(admin.TabularInline):
+    model = Paso2
+    can_delete = False
+    max_num = 1
+    extra = 1
+
+
+class CostoAnioInline(admin.TabularInline):
+    model = CostoAnioGore
+    extra = 0
+
+
 class FlujogramaEjercicioInline(admin.TabularInline):
     model = FlujogramaEjercicioCompetencia
     extra = 0
+    inlines = [CostoAnioInline]
+
+class FluctuacionesPresupuestariasInline(admin.TabularInline):
+    model = FluctuacionPresupuestaria
+    extra = 0
+
 
 @admin.register(FormularioGORE)
 class FormularioSectorialAdmin(admin.ModelAdmin):
@@ -18,6 +38,8 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     raw_id_fields = ('competencia',)
     inlines = [
         Paso1Inline,
+        Paso2Inline,
+        FluctuacionesPresupuestariasInline,
         FlujogramaEjercicioInline,
     ]
 

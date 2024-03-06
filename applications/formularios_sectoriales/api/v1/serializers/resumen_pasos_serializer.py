@@ -67,6 +67,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso3 = Paso3ResumenSerializer(read_only=True)
     paso4 = Paso4ResumenSerializer(read_only=True)
     paso5 = Paso5ResumenSerializer(read_only=True)
+    formulario_completo = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
@@ -81,7 +82,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso2',
             'paso3',
             'paso4',
-            'paso5'
+            'paso5',
+            'formulario_completo',
         ]
 
     def get_competencia_nombre(self, obj):
@@ -89,3 +91,15 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
 
     def get_sector_nombre(self, obj):
         return obj.sector.nombre if obj.sector else None
+
+    def get_formulario_completo(self, obj):
+        # Revisa si todos los pasos están completados
+        pasos_completados = [
+            obj.paso1.completado if hasattr(obj, 'paso1') else False,
+            obj.paso2.completado if hasattr(obj, 'paso2') else False,
+            obj.paso3.completado if hasattr(obj, 'paso3') else False,
+            obj.paso4.completado if hasattr(obj, 'paso4') else False,
+            obj.paso5.completado if hasattr(obj, 'paso5') else False,
+        ]
+        # Retorna True si todos los pasos están completados, False en caso contrario
+        return all(pasos_completados)
