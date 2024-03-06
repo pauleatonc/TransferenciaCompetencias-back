@@ -30,15 +30,19 @@ def actualizar_etapa4_al_modificar_usuarios_gore(sender, instance, action, pk_se
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
 @transaction.atomic
-def agregar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
+def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add' and instance.pk:
-        # Asegúrate de que la instancia de Competencia está completamente guardada
         competencia = Competencia.objects.get(pk=instance.pk)
         for region_pk in pk_set:
             region = Region.objects.get(pk=region_pk)
-            # Aquí se crea el formulario asociado al GORE
             FormularioGORE.objects.get_or_create(
                 competencia=competencia,
                 region=region,
                 defaults={'nombre': f'Formulario GORE de {region.region} - {competencia.nombre}'}
             )
+    elif action == 'post_remove':
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for region_pk in pk_set:
+            # Eliminar formularios GORE asociados a la competencia y a la región eliminada
+            FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk).delete()
+

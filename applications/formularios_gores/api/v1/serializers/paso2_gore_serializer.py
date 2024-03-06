@@ -14,6 +14,7 @@ User = get_user_model()
 
 class CostosDirectosGORESerializer(serializers.ModelSerializer):
     subtitulo_label_value = serializers.SerializerMethodField()
+    sector_nombre = serializers.SerializerMethodField()
     item_subtitulo_label_value = serializers.SerializerMethodField()
 
     class Meta:
@@ -21,6 +22,7 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'sector',
+            'sector_nombre',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -49,6 +51,12 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
             }
         return {'label': '', 'value': ''}
 
+    def get_sector_nombre(self, obj):
+        # Método para el campo personalizado de sector
+        if obj.sector:
+            return obj.sector.nombre
+        return ''
+
 
 class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
@@ -67,10 +75,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
-            'denominacion_region',
-            'descripcion_ejercicio_competencia',
-            'organigrama_gore',
-            'descripcion_organigrama_gore',
+            'denominacion_region'
         ]
 
     def avance(self, obj):
