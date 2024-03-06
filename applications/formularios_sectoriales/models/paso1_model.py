@@ -9,6 +9,7 @@ from applications.base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
 from applications.regioncomuna.models import Region
 from applications.competencias.models import Ambito
+from django.core.exceptions import ValidationError
 
 
 class Paso1(PasoBase):
@@ -84,6 +85,17 @@ class MarcoJuridico(BaseModel):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_twenty],
                                  verbose_name='Marco jurídico que lo rige', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Contar cuántos documentos ya existen para este Formulario Sectorial
+        existing_files_count = MarcoJuridico.objects.filter(
+            formulario_sectorial=self.formulario_sectorial).count()
+
+        if existing_files_count >= 5:
+            # No permitir guardar si ya hay 5 o más archivos
+            raise ValidationError('No se pueden añadir más de 5 marcos jurídicos para este formulario.')
+
+        super().save(*args, **kwargs)
 
 
 class OrganigramaRegional(BaseModel):
