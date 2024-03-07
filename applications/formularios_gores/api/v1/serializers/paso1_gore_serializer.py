@@ -10,6 +10,7 @@ from applications.formularios_gores.models import (
 
 User = get_user_model()
 
+
 class FlujogramaEjercicioCompetenciaSerializer(serializers.ModelSerializer):
     documento = serializers.FileField(required=False, allow_null=True)
 
@@ -131,7 +132,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
 
     def update(self, instance, validated_data):
         paso1 = validated_data.pop('paso1', None)
-        flujograma_competencia_data = validated_data.pop('flujogramaejerciciocompetencia', None)
+        flujograma_competencia_data = validated_data.pop('flujograma_ejercicio_competencia', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
