@@ -15,6 +15,55 @@ from applications.formularios_gores.models import (
 User = get_user_model()
 
 
+class CostosDirectosGOREBaseSerializer(serializers.ModelSerializer):
+    subtitulo_label_value = serializers.SerializerMethodField()
+    sector_nombre = serializers.SerializerMethodField()
+    item_subtitulo_label_value = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CostosDirectosGore
+        fields = [
+            'id',
+            'sector',
+            'sector_nombre',
+            'subtitulo_label_value',
+            'item_subtitulo',
+            'item_subtitulo_label_value',
+            'total_anual_sector',
+            'total_anual_gore',
+            'diferencia_monto',
+            'es_transitorio',
+            'descripcion',
+        ]
+
+    def get_subtitulo_label_value(self, obj):
+        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+            return {'label': obj.item_subtitulo.subtitulo.subtitulo, 'value': str(obj.item_subtitulo.subtitulo.id)}
+        return {'label': '', 'value': ''}
+
+    def get_item_subtitulo_label_value(self, obj):
+        if obj.item_subtitulo:
+            return {'label': obj.item_subtitulo.item, 'value': str(obj.item_subtitulo.id)}
+        return {'label': '', 'value': ''}
+
+    def get_sector_nombre(self, obj):
+        if obj.sector:
+            return obj.sector.nombre
+        return ''
+
+
+class CostosDirectosSectorSerializer(CostosDirectosGOREBaseSerializer):
+    pass
+
+
+class PersonalDirectoSectorSerializer(CostosDirectosGOREBaseSerializer):
+    pass
+
+
+class CostosDirectosGoreSerializer(CostosDirectosGOREBaseSerializer):
+    pass
+
+
 class CostosDirectosGORESerializer(serializers.ModelSerializer):
     subtitulo_label_value = serializers.SerializerMethodField()
     sector_nombre = serializers.SerializerMethodField()
@@ -210,6 +259,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
     paso2_gore = Paso2EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
     p_2_1_a_costos_directos = CostosDirectosGORESerializer(many=True, read_only=False)
+    costos_directos_sector = serializers.SerializerMethodField()
+    personal_directo_sector = serializers.SerializerMethodField()
+    costos_directos_gore = serializers.SerializerMethodField()
     p_2_1_b_costos_indirectos = CostosIndirectosGORESerializer(many=True, read_only=False)
     resumen_costos = ResumenCostosGORESerializer(many=True)
     p_2_1_c_fluctuaciones_presupuestarias = FluctuacionPresupuestariaSerializer(many=True, read_only=False)
@@ -221,6 +273,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
             'paso2_gore',
             'solo_lectura',
             'p_2_1_a_costos_directos',
+            'costos_directos_sector',
+            'personal_directo_sector',
+            'costos_directos_gore',
             'p_2_1_b_costos_indirectos',
             'resumen_costos',
             'p_2_1_c_fluctuaciones_presupuestarias',
@@ -243,6 +298,20 @@ class Paso2Serializer(WritableNestedModelSerializer):
             paso2_instance.save()
         else:
             Paso2.objects.create(formulario_gore=instance, **paso2_data)
+
+    def get_costos_directos_sector(self, obj):
+        queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=False).exclude(
+            item_subtitulo__subtitulo__subtitulo='Sub. 21')
+        return CostosDirectosSectorSerializer(queryset, many=True).data
+
+    def get_personal_directo_sector(self, obj):
+        queryset = CostosDirectosGore.objects.filter(formulario_gore=obj,
+                                                     item_subtitulo__subtitulo__subtitulo='Sub. 21')
+        return PersonalDirectoSectorSerializer(queryset, many=True).data
+
+    def get_costos_directos_gore(self, obj):
+        queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
+        return CostosDirectosGoreSerializer(queryset, many=True).data
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
