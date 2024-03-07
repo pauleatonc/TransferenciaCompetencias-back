@@ -2,7 +2,6 @@ from django.db import models
 
 from applications.base.models import BaseModel
 from applications.formularios_sectoriales.models import (
-    Subtitulos,
     ItemSubtitulo,
     Estamento,
     CalidadJuridica
@@ -21,14 +20,14 @@ class Paso3(PasoBase):
         return 3
 
     def es_personal_directo_completo(self):
-        return PersonalDirecto.objects.filter(
+        return PersonalDirectoGORE.objects.filter(
             formulario_gore=self.formulario_gore,
             estamento__isnull=False,
             renta_bruta__isnull=False
         ).exists()
 
     def es_personal_indirecto_completo(self):
-        return PersonalIndirecto.objects.filter(
+        return PersonalIndirectoGORE.objects.filter(
             formulario_gore=self.formulario_gore,
             estamento__isnull=False,
             numero_personas__isnull=False,
@@ -119,7 +118,7 @@ class Paso3(PasoBase):
     costos_justificar_gore = models.IntegerField(null=True, blank=True)
 
 
-class PersonalDirecto(BaseModel):
+class PersonalDirectoGORE(BaseModel):
     formulario_gore = models.ForeignKey(FormularioGORE, on_delete=models.CASCADE,
                                              related_name='p_3_1_a_personal_directo')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='personal_directo_gore',
@@ -135,7 +134,7 @@ class PersonalDirecto(BaseModel):
         ordering = ['id']
 
 
-class PersonalIndirecto(BaseModel):
+class PersonalIndirectoGORE(BaseModel):
     formulario_gore = models.ForeignKey(FormularioGORE, on_delete=models.CASCADE,
                                              related_name='p_3_1_b_personal_indirecto')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='personal_indirecto_gore',
@@ -165,8 +164,6 @@ class RecursosComparados(BaseModel):
                                              related_name='p_3_2_recursos_comparados')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='recursos_comparados_gore',
                                blank=True, null=True)
-    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='recursos_comparados_gore',
-                                  blank=True, null=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='recursos_comparados_gore',
                                        blank=True, null=True)
     costo_sector = models.IntegerField(null=True, blank=True, default=None)
@@ -186,8 +183,6 @@ class SistemasInformaticos(BaseModel):
                                              related_name='p_3_2_a_sistemas_informaticos')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore',
                                blank=True, null=True)
-    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore',
-                                  blank=True, null=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore')
     nombre_plataforma = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
@@ -203,8 +198,6 @@ class RecursosFisicosInfraestructura(BaseModel):
                                              related_name='p_3_2_b_recursos_fisicos_infraestructura')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore',
                                blank=True, null=True)
-    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore',
-                                  blank=True, null=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore')
     costo_unitario = models.IntegerField(null=True, blank=True, default=None)
     cantidad = models.IntegerField(null=True, blank=True, default=None)

@@ -300,14 +300,50 @@ class Paso2Serializer(WritableNestedModelSerializer):
             Paso2.objects.create(formulario_gore=instance, **paso2_data)
 
     def get_costos_directos_sector(self, obj):
-        queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=False).exclude(
-            item_subtitulo__subtitulo__subtitulo='Sub. 21')
-        return CostosDirectosSectorSerializer(queryset, many=True).data
+        # Obtén todos los costos directos, excluyendo los de 'Sub. 21'
+        costos = CostosDirectosGore.objects.filter(
+            formulario_gore=obj, sector__isnull=False
+        ).exclude(item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related('sector')
+
+        # Agrupa los costos por sector
+        agrupados_por_sector = {}
+        for costo in costos:
+            sector = costo.sector.nombre
+            if sector not in agrupados_por_sector:
+                agrupados_por_sector[sector] = []
+            agrupados_por_sector[sector].append(costo)
+
+        # Serializa los datos agrupados
+        resultado = []
+        for sector, costos in agrupados_por_sector.items():
+            resultado.append({
+                'sector': sector,
+                'costos': CostosDirectosSectorSerializer(costos, many=True).data
+            })
+
+        return resultado
 
     def get_personal_directo_sector(self, obj):
-        queryset = CostosDirectosGore.objects.filter(formulario_gore=obj,
-                                                     item_subtitulo__subtitulo__subtitulo='Sub. 21')
-        return PersonalDirectoSectorSerializer(queryset, many=True).data
+        personal = CostosDirectosGore.objects.filter(formulario_gore=obj,
+                                                     item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related('sector')
+
+        agrupados_por_sector = {}
+        for personal in personal:
+            sector = personal.sector.nombre
+            if sector not in agrupados_por_sector:
+                agrupados_por_sector[sector] = []
+            agrupados_por_sector[sector].append(personal)
+
+        # Serializa los datos agrupados
+        resultado = []
+        for sector, personal in agrupados_por_sector.items():
+            resultado.append({
+                'sector': sector,
+                'personal': PersonalDirectoSectorSerializer(personal, many=True).data
+            })
+
+        return resultado
+
 
     def get_costos_directos_gore(self, obj):
         queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
