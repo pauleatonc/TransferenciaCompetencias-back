@@ -170,12 +170,18 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         formulario_sectorial = self.get_object()
         return manejar_permiso_patch(request, formulario_sectorial, Paso5Serializer)
 
-    @action(detail=True, methods=['get'], url_path='resumen')
+    @action(detail=True, methods=['get', 'patch'], url_path='resumen')
     def resumen(self, request, pk=None):
         """
-        API para obtener el resumen de todos los pasos del Formulario Sectorial
+        API para obtener o actualizar el resumen de todos los pasos del Formulario Sectorial
         """
         formulario_sectorial = self.get_object()
+
+        if request.method == 'PATCH':
+            # Aquí manejas el PATCH utilizando la lógica de permisos y actualización
+            return manejar_permiso_patch(request, formulario_sectorial, ResumenFormularioSerializer)
+
+        # Si el método es GET, simplemente serializas y retornas los datos como antes
         serializer = ResumenFormularioSerializer(formulario_sectorial)
         return Response(serializer.data)
 
