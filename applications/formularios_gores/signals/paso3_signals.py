@@ -28,15 +28,18 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 @receiver(post_save, sender=PersonalDirecto)
 @receiver(post_save, sender=PersonalIndirecto)
 def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
+    # Inicializa campos_adicionales vacío para asegurar que siempre esté definido
+    campos_adicionales = {}
+
     # Determina el modelo GORE basado en el tipo de modelo que disparó la señal
     if sender == PersonalDirecto:
         modelo_gore = PersonalDirectoGORE
-
     else:  # PersonalIndirecto
         modelo_gore = PersonalIndirectoGORE
         campos_adicionales = {
             'numero_personas': instance.numero_personas,
-            'total_rentas': instance.total_rentas
+            'total_rentas': instance.total_rentas,
+            # Añade aquí cualquier otro campo específico de PersonalIndirecto
         }
 
     formulario_sectorial = instance.formulario_sectorial
@@ -55,6 +58,8 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
         }
         obj, created_gore = modelo_gore.objects.get_or_create(
             formulario_gore=formulario_gore,
+            # Asegúrate de que 'id' aquí es el campo correcto para buscar la instancia.
+            # Si es necesario, usa un campo diferente que sea único y relevante.
             id=instance.id,
             sector=sector,
             defaults=defaults
