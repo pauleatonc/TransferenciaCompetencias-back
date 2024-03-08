@@ -113,7 +113,7 @@ class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
             'calidad_juridica',
             'nombre_calidad_juridica',
             'calidad_juridica_label_value',
-            'numero_personas'
+            'numero_personas',
             'renta_bruta',
             'total_rentas',
             'grado',
