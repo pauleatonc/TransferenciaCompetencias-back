@@ -230,7 +230,7 @@ calidades_y_campos_directos = {
 @receiver([post_save, post_delete], sender=CostosDirectos)
 @receiver([post_save, post_delete], sender=PersonalDirecto)
 # Realiza los cálculos de los campos directos y los costos por justificar
-def actualizar_campos_paso5(sender, instance, **kwargs):
+def actualizar_campos_paso5_directo(sender, instance, **kwargs):
     if isinstance(instance, Paso5):
         return
 
@@ -297,7 +297,7 @@ calidades_y_campos_indirectos = {
 @receiver([post_save, post_delete], sender=CostosIndirectos)
 @receiver([post_save, post_delete], sender=PersonalIndirecto)
 # Realiza los cálculos de los campos indirectos y los costos por justificar
-def actualizar_campos_paso5(sender, instance, **kwargs):
+def actualizar_campos_paso5_indirecto(sender, instance, **kwargs):
     if isinstance(instance, Paso5):
         return
 
