@@ -28,7 +28,16 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 @receiver(post_save, sender=PersonalDirecto)
 @receiver(post_save, sender=PersonalIndirecto)
 def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
-    modelo_gore = PersonalDirectoGORE if sender == PersonalDirecto else PersonalIndirectoGORE
+    # Determina el modelo GORE basado en el tipo de modelo que disparó la señal
+    if sender == PersonalDirecto:
+        modelo_gore = PersonalDirectoGORE
+
+    else:  # PersonalIndirecto
+        modelo_gore = PersonalIndirectoGORE
+        campos_adicionales = {
+            'numero_personas': instance.numero_personas,
+            'total_rentas': instance.total_rentas
+        }
 
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
@@ -36,25 +45,25 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
 
     formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
     for formulario_gore in formularios_gore:
+        defaults = {
+            'estamento': instance.estamento,
+            'calidad_juridica': instance.calidad_juridica,
+            'renta_bruta': instance.renta_bruta,
+            'grado': instance.grado,
+            'comision_servicio': True,
+            **campos_adicionales  # Incorpora campos adicionales según el tipo de personal
+        }
         obj, created_gore = modelo_gore.objects.get_or_create(
             formulario_gore=formulario_gore,
             id=instance.id,
             sector=sector,
-            defaults={
-                'estamento':  instance.estamento,
-                'calidad_juridica': instance.calidad_juridica,
-                'renta_bruta': instance.renta_bruta,
-                'grado': instance.grado,
-                'comision_servicio': True
-            }
+            defaults=defaults
         )
         if not created_gore:
-            # Actualiza los campos necesarios de `obj` con los valores de `instance`.
-            obj.estamento = instance.estamento
-            obj.calidad_juridica = instance.calidad_juridica
-            obj.renta_bruta = instance.renta_bruta
-            obj.grado = instance.grado
+            for attr, value in defaults.items():
+                setattr(obj, attr, value)
             obj.save()
+
 
 @receiver(post_delete, sender=PersonalDirecto)
 @receiver(post_delete, sender=PersonalIndirecto)

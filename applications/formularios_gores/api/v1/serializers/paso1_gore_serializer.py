@@ -80,7 +80,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
             return user.perfil != 'GORE'
 
     def update_paso1_instance(self, instance, paso1_data):
-        paso1_instance = getattr(instance, 'paso1', None)
+        paso1_instance = getattr(instance, 'paso1_gore', None)
         if paso1_instance:
             for attr, value in paso1_data.items():
                 setattr(paso1_instance, attr, value)
@@ -131,7 +131,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 model.objects.filter(id=item_id).delete()
 
     def update(self, instance, validated_data):
-        paso1 = validated_data.pop('paso1', None)
+        paso1 = validated_data.pop('paso1_gore', None)
         flujograma_competencia_data = validated_data.pop('flujograma_ejercicio_competencia', None)
 
         # Actualizar los atributos de FormularioSectorial
