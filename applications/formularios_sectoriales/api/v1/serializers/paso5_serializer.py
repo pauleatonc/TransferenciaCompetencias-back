@@ -1,6 +1,7 @@
 from drf_writable_nested import WritableNestedModelSerializer
 from rest_framework import serializers
 from applications.competencias.models import Competencia
+import logging
 from applications.formularios_sectoriales.models import (
     FormularioSectorial,
     Paso5,
@@ -27,6 +28,8 @@ from applications.sectores_gubernamentales.models import SectorGubernamental
 from .base_serializer import FormularioSectorialDetailSerializer
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 class SubtitulosSerializer(serializers.ModelSerializer):

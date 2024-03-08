@@ -10,6 +10,7 @@ from applications.formularios_gores.models import (
 
 User = get_user_model()
 
+
 class FlujogramaEjercicioCompetenciaSerializer(serializers.ModelSerializer):
     documento = serializers.FileField(required=False, allow_null=True)
 
@@ -56,7 +57,7 @@ class Paso1EncabezadoSerializer(serializers.ModelSerializer):
 
 
 class Paso1Serializer(WritableNestedModelSerializer):
-    paso1 = Paso1EncabezadoSerializer()
+    paso1_gore = Paso1EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
     flujograma_ejercicio_competencia = FlujogramaEjercicioCompetenciaSerializer(many=True)
 
@@ -64,7 +65,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
         model = FormularioGORE
         fields = [
             'id',
-            'paso1',
+            'paso1_gore',
             'solo_lectura',
             'flujograma_ejercicio_competencia',
         ]
@@ -79,7 +80,7 @@ class Paso1Serializer(WritableNestedModelSerializer):
             return user.perfil != 'GORE'
 
     def update_paso1_instance(self, instance, paso1_data):
-        paso1_instance = getattr(instance, 'paso1', None)
+        paso1_instance = getattr(instance, 'paso1_gore', None)
         if paso1_instance:
             for attr, value in paso1_data.items():
                 setattr(paso1_instance, attr, value)
@@ -130,8 +131,8 @@ class Paso1Serializer(WritableNestedModelSerializer):
                 model.objects.filter(id=item_id).delete()
 
     def update(self, instance, validated_data):
-        paso1 = validated_data.pop('paso1', None)
-        flujograma_competencia_data = validated_data.pop('flujogramaejerciciocompetencia', None)
+        paso1 = validated_data.pop('paso1_gore', None)
+        flujograma_competencia_data = validated_data.pop('flujograma_ejercicio_competencia', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():

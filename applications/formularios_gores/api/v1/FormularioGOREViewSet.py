@@ -13,7 +13,9 @@ from applications.formularios_gores.models import(
 from applications.users.permissions import IsSUBDEREOrSuperuser
 from .serializers import (
     FormularioGOREDetailSerializer,
-    Paso1Serializer
+    Paso1Serializer,
+    Paso2Serializer,
+    Paso3Serializer,
 )
 
 
@@ -110,7 +112,7 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
         """
         formulario_gore = self.get_object()
         return manejar_permiso_patch(request, formulario_gore, Paso1Serializer)
-    '''
+
     @action(detail=True, methods=['get', 'patch'], url_path='paso-2')
     def paso_2(self, request, pk=None):
         formulario_gore = self.get_object()
@@ -121,16 +123,7 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
         formulario_gore = self.get_object()
         return manejar_permiso_patch(request, formulario_gore, Paso3Serializer)
 
-    @action(detail=True, methods=['get', 'patch'], url_path='paso-4')
-    def paso_4(self, request, pk=None):
-        formulario_gore = self.get_object()
-        return manejar_permiso_patch(request, formulario_gore, Paso4Serializer)
-
-    @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
-    def paso_5(self, request, pk=None):
-        formulario_gore = self.get_object()
-        return manejar_permiso_patch(request, formulario_gore, Paso5Serializer)
-
+    '''
     @action(detail=True, methods=['get'], url_path='resumen')
     def resumen(self, request, pk=None):
         """
