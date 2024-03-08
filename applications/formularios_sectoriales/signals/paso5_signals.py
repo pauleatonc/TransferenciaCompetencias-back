@@ -290,7 +290,7 @@ items_y_campos_indirectos = {
 calidades_y_campos_indirectos = {
     "Planta": "sub21b_personal_planta_justificado",
     "Contrata": "sub21b_personal_contrata_justificado",
-    "Honorario a suma alzada": "sub21b_personal_otras_remuneraciones_justificado",
+    "Honorario a suma alzada": "sub21b_otras_remuneraciones_justificado",
 }
 
 
@@ -332,7 +332,7 @@ def actualizar_campos_paso5(sender, instance, **kwargs):
         ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
         ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado', 'sub21b_personal_contrata_justificar'),
         ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
-         'sub21b_personal_otras_remuneraciones_justificar'),
+         'sub21b_otras_remuneraciones_justificar'),
         ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
          'sub21b_gastos_en_personal_justificar'),
     ]
