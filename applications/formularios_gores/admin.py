@@ -19,10 +19,18 @@ class CostoAnioInline(admin.TabularInline):
     extra = 0
 
 
+class Paso3Inline(admin.TabularInline):
+    model = Paso3
+    extra = 0
+    can_delete = False
+    max_num = 1
+
+
 class FlujogramaEjercicioInline(admin.TabularInline):
     model = FlujogramaEjercicioCompetencia
     extra = 0
     inlines = [CostoAnioInline]
+
 
 class FluctuacionesPresupuestariasInline(admin.TabularInline):
     model = FluctuacionPresupuestaria
@@ -39,6 +47,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     inlines = [
         Paso1Inline,
         Paso2Inline,
+        Paso3Inline,
         FluctuacionesPresupuestariasInline,
         FlujogramaEjercicioInline,
     ]

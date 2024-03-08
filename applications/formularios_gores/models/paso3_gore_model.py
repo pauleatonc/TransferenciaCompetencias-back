@@ -127,7 +127,7 @@ class PersonalDirectoGORE(BaseModel):
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo_gore')
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
-    comision_servicio = models.BooleanField(blank=True, null=True, default=None)
+    comision_servicio = models.BooleanField(blank=True, null=True, default=False)
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:
@@ -145,7 +145,7 @@ class PersonalIndirectoGORE(BaseModel):
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_rentas = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
-    comision_servicio = models.BooleanField(blank=True, null=True, default=None)
+    comision_servicio = models.BooleanField(blank=True, null=True, default=False)
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:

@@ -8,11 +8,11 @@ from applications.formularios_gores.models import (
     CostosDirectosGore,
     CostosIndirectosGore,
     FluctuacionPresupuestaria,
-    CostoAnioGore, ResumenCostosGore
+    CostoAnioGore,
+    ResumenCostosGore
 )
 
 from applications.formularios_sectoriales.models import (
-    FormularioSectorial,
     CostosDirectos as CostosDirectosSectorial,
     CostosIndirectos as CostosIndirectosSectorial,
 )
@@ -21,7 +21,7 @@ from applications.formularios_sectoriales.models import (
 @receiver(post_save, sender=FormularioGORE)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
-        # Crear instancia de Paso1
+        # Crear instancia de Paso2
         Paso2.objects.create(formulario_gore=instance)
 
 

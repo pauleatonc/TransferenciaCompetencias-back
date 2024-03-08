@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from drf_writable_nested.serializers import WritableNestedModelSerializer
 from rest_framework import serializers
+import logging
 
 from applications.formularios_gores.models import (
     FormularioGORE,
@@ -30,8 +31,11 @@ from applications.formularios_sectoriales.api.v1.serializers import (
 
 User = get_user_model()
 
+logger = logging.getLogger(__name__)
+
 
 class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     sector_nombre = serializers.SerializerMethodField()
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
@@ -88,6 +92,7 @@ class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
         
 
 class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     sector_nombre = serializers.SerializerMethodField()
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
