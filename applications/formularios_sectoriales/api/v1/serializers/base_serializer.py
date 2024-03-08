@@ -32,6 +32,7 @@ class SectorSerializer(serializers.ModelSerializer):
 
 class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
     competencia_nombre = serializers.SerializerMethodField()
+    competencia_id = serializers.SerializerMethodField()
     sector_nombre = serializers.SerializerMethodField()
     plazo_dias = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.SerializerMethodField()
@@ -43,6 +44,7 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'competencia_nombre',
+            'competencia_id',
             'sector_nombre',
             'plazo_dias',
             'calcular_tiempo_transcurrido',
@@ -56,6 +58,11 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
     def get_competencia_nombre(self, obj):
         if obj.competencia:
             return obj.competencia.nombre
+        return None
+
+    def get_competencia_id(self, obj):
+        if obj.competencia:
+            return obj.competencia.id
         return None
 
     def get_sector_nombre(self, obj):
