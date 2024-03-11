@@ -203,6 +203,7 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
 
 class VariacionPromedioSerializer(serializers.ModelSerializer):
     nombre_subtitulo = serializers.SerializerMethodField()
+
     class Meta:
         model = VariacionPromedio
         fields = [
@@ -277,7 +278,6 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
 
     def get_calidad_juridica_label_value(self, obj):
         if obj.calidad_juridica:
-
             return {
                 'label': obj.calidad_juridica.calidad_juridica,
                 'value': str(obj.calidad_juridica.id)
@@ -385,7 +385,6 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'sub21b_gastos_en_personal_justificar'
         ]
 
-
     def get_años(self, obj):
         competencia = obj.formulario_sectorial.competencia
         if competencia and competencia.fecha_inicio:
@@ -413,12 +412,48 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     def avance(self, obj):
         return obj.avance()
 
+
 def eliminar_instancia_costo(modelo, instancia_id):
-        try:
-            instancia = modelo.objects.get(id=instancia_id)
-            instancia.delete()  # Esto disparará la señal post_delete
-        except modelo.DoesNotExist:
-            pass
+    try:
+        instancia = modelo.objects.get(id=instancia_id)
+        instancia.delete()  # Esto disparará la señal post_delete
+    except modelo.DoesNotExist:
+        pass
+
+
+def get_subtitulos_disponibles(modelo_costos, formulario_obj):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo_costos para este formulario
+    items_utilizados = modelo_costos.objects.filter(
+        formulario_sectorial=formulario_obj).values_list('item_subtitulo__id', flat=True)
+
+    # Filtra ItemSubtitulo para excluir los utilizados
+    item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados)
+
+    # Obtiene los Subtitulos asociados a los item_subtitulos disponibles
+    subtitulos_ids = item_subtitulos_disponibles.values_list('subtitulo__id', flat=True).distinct()
+    subtitulos_disponibles = Subtitulos.objects.filter(id__in=subtitulos_ids)
+
+    return subtitulos_disponibles
+
+
+def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo de costos para este formulario
+    items_utilizados = modelo_costos.objects.filter(
+        formulario_sectorial=formulario_obj).values_list('item_subtitulo__id', flat=True)
+
+    # Filtra ItemSubtitulo para excluir los utilizados
+    item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados).select_related('subtitulo')
+
+    # Agrupa los ItemSubtitulo disponibles por Subtitulos
+    items_agrupados = {}
+    for item in item_subtitulos_disponibles:
+        subtitulo = item.subtitulo.subtitulo
+        if subtitulo not in items_agrupados:
+            items_agrupados[subtitulo] = []
+        items_agrupados[subtitulo].append(ItemSubtituloSerializer(item).data)
+
+    return items_agrupados
+
 
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
@@ -436,6 +471,10 @@ class Paso5Serializer(WritableNestedModelSerializer):
     p_5_2_variacion_promedio = VariacionPromedioSerializer(many=True, read_only=False)
     p_5_3_a_personal_directo = PersonalDirectoSerializer(many=True, read_only=False)
     p_5_3_b_personal_indirecto = PersonalIndirectoSerializer(many=True, read_only=False)
+    listado_subtitulos_directos = serializers.SerializerMethodField()
+    listado_subtitulos_indirectos = serializers.SerializerMethodField()
+    listado_item_subtitulos_directos = serializers.SerializerMethodField()
+    listado_item_subtitulos_indirectos = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
@@ -450,7 +489,11 @@ class Paso5Serializer(WritableNestedModelSerializer):
             'p_5_3_a_personal_directo',
             'p_5_3_b_personal_indirecto',
             'listado_subtitulos',
+            'listado_subtitulos_directos',
+            'listado_subtitulos_indirectos',
             'listado_item_subtitulos',
+            'listado_item_subtitulos_directos',
+            'listado_item_subtitulos_indirectos',
             'listado_estamentos',
             'listado_calidades_juridicas_directas',
             'listado_calidades_juridicas_indirectas',
@@ -523,10 +566,26 @@ class Paso5Serializer(WritableNestedModelSerializer):
 
         return items_agrupados
 
+    def get_listado_item_subtitulos_directos(self, obj):
+        items_agrupados_directos = get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj)
+        return items_agrupados_directos
+
+    def get_listado_item_subtitulos_indirectos(self, obj):
+        items_agrupados_indirectos = get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, obj)
+        return items_agrupados_indirectos
+
+    def get_listado_subtitulos_directos(self, obj):
+        subtitulos_disponibles = get_subtitulos_disponibles(CostosDirectos, obj)
+        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
+
+    def get_listado_subtitulos_indirectos(self, obj):
+        subtitulos_disponibles = get_subtitulos_disponibles(CostosIndirectos, obj)
+        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
+
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
-    
+
     def update_paso5_instance(self, instance, paso5_data):
         # Asume que 'paso5_data' contiene los datos del objeto relacionado
         paso5_instance = getattr(instance, 'paso5', None)
@@ -540,7 +599,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
-    
+
         # Procesar campos anidados
         for field_name in [
             'p_5_1_a_costos_directos',
@@ -605,7 +664,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
         variacion_promedio_data = validated_data.pop('p_5_2_variacion_promedio', None)
         personal_directo_data = validated_data.pop('p_5_3_a_personal_directo', None)
         personal_indirecto_data = validated_data.pop('p_5_3_b_personal_indirecto', None)
-    
+
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -614,7 +673,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
         # Actualizar o crear Paso5
         if paso5 is not None:
             self.update_paso5_instance(instance, paso5)
-    
+
         # Actualizar o crear CostosDirectos
         if costos_directos_data is not None:
             for costo_data in costos_directos_data:
@@ -635,7 +694,7 @@ class Paso5Serializer(WritableNestedModelSerializer):
                 if etapa_ids is not None:
                     # Asegurarse de que etapa_ids solo contenga números (IDs)
                     costo_instance.etapa.set(etapa_ids)
-    
+
         # Actualizar o crear CostosIndirectos
         if costos_indirectos_data is not None:
             for costo_data in costos_indirectos_data:
@@ -655,23 +714,22 @@ class Paso5Serializer(WritableNestedModelSerializer):
                 if etapa_ids is not None:
                     costo_instance.etapa.set(etapa_ids)  # Asume que etapa_ids es una lista de IDs
 
-    
         # Actualizar o crear ResumenCostosPorSubtitulo
         if resumen_costos_data is not None:
             self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_data, instance)
-    
+
         # Actualizar o crear EvolucionGastoAsociado
         if evolucion_gasto_data is not None:
             for evolucion_gasto_data in evolucion_gasto_data:
                 evolucion_gasto_id = evolucion_gasto_data.pop('id', None)
                 costo_anio_data = evolucion_gasto_data.pop('costo_anio', [])
-    
+
                 evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
                     id=evolucion_gasto_id,
                     defaults=evolucion_gasto_data,
                     formulario_sectorial=instance
                 )
-    
+
                 for costo_data in costo_anio_data:
                     costo_id = costo_data.pop('id', None)
                     costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
@@ -679,18 +737,17 @@ class Paso5Serializer(WritableNestedModelSerializer):
                         id=costo_id,
                         defaults=costo_data
                     )
-    
+
         # Actualizar o crear VariacionPromedio
         if variacion_promedio_data is not None:
             self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance)
-    
+
         # Actualizar o crear PersonalDirecto
         if personal_directo_data is not None:
             self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance)
-    
+
         # Actualizar o crear PersonalIndirecto
         if personal_indirecto_data is not None:
             self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
-
 
         return instance
