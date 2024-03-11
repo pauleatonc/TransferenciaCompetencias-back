@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 import time
@@ -18,10 +18,12 @@ from applications.formularios_gores.models import (
 from applications.formularios_sectoriales.models import (
     PersonalDirecto,
     PersonalIndirecto,
+    Subtitulos,
     ItemSubtitulo,
     CalidadJuridica
 )
 
+id_generado = int(time.time())
 
 @receiver(post_save, sender=FormularioGORE)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
@@ -286,7 +288,7 @@ def crear_instancias_personal(modelo_costos, modelo_personal, instance, created)
                 calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
                 if not modelo_personal.objects.filter(formulario_gore=instance.formulario_gore,
                                                       calidad_juridica=calidad_juridica_obj).exists():
-                    id_generado = int(time.time())  # Obtiene el timestamp actual en segundos
+
                     modelo_personal.objects.create(
                         id=id_generado,
                         formulario_gore=instance.formulario_gore,
@@ -339,3 +341,77 @@ def post_delete_costos_indirectos(sender, instance, **kwargs):
     if instance.sector is None:
         eliminar_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance)
 
+
+@receiver(post_save, sender=CostosDirectosGore)
+@receiver(post_save, sender=CostosIndirectosGore)
+def copiar_a_recursos_comparados_y_mas(sender, instance, **kwargs):
+    subtitulos_deseados = ["Sub. 22", "Sub. 29"]
+    programas_informaticos = ItemSubtitulo.objects.filter(item='07 - Programas Informáticos').first()
+    subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
+
+    # Manejo de Recursos Comparados
+    if instance.item_subtitulo.subtitulo_id in subtitulos_ids and (instance.total_anual_gore or 0) > (instance.total_anual_sector or 0):
+        RecursosComparados.objects.update_or_create(
+            formulario_gore=instance.formulario_gore,
+            id=id_generado,
+            sector=instance.sector,
+            item_subtitulo=instance.item_subtitulo,
+            defaults={
+                'costo_sector': instance.total_anual_sector,
+                'costo_gore': instance.total_anual_gore,
+                'diferencia_monto': (instance.total_anual_gore or 0) - (instance.total_anual_sector or 0)
+            }
+        )
+
+    # Manejo de Sistemas Informaticos
+    if programas_informaticos and instance.item_subtitulo == programas_informaticos:
+        SistemasInformaticos.objects.get_or_create(
+            id=id_generado,
+            formulario_gore=instance.formulario_gore,
+            sector=instance.sector,
+            item_subtitulo=programas_informaticos
+        )
+
+    # Manejo de Recursos Fisicos Infraestructura
+    item_subtitulos_excluidos = ItemSubtitulo.objects.filter(
+        Q(subtitulo_id__in=subtitulos_ids) & ~Q(id=programas_informaticos.id)
+    )
+    for item_subtitulo in item_subtitulos_excluidos:
+        if instance.item_subtitulo == item_subtitulo:
+            RecursosFisicosInfraestructura.objects.get_or_create(
+                id=id_generado,
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo=item_subtitulo
+            )
+
+
+@receiver(post_delete, sender=CostosDirectosGore)
+@receiver(post_delete, sender=CostosIndirectosGore)
+def eliminar_instancias_relacionadas(sender, instance, **kwargs):
+    # Identificar si el subtitulo de la instancia eliminada es "Sub. 22" o "Sub. 29"
+    subtitulos_deseados = ["Sub. 22", "Sub. 29"]
+    if instance.item_subtitulo.subtitulo.subtitulo in subtitulos_deseados:
+        # Eliminar RecursosComparados correspondientes
+        RecursosComparados.objects.filter(
+            formulario_gore=instance.formulario_gore,
+            sector=instance.sector,
+            item_subtitulo=instance.item_subtitulo
+        ).delete()
+
+    # Identificar y manejar la eliminación para Sistemas Informaticos y Recursos Fisicos Infraestructura
+    programas_informaticos = ItemSubtitulo.objects.filter(item='07 - Programas Informáticos').first()
+    if programas_informaticos and instance.item_subtitulo == programas_informaticos:
+        SistemasInformaticos.objects.filter(
+            formulario_gore=instance.formulario_gore,
+            sector=instance.sector,
+            item_subtitulo=programas_informaticos
+        ).delete()
+
+    # Excluir el item "07 - Programas Informáticos" para Recursos Fisicos Infraestructura
+    if instance.item_subtitulo.subtitulo.subtitulo in subtitulos_deseados and instance.item_subtitulo != programas_informaticos:
+        RecursosFisicosInfraestructura.objects.filter(
+            formulario_gore=instance.formulario_gore,
+            sector=instance.sector,
+            item_subtitulo=instance.item_subtitulo
+        ).delete()
