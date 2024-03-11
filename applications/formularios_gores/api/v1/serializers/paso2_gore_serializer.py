@@ -324,26 +324,31 @@ class Paso2Serializer(WritableNestedModelSerializer):
         return resultado
 
     def get_personal_directo_sector(self, obj):
-        personal = CostosDirectosGore.objects.filter(formulario_gore=obj,
-                                                     item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related('sector')
+        personal_objs = CostosDirectosGore.objects.filter(formulario_gore=obj,
+                                                          item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related(
+            'sector')
 
         agrupados_por_sector = {}
-        for personal in personal:
-            sector = personal.sector.nombre
-            if sector not in agrupados_por_sector:
-                agrupados_por_sector[sector] = []
-            agrupados_por_sector[sector].append(personal)
+        for personal in personal_objs:
+            # Omitir los objetos donde personal.sector es None
+            if personal.sector is None:
+                continue  # No incluir en el resultado y continuar con el siguiente objeto
+
+            # De lo contrario, procesar normalmente
+            sector_nombre = personal.sector.nombre
+            if sector_nombre not in agrupados_por_sector:
+                agrupados_por_sector[sector_nombre] = []
+            agrupados_por_sector[sector_nombre].append(personal)
 
         # Serializa los datos agrupados
         resultado = []
-        for sector, personal in agrupados_por_sector.items():
+        for sector_nombre, personal in agrupados_por_sector.items():
             resultado.append({
-                'sector': sector,
+                'sector': sector_nombre,
                 'personal': PersonalDirectoSectorSerializer(personal, many=True).data
             })
 
         return resultado
-
 
     def get_costos_directos_gore(self, obj):
         queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
