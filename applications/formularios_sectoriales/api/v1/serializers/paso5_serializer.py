@@ -458,8 +458,6 @@ def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
 class Paso5Serializer(WritableNestedModelSerializer):
     paso5 = Paso5EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
-    listado_subtitulos = serializers.SerializerMethodField()
-    listado_item_subtitulos = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
     listado_calidades_juridicas_directas = serializers.SerializerMethodField()
     listado_calidades_juridicas_indirectas = serializers.SerializerMethodField()
@@ -488,10 +486,8 @@ class Paso5Serializer(WritableNestedModelSerializer):
             'p_5_2_variacion_promedio',
             'p_5_3_a_personal_directo',
             'p_5_3_b_personal_indirecto',
-            'listado_subtitulos',
             'listado_subtitulos_directos',
             'listado_subtitulos_indirectos',
-            'listado_item_subtitulos',
             'listado_item_subtitulos_directos',
             'listado_item_subtitulos_indirectos',
             'listado_estamentos',
@@ -508,11 +504,6 @@ class Paso5Serializer(WritableNestedModelSerializer):
         else:
             # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
             return user.perfil != 'Usuario Sectorial'
-
-    def get_listado_subtitulos(self, obj):
-        # Obtener todos los registros de Subtitulos y serializarlos
-        subtitulos = Subtitulos.objects.all()
-        return SubtitulosSerializer(subtitulos, many=True).data
 
     def get_listado_estamentos(self, obj):
         # Obtener todos los registros de Estamento y serializarlos
@@ -554,17 +545,6 @@ class Paso5Serializer(WritableNestedModelSerializer):
 
     def get_listado_calidades_juridicas_indirectas(self, obj):
         return self.get_filtered_calidades_juridicas(obj, CostosIndirectos)
-
-    def get_listado_item_subtitulos(self, obj):
-        # Agrupar ItemSubtitulo por Subtitulos
-        items_agrupados = {}
-        for item in ItemSubtitulo.objects.all().select_related('subtitulo'):
-            subtitulo = item.subtitulo.subtitulo
-            if subtitulo not in items_agrupados:
-                items_agrupados[subtitulo] = []
-            items_agrupados[subtitulo].append(ItemSubtituloSerializer(item).data)
-
-        return items_agrupados
 
     def get_listado_item_subtitulos_directos(self, obj):
         items_agrupados_directos = get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj)
