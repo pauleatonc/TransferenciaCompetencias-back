@@ -171,7 +171,7 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
             except FlujogramaEjercicioCompetencia.DoesNotExist:
                 return Response({"error": "FlujogramaCompetencia no encontrado."}, status=status.HTTP_404_NOT_FOUND)
             
-            flujograma_competencia.flujograma_ejercicio_competencia = documento_file  # Asegúrate de usar el campo correcto aquí
+            flujograma_competencia.documento = documento_file  # Esta es la línea corregida
             flujograma_competencia.save()
 
             return Response({"mensaje": "Documento actualizado con éxito."})
@@ -179,9 +179,8 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
             # Crea un nuevo FlujogramaCompetencia si no se proporciona ID
             flujograma_competencia = FlujogramaEjercicioCompetencia.objects.create(
                 formulario_gore=formulario_gore,
-                flujograma_ejercicio_competencia=documento_file  # Asegúrate de usar el campo correcto aquí también
+                documento=documento_file  # Esta es la línea corregida
             )
 
-            return Response({"mensaje": "Documento creado con éxito.", "flujograma_ejercicio_competencia_id": flujograma_competencia.id},
+            return Response({"mensaje": "Documento creado con éxito.", "flujograma_competencia_id": flujograma_competencia.id},
                             status=status.HTTP_201_CREATED)
-
