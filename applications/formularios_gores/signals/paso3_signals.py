@@ -45,8 +45,7 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
         modelo_gore = PersonalIndirectoGORE
         campos_adicionales = {
             'numero_personas': instance.numero_personas,
-            'total_rentas': instance.total_rentas,
-            # Añade aquí cualquier otro campo específico de PersonalIndirecto
+            'total_rentas': instance.total_rentas
         }
 
     formulario_sectorial = instance.formulario_sectorial

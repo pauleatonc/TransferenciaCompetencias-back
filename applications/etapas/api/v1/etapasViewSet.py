@@ -1,12 +1,5 @@
-from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
-from rest_framework.decorators import action
-from rest_framework import viewsets, status
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from applications.competencias.models import Competencia
+from rest_framework import viewsets
+
 from applications.etapas.models import (
     Etapa1,
     Etapa2,
@@ -14,7 +7,7 @@ from applications.etapas.models import (
     Etapa4,
     Etapa5,
 )
-
+from applications.users.permissions import IsSUBDEREOrSuperuser
 from .serializers import (
     Etapa1Serializer,
     Etapa2Serializer,
@@ -22,8 +15,6 @@ from .serializers import (
     Etapa4Serializer,
     Etapa5Serializer,
 )
-
-from applications.users.permissions import IsSUBDEREOrSuperuser
 
 
 class Etapa1ViewSet(viewsets.ModelViewSet):
