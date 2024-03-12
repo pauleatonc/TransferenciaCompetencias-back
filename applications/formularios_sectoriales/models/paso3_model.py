@@ -16,27 +16,26 @@ class Paso3(PasoBase):
         return 3
 
     def avance_numerico(self):
-        # Lista de todos los campos obligatorios
-        campos_obligatorios = [
+        # Lista de campos que no son estrictamente numéricos y son obligatorios
+        campos_obligatorios_texto = [
             'universo_cobertura', 'descripcion_cobertura'
         ]
-        total_campos = len(campos_obligatorios)
+        total_campos = len(campos_obligatorios_texto) + 1  # +1 para considerar 'coberturas_anuales_completados'
 
-        # Verifica si los campos obligatorios están llenos
-        completados = sum([1 for campo in campos_obligatorios if getattr(self, campo, None)])
+        # Verifica si los campos de texto obligatorios están llenos
+        completados = sum([1 for campo in campos_obligatorios_texto if getattr(self, campo, None)])
 
-        # Verifica si todas las instancias de CoberturaAnual tienen todos los campos llenos
+        # Verifica si todas las instancias de CoberturaAnual tienen los campos numéricos definidos (no None)
         todas_coberturas_anuales_completas = all(
-            cobertura.universo_cobertura and cobertura.cobertura_efectivamente_abordada and cobertura.recursos_ejecutados
+            cobertura.universo_cobertura is not None and
+            cobertura.cobertura_efectivamente_abordada is not None and
+            cobertura.recursos_ejecutados is not None
             for cobertura in self.formulario_sectorial.cobertura_anual.all()
         )
 
-        # Si todas las instancias de CoberturaAnual están completas, añadir 1 a completados
+        # Si todas las instancias de CoberturaAnual están completas (considerando None como incompleto), añadir 1 a completados
         if todas_coberturas_anuales_completas:
             completados += 1
-
-        # Actualizar el total de campos para incluir 'coberturas_anuales_completados'
-        total_campos += 1
 
         return completados, total_campos
 
