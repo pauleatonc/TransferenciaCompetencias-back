@@ -52,9 +52,6 @@ class Etapa4Serializer(serializers.ModelSerializer):
     def get_fecha_ultima_modificacion(self, obj):
         return get_fecha_ultima_modificacion(self, obj)
 
-    def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-        return calcular_tiempo_registro(etapa_obj, fecha_envio)
-
     def reordenar_detalle(self, detalle, user):
         return reordenar_detalle(self, detalle, user)
 
@@ -137,7 +134,8 @@ class Etapa4Serializer(serializers.ModelSerializer):
                     "accion": accion
                 }
                 if formulario_gore.formulario_enviado:
-                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj, formulario_gore.fecha_envio)
+                    detalle_formulario["registro_tiempo"] =calcular_tiempo_registro(self, obj.fecha_inicio,
+                                                                                          formulario_gore.fecha_envio)
                 detalle.append(detalle_formulario)
 
         if len(regiones) <= 1:
