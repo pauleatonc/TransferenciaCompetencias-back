@@ -65,8 +65,6 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
         }
         obj, created_gore = modelo_gore.objects.get_or_create(
             formulario_gore=formulario_gore,
-            # Asegúrate de que 'id' aquí es el campo correcto para buscar la instancia.
-            # Si es necesario, usa un campo diferente que sea único y relevante.
             id=id_generado,
             sector=sector,
             defaults=defaults
