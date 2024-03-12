@@ -170,13 +170,6 @@ class RecursosComparados(BaseModel):
     costo_gore = models.IntegerField(null=True, blank=True, default=None)
     diferencia_monto = models.IntegerField(null=True, blank=True, default=None)
 
-    def save(self, *args, **kwargs):
-        if self.costo_sector is not None and self.costo_gore is not None:
-            self.diferencia_monto = self.costo_sector - self.costo_gore
-        else:
-            self.diferencia_monto = None
-        super().save(*args, **kwargs)
-
 
 class SistemasInformaticos(BaseModel):
     formulario_gore = models.ForeignKey(FormularioGORE, on_delete=models.CASCADE,
