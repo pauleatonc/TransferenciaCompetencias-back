@@ -1,18 +1,16 @@
-from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework import viewsets
+
 from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Prefetch
-from rest_framework.decorators import action
-from rest_framework import viewsets, status
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.response import Response
-from applications.competencias.models import Competencia
+
 from applications.etapas.models import (
     Etapa1,
     Etapa2,
     Etapa3,
     Etapa4,
     Etapa5,
+)
+from applications.users.permissions import (
+    IsSUBDEREOrSuperuser
 )
 
 from .serializers import (
@@ -23,7 +21,32 @@ from .serializers import (
     Etapa5Serializer,
 )
 
-from applications.users.permissions import IsSUBDEREOrSuperuser, is_DIPRES
+
+from rest_framework.permissions import BasePermission
+
+class IsDIPRESAndAssignedToCompetition(BasePermission):
+    """
+    Permite el acceso solo a los usuarios DIPRES asignados a la competencia relacionada con la etapa.
+    """
+
+    def has_permission(self, request, view):
+        # Esta implementación es solo un esquema. Deberás adaptarla según tu modelo y lógica específica.
+        user = request.user
+        # Asumiendo que puedes obtener la instancia de la etapa (Etapa3, Etapa5, etc.) de esta manera
+        etapa = view.get_object()
+        competencia = etapa.competencia
+
+        # Verificación de pertenencia al grupo DIPRES y asignación a la competencia
+        return user.groups.filter(name='DIPRES').exists() and competencia.usuarios_dipres.filter(id=user.id).exists()
+
+    def has_object_permission(self, request, view, obj):
+        # Implementación similar a has_permission, pero aplicada a nivel de objeto.
+        # Aquí, obj es la instancia específica de la etapa.
+        user = request.user
+        competencia = obj.competencia
+
+        return user.groups.filter(name='DIPRES').exists() and competencia.usuarios_dipres.filter(id=user.id).exists()
+
 
 
 class Etapa1ViewSet(viewsets.ModelViewSet):
@@ -41,7 +64,16 @@ class  Etapa2ViewSet(viewsets.ModelViewSet):
 class Etapa3ViewSet(viewsets.ModelViewSet):
     queryset = Etapa3.objects.all()
     serializer_class = Etapa3Serializer
-    permission_classes = [IsSUBDEREOrSuperuser, is_DIPRES]
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsSUBDEREOrSuperuser, IsDIPRESAndAssignedToCompetition]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
 
 class  Etapa4ViewSet(viewsets.ModelViewSet):
@@ -53,4 +85,13 @@ class  Etapa4ViewSet(viewsets.ModelViewSet):
 class Etapa5ViewSet(viewsets.ModelViewSet):
     queryset = Etapa5.objects.all()
     serializer_class = Etapa5Serializer
-    permission_classes = [IsSUBDEREOrSuperuser, is_DIPRES]
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsSUBDEREOrSuperuser, IsDIPRESAndAssignedToCompetition]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]

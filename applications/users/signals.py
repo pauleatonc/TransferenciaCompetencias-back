@@ -1,8 +1,10 @@
 from django.contrib.auth.models import Group
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from .models import User
+from ..competencias.models import Competencia
+
 
 @receiver(post_save, sender=User)
 def update_user_group(sender, instance, created, **kwargs):
@@ -17,3 +19,23 @@ def update_user_group(sender, instance, created, **kwargs):
             instance.groups.clear()
             new_group, created = Group.objects.get_or_create(name=new_group_name)
             instance.groups.add(new_group)
+
+
+@receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
+def validar_usuarios_sectoriales(sender, instance, action, pk_set, **kwargs):
+    if action == "pre_add":
+        competencia_sectores = instance.sectores.all()
+        for user_id in pk_set:
+            user = User.objects.get(id=user_id)
+            if user.sector not in competencia_sectores:
+                raise ValueError("Los usuarios sectoriales deben compartir el mismo sector de la competencia.")
+
+
+@receiver(m2m_changed, sender=Competencia.usuarios_gore.through)
+def validar_usuarios_gore(sender, instance, action, pk_set, **kwargs):
+    if action == "pre_add":
+        competencia_regiones = instance.regiones.all()
+        for user_id in pk_set:
+            user = User.objects.get(id=user_id)
+            if user.region not in competencia_regiones:
+                raise ValueError("Los usuarios GORE deben compartir la misma región de la competencia.")

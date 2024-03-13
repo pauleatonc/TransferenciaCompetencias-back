@@ -46,6 +46,12 @@ def eliminar_instancias_gore_correspondientes(modelo_gore, instance):
 
 
 def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
+    # Obtiene el texto del subtitulo asociado a la instancia de ItemSubtitulo
+    item_subtitulo_subtitulos_texto = instance.item_subtitulo.subtitulo.subtitulo
+
+    # Retorna sin hacer nada si el texto del subtitulo es "Sub. 21"
+    if item_subtitulo_subtitulos_texto == "Sub. 21":
+        return
 
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
@@ -62,6 +68,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
         if not created and not created_gore:
             obj.total_anual_sector = instance.total_anual  # Ajusta según el modelo
             obj.save()
+
 
 
 @receiver(post_save, sender=CostosDirectosSectorial)

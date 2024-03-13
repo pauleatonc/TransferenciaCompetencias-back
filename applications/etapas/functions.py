@@ -24,8 +24,8 @@ def get_fecha_ultima_modificacion(self, obj):
 
 
 def calcular_tiempo_registro(self, etapa_obj, fecha_envio):
-    if etapa_obj.fecha_inicio and fecha_envio:
-        delta = fecha_envio - etapa_obj.fecha_inicio
+    if etapa_obj and fecha_envio:
+        delta = fecha_envio - etapa_obj
         total_seconds = int(delta.total_seconds())
         dias = total_seconds // (24 * 3600)
         horas = (total_seconds % (24 * 3600)) // 3600

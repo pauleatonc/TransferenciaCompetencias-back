@@ -7,14 +7,18 @@ from rest_framework.permissions import BasePermission
 def is_SUBDERE_or_superuser(user: User) -> bool:
     return user.groups.filter(name='SUBDERE').exists() or user.is_superuser
 
+
 def is_DIPRES(user: User) -> bool:
     return user.groups.filter(name='DIPRES').exists() or user.is_superuser
+
 
 def is_Sectorial(user: User) -> bool:
     return user.groups.filter(name='Usuario Sectorial').exists() or user.is_superuser
 
+
 def is_GORE(user: User) -> bool:
     return user.groups.filter(name='GORE').exists() or user.is_superuser
+
 
 def is_Observador(user: User) -> bool:
     return user.groups.filter(name='Usuario Observador').exists() or user.is_superuser
@@ -26,11 +30,11 @@ class IsSUBDEREOrSuperuser(BasePermission):
     """
 
     def has_permission(self, request, view):
-        return is_SUBDERE_or_superuser(request.user)
+        # Llamada a la verificación básica
+        if not is_SUBDERE_or_superuser(request.user):
+            return False
 
-    def has_object_permission(self, request, view, obj):
-        # La lógica para permisos de objeto puede ser diferente si es necesario
-        return is_SUBDERE_or_superuser(request.user)
+        return True
 
 
 class CanEditUser(permissions.BasePermission):
@@ -53,3 +57,4 @@ class CanEditUser(permissions.BasePermission):
 
         # En cualquier otro caso, no se permite la edición
         return False
+

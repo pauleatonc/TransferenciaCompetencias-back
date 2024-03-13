@@ -140,7 +140,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                     "accion": accion
                 }
                 if formulario_sectorial.formulario_enviado:
-                    detalle_formulario["registro_tiempo"] = self.calcular_tiempo_registro(obj,
+                    detalle_formulario["registro_tiempo"] = calcular_tiempo_registro(self, obj.fecha_inicio,
                                                                                           formulario_sectorial.fecha_envio)
                 detalle.append(detalle_formulario)
 

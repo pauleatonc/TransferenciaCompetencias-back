@@ -35,25 +35,22 @@ def manejar_formularios_pasos(request, formulario_gore, serializer_class):
 
 
 
-def es_usuario_autorizado_para_region(request, formulario_gore):
-    """
-    Verifica si el usuario pertenece a la misma región que el formulario y
-    si es un usuario del sector relacionado con usuarios_gore de la competencia.
-    """
-    # Asegurarse de que el usuario está en la misma región que el formulario
-    misma_region = request.user.region == formulario_gore.region
+def es_usuario_autorizado_para_region(request, formulario_sectorial):
+    usuario = request.user
+    competencia = formulario_sectorial.competencia
 
-    # Comprobar si el usuario pertenece al grupo de usuarios sectoriales
-    es_usuario_gore = request.user.groups.filter(name='GORE').exists()
+    # Verifica si el usuario es un "Usuario GORE".
+    es_usuario_gore = usuario.groups.filter(name='GORE').exists()
 
-    # Obtener la competencia asociada al formulario
-    competencia = formulario_gore.competencia
+    # Verifica si la región del usuario está entre las regiones asociadas a la competencia.
+    usuario_pertenece_region_competencia = competencia.regiones.filter(id=usuario.region.id).exists() if usuario.region else False
 
-    # Comprobar si el usuario es uno de los usuarios_gore relacionados con la competencia
-    es_usuario_gore_de_competencia = competencia.usuarios_gore.filter(id=request.user.id).exists()
+    # Verifica si el usuario está asignado específicamente a la competencia como usuario GORE.
+    es_usuario_gore_de_competencia = competencia.usuarios_gore.filter(id=usuario.id).exists()
 
-    # La condición final para ser un usuario autorizado es cumplir con todas las verificaciones anteriores
-    return misma_region and es_usuario_gore and es_usuario_gore_de_competencia
+    # El usuario debe ser un usuario GORE, su región debe coincidir con alguna de las regiones de la competencia,
+    # y debe estar asignado específicamente a la competencia como usuario GORE.
+    return es_usuario_gore and usuario_pertenece_region_competencia and es_usuario_gore_de_competencia
 
 
 def manejar_permiso_patch(request, formulario_gore, serializer_class):

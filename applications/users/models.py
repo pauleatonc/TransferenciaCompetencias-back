@@ -70,3 +70,4 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name= 'Usuario'
         verbose_name_plural= 'Usuarios'
+        ordering = ['nombre_completo']
