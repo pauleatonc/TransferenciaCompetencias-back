@@ -25,53 +25,40 @@ from .serializers import (
 def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
     if request.method == 'PATCH':
         print("Datos recibidos para PATCH:", request.data)
-        # Asegúrate de pasar el contexto aquí
+
         serializer = serializer_class(formulario_sectorial, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:  # GET
-        # Y también aquí
+
         serializer = serializer_class(formulario_sectorial, context={'request': request})
         return Response(serializer.data)
 
-def es_usuario_autorizado_para_region(request, formulario_gore):
-    """
-    Verifica si el usuario pertenece a la misma región que el formulario y
-    si es un usuario del sector relacionado con usuarios_gore de la competencia.
-    """
-    # Asegurarse de que el usuario está en la misma región que el formulario
-    misma_region = request.user.region == formulario_gore.region
-
-    # Comprobar si el usuario pertenece al grupo de usuarios sectoriales
-    es_usuario_gore = request.user.groups.filter(name='GORE').exists()
-
-    # Obtener la competencia asociada al formulario
-    competencia = formulario_gore.competencia
-
-    # Comprobar si el usuario es uno de los usuarios_gore relacionados con la competencia
-    es_usuario_gore_de_competencia = competencia.usuarios_gore.filter(id=request.user.id).exists()
-
-    # La condición final para ser un usuario autorizado es cumplir con todas las verificaciones anteriores
-    return misma_region and es_usuario_gore and es_usuario_gore_de_competencia
 
 def es_usuario_autorizado_para_sector(request, formulario_sectorial):
-    """
-        Verifica si el usuario pertenece al mismo sector que el formulario.
-        """
-    mismo_sector = request.user.sector == formulario_sectorial.sector
-    es_usuario_sectorial = request.user.groups.filter(name='Usuario Sectorial').exists()
+    usuario = request.user
     competencia = formulario_sectorial.competencia
-    es_usuario_sectorial_de_competencia = competencia.usuarios_sectoriales.filter(id=request.user.id).exists()
 
-    return mismo_sector and es_usuario_sectorial and es_usuario_sectorial_de_competencia
+    # Verifica si el usuario es un "Usuario Sectorial".
+    es_usuario_sectorial = usuario.groups.filter(name='Usuario Sectorial').exists()
+
+    # Verifica si el usuario pertenece al mismo sector que el formulario.
+    mismo_sector = usuario.sector == formulario_sectorial.sector if usuario.sector else False
+
+    # Verifica si el usuario está asignado específicamente a la competencia como usuario sectorial.
+    es_usuario_sectorial_de_competencia = competencia.usuarios_sectoriales.filter(id=usuario.id).exists()
+
+    # El usuario debe ser un usuario sectorial, pertenecer al mismo sector que el formulario,
+    # y estar asignado específicamente a la competencia como usuario sectorial.
+    return es_usuario_sectorial and mismo_sector and es_usuario_sectorial_de_competencia
 
 
 def manejar_permiso_patch(request, formulario_sectorial, serializer_class):
     """
-        Maneja los permisos para operaciones PATCH y la serialización.
-        """
+    Maneja los permisos para operaciones PATCH y la serialización.
+    """
     if request.method == 'PATCH':
         if not es_usuario_autorizado_para_sector(request, formulario_sectorial):
             return Response({"detail": "No autorizado para editar este formulario sectorial."},
@@ -208,14 +195,19 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         proporciona marco_juridico_id, el endpoint actualiza el documento existente. Si no se proporciona
         marco_juridico_id, el endpoint crea un nuevo MarcoJuridico.
         """
+        formulario_sectorial = self.get_object()
+
+        # Verificar permisos del usuario
+        if not es_usuario_autorizado_para_sector(request, formulario_sectorial):
+            return Response({"detail": "No autorizado para editar este documento."},
+                            status=status.HTTP_403_FORBIDDEN)
+
         marco_juridico_id = request.data.get('marco_juridico_id')
         documento_file = request.FILES.get('documento')
 
         if not documento_file:
             return Response({"error": "Documento es requerido."},
                             status=status.HTTP_400_BAD_REQUEST)
-
-        formulario_sectorial = self.get_object()
 
         if marco_juridico_id:
             # Intenta actualizar un MarcoJuridico existente
@@ -250,13 +242,18 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         Si se proporciona flujograma_competencia_id, el endpoint actualiza el documento existente. Si no se proporciona
         flujograma_competencia_id, el endpoint crea un nuevo FlujogramaCompetencia.
         """
+        formulario_sectorial = self.get_object()
+
+        # Verificar permisos del usuario
+        if not es_usuario_autorizado_para_sector(request, formulario_sectorial):
+            return Response({"detail": "No autorizado para editar este documento."},
+                            status=status.HTTP_403_FORBIDDEN)
+
         flujograma_competencia_id = request.data.get('flujograma_competencia_id')
         documento_file = request.FILES.get('documento')  # Esta es la línea que extrae el archivo del request
 
         if not documento_file:
             return Response({"error": "Documento es requerido."}, status=status.HTTP_400_BAD_REQUEST)
-
-        formulario_sectorial = self.get_object()
 
         if flujograma_competencia_id:
             # Intenta actualizar un FlujogramaCompetencia existente
@@ -289,6 +286,13 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
         Se deben agregar en el body dos keys, organigrama_regional_id: el valor del ID y documento: el archivo a subir.
         Si se proporciona organigrama_regional_id, el endpoint actualiza el documento existente.
         """
+        formulario_sectorial = self.get_object()
+
+        # Verificar permisos del usuario
+        if not es_usuario_autorizado_para_sector(request, formulario_sectorial):
+            return Response({"detail": "No autorizado para editar este documento."},
+                            status=status.HTTP_403_FORBIDDEN)
+
         organigrama_regional_id = request.data.get('organigrama_regional_id')
         documento_file = request.FILES.get('documento')
 
