@@ -40,7 +40,7 @@ STATIC_URL = '/staticfiles/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles', 'transferenciacompetencias')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/tc')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 RECAPTCHA_PRIVATE_KEY = env("RECAPTCHA_PRIVATE_KEY")
