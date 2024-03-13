@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  Transferenciadb:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data_tc:/var/lib/postgresql/data/
+    networks:
+      - development
+
+  tc_back:
+    build: .
+    command: bash -c "python manage.py migrate && gunicorn transferenciacompetencias.wsgi:application --bind 0.0.0.0:8082"
+    volumes:
+      - .:/app
+      - ./staticfiles/transferenciacompetencias:/app/staticfiles/transferenciacompetencias
+      #- /home/peaton/transferencia_competencias/back/collected_static/transferencia_competencias:/static/transferencia_competencias
+      #- /home/peaton/transferencia_competencias/back/media/transferencia_competencias:/media/transferencia_competencias
+
+    networks:
+      - development
+    depends_on:
+      - Transferenciadb
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=transferenciacompetencias.settings.dev
+    ports:
+      - "8082:8082"
+
+volumes:
+  postgres_data_tc:
+
+networks:
+  development:
+    external: true
