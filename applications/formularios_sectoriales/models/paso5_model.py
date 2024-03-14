@@ -187,13 +187,13 @@ class CostosDirectos(BaseModel):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
+        if self.item_subtitulo is not None:
+            self.actualizar_resumen_costos()
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
-        self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
+        if self.item_subtitulo is not None:
+            self.actualizar_resumen_costos()
 
     def actualizar_resumen_costos(self):
         try:
@@ -215,7 +215,7 @@ class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_b_costos_indirectos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos', blank=True, null=True)
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)
@@ -223,12 +223,10 @@ class CostosIndirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def actualizar_resumen_costos(self):
         try:

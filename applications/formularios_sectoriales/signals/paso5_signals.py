@@ -27,24 +27,36 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 
 
 def regenerar_resumen_costos(formulario_sectorial_id):
-    # Obtener todos los subtitulos únicos para este formulario sectorial
+    # Obtener todos los subtitulos únicos para este formulario sectorial que tienen un item_subtitulo
     subtitulos_directos = set(
-        CostosDirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id).values_list(
-            'item_subtitulo__subtitulo_id', flat=True))
+        CostosDirectos.objects.filter(
+            formulario_sectorial_id=formulario_sectorial_id,
+            item_subtitulo__isnull=False  # Solo instancias con item_subtitulo
+        ).values_list('item_subtitulo__subtitulo_id', flat=True))
+
     subtitulos_indirectos = set(
-        CostosIndirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id).values_list(
-            'item_subtitulo__subtitulo_id', flat=True))
+        CostosIndirectos.objects.filter(
+            formulario_sectorial_id=formulario_sectorial_id,
+            item_subtitulo__isnull=False  # Solo instancias con item_subtitulo
+        ).values_list('item_subtitulo__subtitulo_id', flat=True))
 
     subtitulos_unicos = subtitulos_directos.union(subtitulos_indirectos)
 
-    # Obtener o crear ResumenCostosPorSubtitulo para cada subtitulo único y actualizar el total_anual
+    # Para cada subtitulo único, obtener o crear ResumenCostosPorSubtitulo y actualizar el total_anual
     for subtitulo_id in subtitulos_unicos:
-        total_directos = CostosDirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id,
-                                                       item_subtitulo__subtitulo_id=subtitulo_id).aggregate(
-            total=Sum('total_anual'))['total'] or 0
-        total_indirectos = CostosIndirectos.objects.filter(formulario_sectorial_id=formulario_sectorial_id,
-                                                           item_subtitulo__subtitulo_id=subtitulo_id).aggregate(
-            total=Sum('total_anual'))['total'] or 0
+        if subtitulo_id is None:
+            continue  # Saltar si subtitulo_id es None
+
+        total_directos = CostosDirectos.objects.filter(
+            formulario_sectorial_id=formulario_sectorial_id,
+            item_subtitulo__subtitulo_id=subtitulo_id
+        ).aggregate(total=Sum('total_anual'))['total'] or 0
+
+        total_indirectos = CostosIndirectos.objects.filter(
+            formulario_sectorial_id=formulario_sectorial_id,
+            item_subtitulo__subtitulo_id=subtitulo_id
+        ).aggregate(total=Sum('total_anual'))['total'] or 0
+
         total_anual = total_directos + total_indirectos
 
         resumen_costos, created = ResumenCostosPorSubtitulo.objects.get_or_create(
@@ -53,8 +65,8 @@ def regenerar_resumen_costos(formulario_sectorial_id):
             defaults={'total_anual': total_anual}
         )
         if not created:
-            # Si la instancia ya existía, actualizamos solo el total_anual
-            ResumenCostosPorSubtitulo.objects.filter(id=resumen_costos.id).update(total_anual=total_anual)
+            resumen_costos.total_anual = total_anual  # Actualizar el total_anual
+            resumen_costos.save()
 
     # Identificar y eliminar cualquier ResumenCostosPorSubtitulo obsoleto
     ResumenCostosPorSubtitulo.objects.filter(
@@ -62,6 +74,7 @@ def regenerar_resumen_costos(formulario_sectorial_id):
     ).exclude(
         subtitulo_id__in=subtitulos_unicos
     ).delete()
+
 
 
 def calcular_y_actualizar_variacion(formulario_sectorial_id):
@@ -95,37 +108,41 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
 
 
 def actualizar_evolucion_y_variacion(formulario_sectorial_id):
+    # Obtiene IDs de subtitulos a partir de CostosDirectos y CostosIndirectos con item_subtitulo no nulo
     subtitulos_directos_ids = CostosDirectos.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id
+        formulario_sectorial_id=formulario_sectorial_id, item_subtitulo__isnull=False
     ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
 
     subtitulos_indirectos_ids = CostosIndirectos.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id
+        formulario_sectorial_id=formulario_sectorial_id, item_subtitulo__isnull=False
     ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
 
-    subtitulos_unicos_ids = set(list(subtitulos_directos_ids) + list(subtitulos_indirectos_ids))
+    # Combina y elimina duplicados para obtener todos los IDs de subtitulo únicos
+    subtitulos_unicos_ids = set(subtitulos_directos_ids) | set(subtitulos_indirectos_ids)
 
     for subtitulo_id in subtitulos_unicos_ids:
-        # Asegura la existencia de EvolucionGastoAsociado
-        EvolucionGastoAsociado.objects.get_or_create(
-            formulario_sectorial_id=formulario_sectorial_id,
-            subtitulo_id=subtitulo_id,
-        )
+        if subtitulo_id is not None:  # Asegura que el subtitulo_id no sea nulo
+            # Asegura la existencia de EvolucionGastoAsociado solo para subtitulos válidos
+            EvolucionGastoAsociado.objects.get_or_create(
+                formulario_sectorial_id=formulario_sectorial_id,
+                subtitulo_id=subtitulo_id,
+            )
 
-        # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí)
-        VariacionPromedio.objects.get_or_create(
-            formulario_sectorial_id=formulario_sectorial_id,
-            subtitulo_id=subtitulo_id,
-        )
+            # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí) solo para subtitulos válidos
+            VariacionPromedio.objects.get_or_create(
+                formulario_sectorial_id=formulario_sectorial_id,
+                subtitulo_id=subtitulo_id,
+            )
 
-    # Ahora llama a la función para calcular y actualizar la variación promedio
+    # Ahora llama a la función para calcular y actualizar la variación promedio para los subtitulos válidos
     calcular_y_actualizar_variacion(formulario_sectorial_id)
 
-    # Eliminar instancias obsoletas de EvolucionGastoAsociado y VariacionPromedio
+    # Eliminar instancias obsoletas de EvolucionGastoAsociado y VariacionPromedio que no corresponden a subtitulos válidos
     EvolucionGastoAsociado.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
         subtitulo_id__in=subtitulos_unicos_ids).delete()
     VariacionPromedio.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
         subtitulo_id__in=subtitulos_unicos_ids).delete()
+
 
 
 @receiver(post_save, sender=CostosDirectos)
@@ -408,19 +425,23 @@ def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
 
 @receiver(post_save, sender=CostosDirectos)
 def post_save_costos_directos(sender, instance, created, **kwargs):
-    crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
+    if instance.item_subtitulo:
+        crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
 
 
 @receiver(post_delete, sender=CostosDirectos)
 def post_delete_costos_directos(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+    if instance.item_subtitulo:
+        eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
 
 
 @receiver(post_save, sender=CostosIndirectos)
 def post_save_costos_indirectos(sender, instance, created, **kwargs):
-    crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
+    if instance.item_subtitulo:
+        crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
 
 
 @receiver(post_delete, sender=CostosIndirectos)
 def post_delete_costos_indirectos(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+    if instance.item_subtitulo:
+        eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)

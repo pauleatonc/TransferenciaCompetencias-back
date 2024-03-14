@@ -74,19 +74,21 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
 @receiver(post_save, sender=CostosDirectosSectorial)
 @receiver(post_save, sender=CostosIndirectosSectorial)
 def crear_o_actualizar_costos_gore(sender, instance, created, **kwargs):
-    if sender == CostosDirectosSectorial:
-        crear_o_actualizar_instancias_gore(CostosDirectosGore, instance, created)
-    else:
-        crear_o_actualizar_instancias_gore(CostosIndirectosGore, instance, created)
+    if instance.item_subtitulo:
+        if sender == CostosDirectosSectorial:
+            crear_o_actualizar_instancias_gore(CostosDirectosGore, instance, created)
+        else:
+            crear_o_actualizar_instancias_gore(CostosIndirectosGore, instance, created)
 
 
 @receiver(post_delete, sender=CostosDirectosSectorial)
 @receiver(post_delete, sender=CostosIndirectosSectorial)
 def eliminar_costos_gore_correspondiente(sender, instance, **kwargs):
-    if sender == CostosDirectosSectorial:
-        eliminar_instancias_gore_correspondientes(CostosDirectosGore, instance)
-    else:
-        eliminar_instancias_gore_correspondientes(CostosIndirectosGore, instance)
+    if instance.item_subtitulo:
+        if sender == CostosDirectosSectorial:
+            eliminar_instancias_gore_correspondientes(CostosDirectosGore, instance)
+        else:
+            eliminar_instancias_gore_correspondientes(CostosIndirectosGore, instance)
 
 
 def actualizar_fluctuaciones_presupuestarias(formulario_gore_id):
