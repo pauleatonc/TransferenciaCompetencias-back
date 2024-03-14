@@ -187,13 +187,13 @@ class CostosDirectos(BaseModel):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
+        if self.item_subtitulo is not None:
+            self.actualizar_resumen_costos()
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
-        self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
+        if self.item_subtitulo is not None:
+            self.actualizar_resumen_costos()
 
     def actualizar_resumen_costos(self):
         try:
@@ -223,12 +223,10 @@ class CostosIndirectos(BaseModel):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def delete(self, *args, **kwargs):
         super().delete(*args, **kwargs)
         self.actualizar_resumen_costos()
-        ResumenCostosPorSubtitulo.actualizar_resumen_costos(self)
 
     def actualizar_resumen_costos(self):
         try:

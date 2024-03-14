@@ -51,6 +51,8 @@ class ItemSubtituloSerializer(serializers.ModelSerializer):
 
 
 class CostosDirectosSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
+    DELETE = serializers.BooleanField(required=False, default=False)
     subtitulo_label_value = serializers.SerializerMethodField()
     item_subtitulo_label_value = serializers.SerializerMethodField()
     etapa_label_value = serializers.SerializerMethodField()
@@ -59,6 +61,7 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
         model = CostosDirectos
         fields = [
             'id',
+            'DELETE',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -96,6 +99,8 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
 
 
 class CostosIndirectosSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False, allow_null=True)
+    DELETE = serializers.BooleanField(required=False, default=False)
     subtitulo_label_value = serializers.SerializerMethodField()
     item_subtitulo_label_value = serializers.SerializerMethodField()
     etapa_label_value = serializers.SerializerMethodField()
@@ -104,6 +109,7 @@ class CostosIndirectosSerializer(serializers.ModelSerializer):
         model = CostosDirectos
         fields = [
             'id',
+            'DELETE',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
