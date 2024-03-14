@@ -131,7 +131,7 @@ class PersonalDirectoGORE(BaseModel):
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class PersonalIndirectoGORE(BaseModel):
@@ -149,7 +149,7 @@ class PersonalIndirectoGORE(BaseModel):
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
     def save(self, *args, **kwargs):
         if self.renta_bruta is not None and self.numero_personas is not None:
@@ -170,6 +170,9 @@ class RecursosComparados(BaseModel):
     costo_gore = models.IntegerField(null=True, blank=True, default=None)
     diferencia_monto = models.IntegerField(null=True, blank=True, default=None)
 
+    class Meta:
+        ordering = ['sector', 'item_subtitulo__subtitulo', 'item_subtitulo']
+
 
 class SistemasInformaticos(BaseModel):
     formulario_gore = models.ForeignKey(FormularioGORE, on_delete=models.CASCADE,
@@ -183,7 +186,7 @@ class SistemasInformaticos(BaseModel):
     funcion = models.TextField(max_length=500, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class RecursosFisicosInfraestructura(BaseModel):
@@ -205,5 +208,5 @@ class RecursosFisicosInfraestructura(BaseModel):
         super().save(*args, **kwargs)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 

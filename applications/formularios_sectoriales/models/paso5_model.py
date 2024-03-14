@@ -208,7 +208,7 @@ class CostosDirectos(BaseModel):
             pass
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class CostosIndirectos(BaseModel):
@@ -243,7 +243,7 @@ class CostosIndirectos(BaseModel):
             pass
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
@@ -333,7 +333,7 @@ class PersonalDirecto(BaseModel):
     grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class PersonalIndirecto(BaseModel):
@@ -347,7 +347,7 @@ class PersonalIndirecto(BaseModel):
     grado = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
     def save(self, *args, **kwargs):
         if self.renta_bruta is not None and self.numero_personas is not None:
