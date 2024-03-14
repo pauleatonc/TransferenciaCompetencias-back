@@ -215,7 +215,7 @@ class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_b_costos_indirectos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos', blank=True, null=True)
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)

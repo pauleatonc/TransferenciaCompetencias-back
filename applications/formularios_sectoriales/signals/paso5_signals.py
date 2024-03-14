@@ -133,8 +133,9 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
 @receiver(post_delete, sender=CostosDirectos)
 @receiver(post_delete, sender=CostosIndirectos)
 def actualizar_resumen_costos(sender, instance, **kwargs):
-    regenerar_resumen_costos(instance.formulario_sectorial_id)
-    actualizar_evolucion_y_variacion(instance.formulario_sectorial_id)
+    if instance.item_subtitulo:
+        regenerar_resumen_costos(instance.formulario_sectorial_id)
+        actualizar_evolucion_y_variacion(instance.formulario_sectorial_id)
 
 
 @receiver(post_save, sender=EvolucionGastoAsociado)
@@ -408,19 +409,23 @@ def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
 
 @receiver(post_save, sender=CostosDirectos)
 def post_save_costos_directos(sender, instance, created, **kwargs):
-    crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
+    if instance.item_subtitulo:
+        crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
 
 
 @receiver(post_delete, sender=CostosDirectos)
 def post_delete_costos_directos(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+    if instance.item_subtitulo:
+        eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
 
 
 @receiver(post_save, sender=CostosIndirectos)
 def post_save_costos_indirectos(sender, instance, created, **kwargs):
-    crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
+    if instance.item_subtitulo:
+        crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
 
 
 @receiver(post_delete, sender=CostosIndirectos)
 def post_delete_costos_indirectos(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+    if instance.item_subtitulo:
+        eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
