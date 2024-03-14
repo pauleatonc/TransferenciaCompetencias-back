@@ -82,7 +82,7 @@ class CostosDirectosGore(BaseModel):
                                              related_name='p_2_1_a_costos_directos')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='costos_directos_gore', blank=True, null=True)
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='costos_directos_gore', blank=True, null=True)
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos_gore')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos_gore', blank=True, null=True)
     total_anual_sector = models.IntegerField(null=True, blank=True)
     total_anual_gore = models.IntegerField(null=True, blank=True)
     es_transitorio = models.BooleanField(blank=True, null=True, default=None)
@@ -107,7 +107,7 @@ class CostosIndirectosGore(BaseModel):
                                blank=True, null=True)
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='costos_indirectos_gore', blank=True,
                                   null=True)
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos_gore')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos_gore', blank=True, null=True)
     total_anual_sector = models.IntegerField(null=True, blank=True)
     total_anual_gore = models.IntegerField(null=True, blank=True)
     es_transitorio = models.BooleanField(blank=True, null=True, default=None)
@@ -148,7 +148,7 @@ class ResumenCostosGore(BaseModel):
 class FluctuacionPresupuestaria(BaseModel):
     formulario_gore = models.ForeignKey(FormularioGORE, on_delete=models.CASCADE,
                                              related_name='p_2_1_c_fluctuaciones_presupuestarias')
-    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='fluctuacion_presupuestaria')
+    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='fluctuacion_presupuestaria', blank=True, null=True)
     descripcion = models.TextField(max_length=500, blank=True)
 
     class Meta:

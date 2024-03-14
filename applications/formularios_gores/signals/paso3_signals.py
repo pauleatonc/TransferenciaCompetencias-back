@@ -303,6 +303,10 @@ def crear_instancias_personal(modelo_costos, modelo_personal, instance, created)
 
 
 def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
+
+    if instance.item_subtitulo is None:
+        return
+
     item_subtitulo_texto = instance.item_subtitulo.item
     calidades = relacion_item_calidad.get(item_subtitulo_texto)
 
@@ -323,7 +327,7 @@ def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
 @receiver(post_save, sender=CostosDirectosGore)
 def post_save_costos_directos(sender, instance, created, **kwargs):
     # Verifica si el sector es null o vacío antes de proceder
-    if instance.sector is None:
+    if instance.sector is None and instance.item_subtitulo is not None:
         crear_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance, created)
 
 
@@ -337,7 +341,7 @@ def post_delete_costos_directos(sender, instance, **kwargs):
 @receiver(post_save, sender=CostosIndirectosGore)
 def post_save_costos_indirectos(sender, instance, created, **kwargs):
     # Verifica si el sector es null o vacío antes de proceder
-    if instance.sector is None:
+    if instance.sector is None and instance.item_subtitulo is not None:
         crear_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance, created)
 
 
@@ -354,7 +358,7 @@ def actualizar_recursos_comparados(sender, instance, **kwargs):
     subtitulos_deseados = ["Sub. 22", "Sub. 29"]
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
 
-    if instance.item_subtitulo.subtitulo_id not in subtitulos_ids:
+    if instance.item_subtitulo and instance.item_subtitulo.subtitulo_id not in subtitulos_ids:
         return
 
     # Identifica el ItemSubtitulo y FormularioGORE asociados con la instancia de costo
@@ -420,18 +424,11 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
         )
 
 
-@receiver(post_delete, sender=CostosDirectosGore)
+
+
+'''@receiver(post_delete, sender=RecursosComparados)
 @receiver(post_delete, sender=CostosIndirectosGore)
 def eliminar_instancias_relacionadas(sender, instance, **kwargs):
-    # Identificar si el subtitulo de la instancia eliminada es "Sub. 22" o "Sub. 29"
-    subtitulos_deseados = ["Sub. 22", "Sub. 29"]
-    if instance.item_subtitulo.subtitulo.subtitulo in subtitulos_deseados:
-        # Eliminar RecursosComparados correspondientes
-        RecursosComparados.objects.filter(
-            formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
-            item_subtitulo=instance.item_subtitulo
-        ).delete()
 
     # Identificar y manejar la eliminación para Sistemas Informaticos y Recursos Fisicos Infraestructura
     programas_informaticos = ItemSubtitulo.objects.filter(item='07 - Programas Informáticos').first()
@@ -448,4 +445,4 @@ def eliminar_instancias_relacionadas(sender, instance, **kwargs):
             formulario_gore=instance.formulario_gore,
             sector=instance.sector,
             item_subtitulo=instance.item_subtitulo
-        ).delete()
+        ).delete()'''
