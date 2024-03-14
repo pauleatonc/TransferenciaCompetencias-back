@@ -402,18 +402,26 @@ class Paso3Serializer(WritableNestedModelSerializer):
             Paso3.objects.create(formulario_gore=instance, **paso3_data)
 
     def get_listado_subtitulos(self, obj):
-        # Filtrar los subtítulos deseados directamente desde la base de datos, si es posible
-        subtitulos_deseados = ["Sub. 22", "Sub. 29"]
-        subtitulos = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados)
+        # Obtener IDs de subtitulos usados en RecursosComparados para un formulario_gore específico
+        subtitulos_usados_ids = RecursosComparados.objects.filter(
+            formulario_gore=obj  # Usar el objeto formulario_gore pasado al serializador
+        ).values_list('item_subtitulo__subtitulo__id', flat=True).distinct()
+
+        # Filtrar Subtitulos por los IDs obtenidos
+        subtitulos = Subtitulos.objects.filter(id__in=subtitulos_usados_ids)
+
         return SubtitulosSerializer(subtitulos, many=True).data
 
     def get_listado_item_subtitulos(self, obj):
-        # Filtrar ítems de los subtítulos deseados
-        subtitulos_deseados = ["Sub. 22", "Sub. 29"]
         items_agrupados = {}
-        # Suponiendo que existe una relación directa para filtrar items por los nombres de subtitulo
-        for item in ItemSubtitulo.objects.filter(subtitulo__subtitulo__in=subtitulos_deseados).select_related(
-                'subtitulo'):
+
+        # Obtener IDs de ItemSubtitulo usados en RecursosComparados para un formulario_gore específico
+        items_usados_ids = RecursosComparados.objects.filter(
+            formulario_gore=obj  # Usar el objeto formulario_gore pasado al serializador
+        ).values_list('item_subtitulo__id', flat=True).distinct()
+
+        # Filtrar ItemSubtitulo por los IDs obtenidos y realizar la agrupación
+        for item in ItemSubtitulo.objects.filter(id__in=items_usados_ids).select_related('subtitulo'):
             subtitulo = item.subtitulo.subtitulo
             if subtitulo not in items_agrupados:
                 items_agrupados[subtitulo] = []

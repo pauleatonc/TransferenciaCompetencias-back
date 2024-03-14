@@ -350,43 +350,74 @@ def post_delete_costos_indirectos(sender, instance, **kwargs):
 
 @receiver(post_save, sender=CostosDirectosGore)
 @receiver(post_save, sender=CostosIndirectosGore)
-def copiar_a_recursos_comparados_y_mas(sender, instance, **kwargs):
+def actualizar_recursos_comparados(sender, instance, **kwargs):
     subtitulos_deseados = ["Sub. 22", "Sub. 29"]
-    programas_informaticos = ItemSubtitulo.objects.filter(item='07 - Programas Informáticos').first()
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
 
-    # Manejo de Recursos Comparados
-    if instance.item_subtitulo.subtitulo_id in subtitulos_ids and (instance.total_anual_gore or 0) > (instance.total_anual_sector or 0):
+    if instance.item_subtitulo.subtitulo_id not in subtitulos_ids:
+        return
+
+    # Identifica el ItemSubtitulo y FormularioGORE asociados con la instancia de costo
+    item_subtitulo = instance.item_subtitulo
+    formulario_gore = instance.formulario_gore
+
+    # Calcula los totales para costos directos e indirectos
+    total_anual_sector_directo = \
+        CostosDirectosGore.objects.filter(item_subtitulo=item_subtitulo, formulario_gore=formulario_gore).aggregate(
+            Sum('total_anual_sector'))['total_anual_sector__sum'] or 0
+    total_anual_sector_indirecto = \
+        CostosIndirectosGore.objects.filter(item_subtitulo=item_subtitulo,
+                                            formulario_gore=formulario_gore).aggregate(
+            Sum('total_anual_sector'))['total_anual_sector__sum'] or 0
+
+    total_anual_gore_directo = \
+        CostosDirectosGore.objects.filter(item_subtitulo=item_subtitulo, formulario_gore=formulario_gore).aggregate(
+            Sum('total_anual_gore'))['total_anual_gore__sum'] or 0
+    total_anual_gore_indirecto = \
+        CostosIndirectosGore.objects.filter(item_subtitulo=item_subtitulo,
+                                            formulario_gore=formulario_gore).aggregate(
+            Sum('total_anual_gore'))['total_anual_gore__sum'] or 0
+
+    # Calcula los totales combinados
+    costo_sector = total_anual_sector_directo + total_anual_sector_indirecto
+    costo_gore = total_anual_gore_directo + total_anual_gore_indirecto
+
+    # Actualiza o crea RecursosComparados solo si cumple la condición
+    if (costo_gore > costo_sector):
+        diferencia_monto = costo_gore - costo_sector
         RecursosComparados.objects.update_or_create(
-            formulario_gore=instance.formulario_gore,
+            formulario_gore=formulario_gore,
             sector=instance.sector,
-            item_subtitulo=instance.item_subtitulo,
+            item_subtitulo=item_subtitulo,
             defaults={
-                'costo_sector': instance.total_anual_sector,
-                'costo_gore': instance.total_anual_gore,
-                'diferencia_monto': (instance.total_anual_gore or 0) - (instance.total_anual_sector or 0)
+                'costo_sector': costo_sector,
+                'costo_gore': costo_gore,
+                'diferencia_monto': diferencia_monto
             }
         )
 
-    # Manejo de Sistemas Informaticos
-    if programas_informaticos and instance.item_subtitulo == programas_informaticos:
+
+@receiver(post_save, sender=RecursosComparados)
+def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
+    # Logica para SistemasInformaticos y RecursosFisicosInfraestructura
+
+    # Sistemas Informaticos
+    if instance.item_subtitulo.item == '07 - Programas Informáticos':
         SistemasInformaticos.objects.get_or_create(
             formulario_gore=instance.formulario_gore,
             sector=instance.sector,
-            item_subtitulo=programas_informaticos
+            item_subtitulo=instance.item_subtitulo
         )
 
-    # Manejo de Recursos Fisicos Infraestructura
-    item_subtitulos_excluidos = ItemSubtitulo.objects.filter(
-        Q(subtitulo_id__in=subtitulos_ids) & ~Q(id=programas_informaticos.id)
-    )
-    for item_subtitulo in item_subtitulos_excluidos:
-        if instance.item_subtitulo == item_subtitulo:
-            RecursosFisicosInfraestructura.objects.get_or_create(
-                formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
-                item_subtitulo=item_subtitulo
-            )
+    # Recursos Fisicos Infraestructura
+    subtitulos_deseados = ["Sub. 22", "Sub. 29"]
+    subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
+    if instance.item_subtitulo.subtitulo_id in subtitulos_ids and instance.item_subtitulo.item != '07 - Programas Informáticos':
+        RecursosFisicosInfraestructura.objects.get_or_create(
+            formulario_gore=instance.formulario_gore,
+            sector=instance.sector,
+            item_subtitulo=instance.item_subtitulo
+        )
 
 
 @receiver(post_delete, sender=CostosDirectosGore)
