@@ -78,7 +78,7 @@ class OrganismosIntervinientes(BaseModel):
     descripcion = models.CharField(max_length=500, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class UnidadesIntervinientes(BaseModel):
@@ -89,7 +89,7 @@ class UnidadesIntervinientes(BaseModel):
     descripcion_unidad = models.TextField(max_length=500, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class EtapasEjercicioCompetencia(BaseModel):
@@ -99,7 +99,7 @@ class EtapasEjercicioCompetencia(BaseModel):
     descripcion_etapa = models.TextField(max_length=500, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class ProcedimientosEtapas(BaseModel):
@@ -111,7 +111,7 @@ class ProcedimientosEtapas(BaseModel):
     unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, blank=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class PlataformasySoftwares(BaseModel):
@@ -128,7 +128,7 @@ class PlataformasySoftwares(BaseModel):
     capacitacion_plataforma = models.BooleanField(blank=True, null=True, default=None)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class FlujogramaCompetencia(BaseModel):

@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False, allow_null=True)
+    DELETE = serializers.BooleanField(required=False, default=False)
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     sector_nombre = serializers.SerializerMethodField()
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
@@ -48,6 +49,7 @@ class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalDirectoGORE
         fields = [
             'id',
+            'DELETE',
             'sector',
             'sector_nombre',
             'estamento',
@@ -93,6 +95,7 @@ class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
 
 class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False, allow_null=True)
+    DELETE = serializers.BooleanField(required=False, default=False)
     calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
     sector_nombre = serializers.SerializerMethodField()
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
@@ -105,6 +108,7 @@ class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalIndirectoGORE
         fields = [
             'id',
+            'DELETE',
             'sector',
             'sector_nombre',
             'estamento',
@@ -347,14 +351,6 @@ class Paso3EncabezadoSerializer(serializers.ModelSerializer):
         return None
 
 
-def eliminar_instancia_costo(modelo, instancia_id):
-    try:
-        instancia = modelo.objects.get(id=instancia_id)
-        instancia.delete()  # Esto disparará la señal post_delete
-    except modelo.DoesNotExist:
-        pass
-
-
 class Paso3Serializer(WritableNestedModelSerializer):
     paso3_gore = Paso3EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
@@ -467,6 +463,10 @@ class Paso3Serializer(WritableNestedModelSerializer):
         return self.get_filtered_calidades_juridicas(obj, CostosIndirectosGore)
 
     def to_internal_value(self, data):
+
+        for item in data.get('p_3_1_a_personal_directo', []):
+            logger.debug(f"Raw DELETE flag for item {item.get('id')}: {item.get('DELETE')}")
+
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
@@ -492,26 +492,40 @@ class Paso3Serializer(WritableNestedModelSerializer):
                         internal_nested_data.append(item_data)
                 internal_value[field_name] = internal_nested_data
 
+        for item in internal_value.get('p_3_1_a_personal_directo', []):
+            logger.debug(f"Transformed DELETE flag for item {item.get('id')}: {item.get('DELETE')}")
+
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
-            item_id = data.pop('id', None)
-            delete_flag = data.pop('DELETE', False)
+            item_id = data.get('id', None)
+            delete_flag = data.get('DELETE', False)
+            logger.debug(f"Delete flag for {model.__name__} with ID {item_id}: {delete_flag}")
 
-            if item_id is not None and not delete_flag:
-                obj = model.objects.get(id=item_id)
-                for attr, value in data.items():
-                    setattr(obj, attr, value)
-                obj.formulario_gore = instance  # Asegurar que la instancia está correctamente asociada
-                obj.save()  # Invoca explícitamente el método save para aplicar la validación
-            elif item_id is None and not delete_flag:
-                # Crear una nueva instancia y guardarla explícitamente para invocar el método save
-                new_obj = model(**data)
-                new_obj.formulario_gore = instance  # Asegurar que la instancia está correctamente asociada
-                new_obj.save()
-            elif delete_flag:
-                model.objects.filter(id=item_id).delete()
+            if delete_flag and item_id:
+                logger.debug(f"Intentando eliminar {model.__name__} con ID {item_id}")
+                deleted, _ = model.objects.filter(id=item_id).delete()
+                if deleted:
+                    logger.debug(f"Eliminado {model.__name__} con ID {item_id}")
+                else:
+                    logger.debug(f"No se encontró {model.__name__} con ID {item_id} para eliminar")
+
+            elif not delete_flag:
+                if item_id:
+                    # Actualizar la instancia existente
+                    obj = model.objects.get(id=item_id)
+                    logger.debug(f"Editando {model.__name__} con ID {item_id}")
+                    for attr, value in data.items():
+                        setattr(obj, attr, value)
+                    obj.formulario_gore = instance  # Asegurar que la instancia está correctamente asociada
+                    obj.save()  # Invoca explícitamente el método save para aplicar la validación
+                else:
+                    # Crear una nueva instancia si no hay ID y el flag 'DELETE' no está presente
+                    data.pop('DELETE', None)  # Remover el flag 'DELETE' si está presente
+                    new_obj = model(**data)
+                    new_obj.formulario_gore = instance  # Asegurar que la instancia está correctamente asociada
+                    new_obj.save()
 
     def update(self, instance, validated_data):
         paso3 = validated_data.pop('paso3', None)

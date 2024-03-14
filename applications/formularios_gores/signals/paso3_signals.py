@@ -23,8 +23,6 @@ from applications.formularios_sectoriales.models import (
     CalidadJuridica
 )
 
-id_generado = int(time.time())
-
 @receiver(post_save, sender=FormularioGORE)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
@@ -64,7 +62,7 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
         }
         obj, created_gore = modelo_gore.objects.get_or_create(
             formulario_gore=formulario_gore,
-            id=id_generado,
+            id=instance.id,  # Utiliza el ID sectorial para encontrar y actualizar la instancia correspondiente en GORE
             sector=sector,
             defaults=defaults
         )
@@ -144,45 +142,51 @@ def actualizar_campos_paso3_directo(sender, instance, **kwargs):
     if isinstance(instance, Paso3):
         return
 
-    paso3_instance = Paso3.objects.get(formulario_gore=instance.formulario_gore)
-    total_especifico = 0
+    # Si el formulario gore existe, procede con la lógica restante
+    try:
 
-    for item, campo in items_y_campos_directos.items():
-        item_subtitulo = get_item_subtitulo(item)
-        total = calcular_total_por_item(CostosDirectosGore, paso3_instance, item_subtitulo)
-        setattr(paso3_instance, campo, total)
+        paso3_instance = Paso3.objects.get(formulario_gore=instance.formulario_gore)
+        total_especifico = 0
 
-    for calidad, campo in calidades_y_campos_directos.items():
-        calidad_juridica = get_calidad_juridica(calidad)
-        total = calcular_total_por_calidad_directo(PersonalDirectoGORE, paso3_instance, calidad_juridica)
-        setattr(paso3_instance, campo, total)
-        total_especifico += total  # Acumula los totales específicos
+        for item, campo in items_y_campos_directos.items():
+            item_subtitulo = get_item_subtitulo(item)
+            total = calcular_total_por_item(CostosDirectosGore, paso3_instance, item_subtitulo)
+            setattr(paso3_instance, campo, total)
 
-    # Calcular el total general de todas las calidades
-    total_general = sum(
-        (personal.renta_bruta or 0) for personal in PersonalDirectoGORE.objects.filter(
-            formulario_gore=paso3_instance.formulario_gore
+        for calidad, campo in calidades_y_campos_directos.items():
+            calidad_juridica = get_calidad_juridica(calidad)
+            total = calcular_total_por_calidad_directo(PersonalDirectoGORE, paso3_instance, calidad_juridica)
+            setattr(paso3_instance, campo, total)
+            total_especifico += total  # Acumula los totales específicos
+
+        # Calcular el total general de todas las calidades
+        total_general = sum(
+            (personal.renta_bruta or 0) for personal in PersonalDirectoGORE.objects.filter(
+                formulario_gore=paso3_instance.formulario_gore
+            )
         )
-    )
 
-    # Calcular el total de "otras calidades"
-    total_otras_calidades = total_general - total_especifico
-    paso3_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
+        # Calcular el total de "otras calidades"
+        total_otras_calidades = total_general - total_especifico
+        paso3_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
 
-    """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
+        """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
 
-    campos_directos = [
-        ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
-        ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado', 'sub21_personal_contrata_justificar'),
-        ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
-         'sub21_otras_remuneraciones_justificar'),
-        ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
-         'sub21_gastos_en_personal_justificar'),
-    ]
+        campos_directos = [
+            ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
+            ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado', 'sub21_personal_contrata_justificar'),
+            ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
+             'sub21_otras_remuneraciones_justificar'),
+            ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
+             'sub21_gastos_en_personal_justificar'),
+        ]
 
-    calcular_costos_por_justificar(paso3_instance, campos_directos)
+        calcular_costos_por_justificar(paso3_instance, campos_directos)
 
-    paso3_instance.save()
+        paso3_instance.save()
+
+    except Paso3.DoesNotExist:
+        return
 
 
 def calcular_total_por_calidad_indirecto(modelo, paso3_gore_instance, calidad_juridica):
@@ -217,45 +221,51 @@ def actualizar_campos_paso3_indirecto(sender, instance, **kwargs):
     if isinstance(instance, Paso3):
         return
 
-    paso3_instance = Paso3.objects.get(formulario_gore=instance.formulario_gore)
-    total_especifico = 0
+    # Si el formulario gore existe, procede con la lógica restante
+    try:
 
-    for item, campo in items_y_campos_indirectos.items():
-        item_subtitulo = get_item_subtitulo(item)
-        total = calcular_total_por_item(CostosIndirectosGore, paso3_instance, item_subtitulo)
-        setattr(paso3_instance, campo, total)
+        paso3_instance = Paso3.objects.get(formulario_gore=instance.formulario_gore)
+        total_especifico = 0
 
-    for calidad, campo in calidades_y_campos_indirectos.items():
-        calidad_juridica = get_calidad_juridica(calidad)
-        total = calcular_total_por_calidad_indirecto(PersonalIndirectoGORE, paso3_instance, calidad_juridica)
-        setattr(paso3_instance, campo, total)
-        total_especifico += total  # Acumula los totales específicos
+        for item, campo in items_y_campos_indirectos.items():
+            item_subtitulo = get_item_subtitulo(item)
+            total = calcular_total_por_item(CostosIndirectosGore, paso3_instance, item_subtitulo)
+            setattr(paso3_instance, campo, total)
 
-    # Calcular el total general de todas las calidades
-    total_general = sum(
-        (personal.total_rentas or 0) for personal in PersonalIndirectoGORE.objects.filter(
-            formulario_gore=paso3_instance.formulario_gore
+        for calidad, campo in calidades_y_campos_indirectos.items():
+            calidad_juridica = get_calidad_juridica(calidad)
+            total = calcular_total_por_calidad_indirecto(PersonalIndirectoGORE, paso3_instance, calidad_juridica)
+            setattr(paso3_instance, campo, total)
+            total_especifico += total  # Acumula los totales específicos
+
+        # Calcular el total general de todas las calidades
+        total_general = sum(
+            (personal.total_rentas or 0) for personal in PersonalIndirectoGORE.objects.filter(
+                formulario_gore=paso3_instance.formulario_gore
+            )
         )
-    )
 
-    # Calcular el total de "otras calidades"
-    total_otras_calidades = total_general - total_especifico
-    paso3_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
+        # Calcular el total de "otras calidades"
+        total_otras_calidades = total_general - total_especifico
+        paso3_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
 
-    """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
+        """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
 
-    campos_indirectos = [
-        ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
-        ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado',
-         'sub21b_personal_contrata_justificar'),
-        ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
-         'sub21b_otras_remuneraciones_justificar'),
-        ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
-         'sub21b_gastos_en_personal_justificar'),
-    ]
+        campos_indirectos = [
+            ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
+            ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado',
+             'sub21b_personal_contrata_justificar'),
+            ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
+             'sub21b_otras_remuneraciones_justificar'),
+            ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
+             'sub21b_gastos_en_personal_justificar'),
+        ]
 
-    calcular_costos_por_justificar(paso3_instance, campos_indirectos)
-    paso3_instance.save()
+        calcular_costos_por_justificar(paso3_instance, campos_indirectos)
+        paso3_instance.save()
+
+    except Paso3.DoesNotExist:
+        return
 
 
 # Mapeo entre ItemSubtitulo y CalidadJuridica
@@ -287,7 +297,6 @@ def crear_instancias_personal(modelo_costos, modelo_personal, instance, created)
                                                       calidad_juridica=calidad_juridica_obj).exists():
 
                     modelo_personal.objects.create(
-                        id=id_generado,
                         formulario_gore=instance.formulario_gore,
                         calidad_juridica=calidad_juridica_obj
                     )
@@ -350,7 +359,6 @@ def copiar_a_recursos_comparados_y_mas(sender, instance, **kwargs):
     if instance.item_subtitulo.subtitulo_id in subtitulos_ids and (instance.total_anual_gore or 0) > (instance.total_anual_sector or 0):
         RecursosComparados.objects.update_or_create(
             formulario_gore=instance.formulario_gore,
-            id=id_generado,
             sector=instance.sector,
             item_subtitulo=instance.item_subtitulo,
             defaults={
@@ -363,7 +371,6 @@ def copiar_a_recursos_comparados_y_mas(sender, instance, **kwargs):
     # Manejo de Sistemas Informaticos
     if programas_informaticos and instance.item_subtitulo == programas_informaticos:
         SistemasInformaticos.objects.get_or_create(
-            id=id_generado,
             formulario_gore=instance.formulario_gore,
             sector=instance.sector,
             item_subtitulo=programas_informaticos
@@ -376,7 +383,6 @@ def copiar_a_recursos_comparados_y_mas(sender, instance, **kwargs):
     for item_subtitulo in item_subtitulos_excluidos:
         if instance.item_subtitulo == item_subtitulo:
             RecursosFisicosInfraestructura.objects.get_or_create(
-                id=id_generado,
                 formulario_gore=instance.formulario_gore,
                 sector=instance.sector,
                 item_subtitulo=item_subtitulo

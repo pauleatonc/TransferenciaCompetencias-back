@@ -97,7 +97,7 @@ class CostosDirectosGore(BaseModel):
         super().save(*args, **kwargs)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class CostosIndirectosGore(BaseModel):
@@ -122,7 +122,7 @@ class CostosIndirectosGore(BaseModel):
         super().save(*args, **kwargs)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['created_date']
 
 
 class ResumenCostosGore(BaseModel):
