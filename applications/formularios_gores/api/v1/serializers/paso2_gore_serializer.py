@@ -15,7 +15,7 @@ from applications.formularios_gores.models import (
 User = get_user_model()
 
 
-class CostosDirectosGOREBaseSerializer(serializers.ModelSerializer):
+class CostosDirectosGORESerializer(serializers.ModelSerializer):
     subtitulo_label_value = serializers.SerializerMethodField()
     sector_nombre = serializers.SerializerMethodField()
     item_subtitulo_label_value = serializers.SerializerMethodField()
@@ -47,64 +47,6 @@ class CostosDirectosGOREBaseSerializer(serializers.ModelSerializer):
         return {'label': '', 'value': ''}
 
     def get_sector_nombre(self, obj):
-        if obj.sector:
-            return obj.sector.nombre
-        return ''
-
-
-class CostosDirectosSectorSerializer(CostosDirectosGOREBaseSerializer):
-    pass
-
-
-class PersonalDirectoSectorSerializer(CostosDirectosGOREBaseSerializer):
-    pass
-
-
-class CostosDirectosGoreSerializer(CostosDirectosGOREBaseSerializer):
-    pass
-
-
-class CostosDirectosGORESerializer(serializers.ModelSerializer):
-    subtitulo_label_value = serializers.SerializerMethodField()
-    sector_nombre = serializers.SerializerMethodField()
-    item_subtitulo_label_value = serializers.SerializerMethodField()
-
-    class Meta:
-        model = CostosDirectosGore
-        fields = [
-            'id',
-            'sector',
-            'sector_nombre',
-            'subtitulo_label_value',
-            'item_subtitulo',
-            'item_subtitulo_label_value',
-            'total_anual_sector',
-            'total_anual_gore',
-            'diferencia_monto',
-            'es_transitorio',
-            'descripcion',
-        ]
-
-    def get_subtitulo_label_value(self, obj):
-        # obj es una instancia de CostosDirectos
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
-            return {
-                'label': obj.item_subtitulo.subtitulo.subtitulo,
-                'value': str(obj.item_subtitulo.subtitulo.id)
-            }
-        return {'label': '', 'value': ''}
-
-    def get_item_subtitulo_label_value(self, obj):
-        # Método para el campo personalizado de item_subtitulo
-        if obj.item_subtitulo:
-            return {
-                'label': obj.item_subtitulo.item,
-                'value': str(obj.item_subtitulo.id)
-            }
-        return {'label': '', 'value': ''}
-
-    def get_sector_nombre(self, obj):
-        # Método para el campo personalizado de sector
         if obj.sector:
             return obj.sector.nombre
         return ''
@@ -193,15 +135,15 @@ class FluctuacionPresupuestariaSerializer(serializers.ModelSerializer):
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        if 'costo_anio' in data:
-            costo_anio = data.get('costo_anio')
+        if 'costo_anio_gore' in data:
+            costo_anio = data.get('costo_anio_gore')
             internal_costo_anio = []
             for item in costo_anio:
                 costo_anio_id = item.get('id')  # Extraer el ID
-                costo_anio_data = self.fields['costo_anio'].child.to_internal_value(item)
+                costo_anio_data = self.fields['costo_anio_gore'].child.to_internal_value(item)
                 costo_anio_data['id'] = costo_anio_id  # Asegurarse de que el ID se incluya
                 internal_costo_anio.append(costo_anio_data)
-            internal_value['costo_anio'] = internal_costo_anio
+            internal_value['costo_anio_gore'] = internal_costo_anio
 
         return internal_value
 
@@ -263,6 +205,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
     personal_directo_sector = serializers.SerializerMethodField()
     costos_directos_gore = serializers.SerializerMethodField()
     p_2_1_b_costos_indirectos = CostosIndirectosGORESerializer(many=True, read_only=False)
+    costos_indirectos_sector = serializers.SerializerMethodField()
+    personal_indirecto_sector = serializers.SerializerMethodField()
+    costos_indirectos_gore = serializers.SerializerMethodField()
     resumen_costos = ResumenCostosGORESerializer(many=True)
     p_2_1_c_fluctuaciones_presupuestarias = FluctuacionPresupuestariaSerializer(many=True, read_only=False)
 
@@ -277,6 +222,9 @@ class Paso2Serializer(WritableNestedModelSerializer):
             'personal_directo_sector',
             'costos_directos_gore',
             'p_2_1_b_costos_indirectos',
+            'costos_indirectos_sector',
+            'personal_indirecto_sector',
+            'costos_indirectos_gore',
             'resumen_costos',
             'p_2_1_c_fluctuaciones_presupuestarias',
         ]
@@ -299,60 +247,61 @@ class Paso2Serializer(WritableNestedModelSerializer):
         else:
             Paso2.objects.create(formulario_gore=instance, **paso2_data)
 
-    def get_costos_directos_sector(self, obj):
-        # Obtén todos los costos directos, excluyendo los de 'Sub. 21'
-        costos = CostosDirectosGore.objects.filter(
-            formulario_gore=obj, sector__isnull=False
-        ).exclude(item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related('sector')
+    def filtrar_queryset_por_obj(self, modelo, obj, subtitulo_excluir, incluir_sector):
+        # Filtro previo de los queryset
+        if incluir_sector:
+            return modelo.objects.filter(formulario_gore=obj, sector__isnull=False).exclude(
+                item_subtitulo__subtitulo__subtitulo=subtitulo_excluir).select_related('sector')
+        else:
+            return modelo.objects.filter(formulario_gore=obj,
+                                         item_subtitulo__subtitulo__subtitulo=subtitulo_excluir).select_related(
+                'sector')
 
-        # Agrupa los costos por sector
+    def serializar_y_agrupar_por_sector(self, queryset, serializer_cls):
+        # Agrupación de los objetos por sector y serialización
         agrupados_por_sector = {}
-        for costo in costos:
-            sector = costo.sector.nombre
-            if sector not in agrupados_por_sector:
-                agrupados_por_sector[sector] = []
-            agrupados_por_sector[sector].append(costo)
-
-        # Serializa los datos agrupados
-        resultado = []
-        for sector, costos in agrupados_por_sector.items():
-            resultado.append({
-                'sector': sector,
-                'costos': CostosDirectosSectorSerializer(costos, many=True).data
-            })
-
-        return resultado
-
-    def get_personal_directo_sector(self, obj):
-        personal_objs = CostosDirectosGore.objects.filter(formulario_gore=obj,
-                                                          item_subtitulo__subtitulo__subtitulo='Sub. 21').select_related(
-            'sector')
-
-        agrupados_por_sector = {}
-        for personal in personal_objs:
-            # Omitir los objetos donde personal.sector es None
-            if personal.sector is None:
-                continue  # No incluir en el resultado y continuar con el siguiente objeto
-
-            # De lo contrario, procesar normalmente
-            sector_nombre = personal.sector.nombre
+        for item in queryset:
+            if item.sector is None:
+                continue  # Omitimos los que no tienen sector
+            sector_nombre = item.sector.nombre
             if sector_nombre not in agrupados_por_sector:
                 agrupados_por_sector[sector_nombre] = []
-            agrupados_por_sector[sector_nombre].append(personal)
+            agrupados_por_sector[sector_nombre].append(item)
 
-        # Serializa los datos agrupados
+        # Ahora, cada sector será una clave en el resultado
         resultado = []
-        for sector_nombre, personal in agrupados_por_sector.items():
-            resultado.append({
-                'sector': sector_nombre,
-                'personal': PersonalDirectoSectorSerializer(personal, many=True).data
-            })
+        for sector_nombre, items in agrupados_por_sector.items():
+            data_serializada = serializer_cls(items, many=True).data
+            sector_dict = {'sector': sector_nombre, 'items': data_serializada}
+            resultado.append(sector_dict)
 
         return resultado
+
+    def get_items_por_sector(self, obj, modelo, serializer_cls, subtitulo_excluir=None, incluir_sector=True):
+        # Obtención del queryset y llamada a la función de agrupación/serialización
+        queryset = self.filtrar_queryset_por_obj(modelo, obj, subtitulo_excluir, incluir_sector)
+        return self.serializar_y_agrupar_por_sector(queryset, serializer_cls)
+
+    def get_costos_directos_sector(self, obj):
+        return self.get_items_por_sector(obj, CostosDirectosGore, CostosDirectosGORESerializer, 'Sub. 21')
+
+    def get_costos_indirectos_sector(self, obj):
+        return self.get_items_por_sector(obj, CostosIndirectosGore, CostosIndirectosGORESerializer, 'Sub. 21')
+
+    def get_personal_directo_sector(self, obj):
+        return self.get_items_por_sector(obj, CostosDirectosGore, CostosDirectosGORESerializer, 'Sub. 21', False)
+
+    def get_personal_indirecto_sector(self, obj):
+        return self.get_items_por_sector(obj, CostosIndirectosGore, CostosIndirectosGORESerializer, 'Sub. 21', False)
+
 
     def get_costos_directos_gore(self, obj):
         queryset = CostosDirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
-        return CostosDirectosGoreSerializer(queryset, many=True).data
+        return CostosDirectosGORESerializer(queryset, many=True).data
+
+    def get_costos_indirectos_gore(self, obj):
+        queryset = CostosIndirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
+        return CostosIndirectosGORESerializer(queryset, many=True).data
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
@@ -437,7 +386,7 @@ class Paso2Serializer(WritableNestedModelSerializer):
                 fluctuacion_instance, _ = FluctuacionPresupuestaria.objects.update_or_create(
                     id=fluctuacion_id,
                     defaults=fluctuacion_data,
-                    formulario_sectorial=instance
+                    formulario_gore=instance
                 )
 
                 for costo_data in costo_anio_data:

@@ -256,8 +256,7 @@ calidades_y_campos_directos = {
 
 campos_directos = [
     ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
-    ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado',
-     'sub21_personal_contrata_justificar'),
+    ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado', 'sub21_personal_contrata_justificar'),
     ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
      'sub21_otras_remuneraciones_justificar'),
     ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
@@ -288,7 +287,7 @@ campos_indirectos = [
 
 
 def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, items_y_campos, calidades_y_campos,
-                            campos_costos_justificar, **kwargs):
+                            campos_costos_justificar, tipo_modelo, **kwargs):
     if isinstance(instance, Paso5):
         return
 
@@ -310,15 +309,26 @@ def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, it
             total_especifico += total
 
         # Calcular el total general de todas las calidades
-        total_general = sum(
-            (personal.total_rentas or 0) for personal in PersonalIndirecto.objects.filter(
-                formulario_sectorial=paso5_instance.formulario_sectorial
+        if tipo_modelo == 'indirecto':
+            total_general = sum(
+                (personal.total_rentas or 0) for personal in PersonalIndirecto.objects.filter(
+                    formulario_sectorial=paso5_instance.formulario_sectorial
+                )
             )
-        )
+        elif tipo_modelo == 'directo':
+            total_general = sum(
+                (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
+                    formulario_sectorial=paso5_instance.formulario_sectorial
+                )
+            )
 
         # Calcular el total de "otras calidades"
         total_otras_calidades = total_general - total_especifico
-        paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
+        if tipo_modelo == 'indirecto':
+            paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
+        elif tipo_modelo == 'directo':
+            paso5_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
+            pass
 
         # Calcular costos por justificar usando el argumento `campos_costos_justificar`
         calcular_costos_por_justificar(paso5_instance, campos_costos_justificar)
@@ -328,32 +338,36 @@ def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, it
     except Paso5.DoesNotExist:
         return
 
+
 @receiver([post_save, post_delete], sender=CostosDirectos)
 @receiver([post_save, post_delete], sender=PersonalDirecto)
 def handler_directo(sender, instance, **kwargs):
     actualizar_campos_paso5(
-        sender,
-        instance,
-        **kwargs,
+        sender=sender,
+        instance=instance,
         modelo_costos=CostosDirectos,
         modelo_personal=PersonalDirecto,
         items_y_campos=items_y_campos_directos,
         calidades_y_campos=calidades_y_campos_directos,
-        campos_costos_justificar=campos_directos
+        campos_costos_justificar=campos_directos,
+        tipo_modelo='directo',  # Especificar el tipo de modelo
+        **kwargs
     )
+
 
 @receiver([post_save, post_delete], sender=CostosIndirectos)
 @receiver([post_save, post_delete], sender=PersonalIndirecto)
 def handler_indirecto(sender, instance, **kwargs):
     actualizar_campos_paso5(
-        sender,
-        instance,
-        **kwargs,
+        sender=sender,
+        instance=instance,
         modelo_costos=CostosIndirectos,
         modelo_personal=PersonalIndirecto,
         items_y_campos=items_y_campos_indirectos,
         calidades_y_campos=calidades_y_campos_indirectos,
-        campos_costos_justificar=campos_indirectos
+        campos_costos_justificar=campos_indirectos,
+        tipo_modelo='indirecto',  # Especificar el tipo de modelo
+        **kwargs
     )
 
 

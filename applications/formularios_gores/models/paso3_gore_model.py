@@ -124,11 +124,12 @@ class PersonalDirectoGORE(BaseModel):
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='personal_directo_gore',
                                blank=True, null=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo_gore', null=True, blank=True)
-    calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo_gore')
+    calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo_gore', null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
     comision_servicio = models.BooleanField(blank=True, null=True, default=False)
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
+    id_sectorial = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['created_date']
@@ -140,13 +141,14 @@ class PersonalIndirectoGORE(BaseModel):
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='personal_indirecto_gore',
                                blank=True, null=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto_gore', null=True, blank=True)
-    calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto_gore')
+    calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto_gore', null=True, blank=True)
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_rentas = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
     comision_servicio = models.BooleanField(blank=True, null=True, default=False)
     utilizara_recurso = models.BooleanField(blank=True, null=True, default=None)
+    id_sectorial = models.IntegerField(null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['created_date']
@@ -179,7 +181,7 @@ class SistemasInformaticos(BaseModel):
                                              related_name='p_3_2_a_sistemas_informaticos')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore',
                                blank=True, null=True)
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='sistemas_informaticos_gore', null=True, blank=True)
     nombre_plataforma = models.TextField(max_length=500, blank=True)
     descripcion_tecnica = models.TextField(max_length=500, blank=True)
     costo = models.IntegerField(null=True, blank=True, default=None)
@@ -194,7 +196,7 @@ class RecursosFisicosInfraestructura(BaseModel):
                                              related_name='p_3_2_b_recursos_fisicos_infraestructura')
     sector = models.ForeignKey(SectorGubernamental, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore',
                                blank=True, null=True)
-    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore')
+    item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='recursos_fisicos_infraestructura_gore', null=True, blank=True)
     costo_unitario = models.IntegerField(null=True, blank=True, default=None)
     cantidad = models.IntegerField(null=True, blank=True, default=None)
     costo_total = models.IntegerField(null=True, blank=True, default=None)

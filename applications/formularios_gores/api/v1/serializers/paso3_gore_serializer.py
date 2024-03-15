@@ -49,6 +49,7 @@ class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalDirectoGORE
         fields = [
             'id',
+            'id_sectorial',
             'DELETE',
             'sector',
             'sector_nombre',
@@ -108,6 +109,7 @@ class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalIndirectoGORE
         fields = [
             'id',
+            'id_sectorial',
             'DELETE',
             'sector',
             'sector_nombre',

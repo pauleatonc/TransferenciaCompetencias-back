@@ -46,12 +46,7 @@ def eliminar_instancias_gore_correspondientes(modelo_gore, instance):
 
 
 def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
-    # Obtiene el texto del subtitulo asociado a la instancia de ItemSubtitulo
     item_subtitulo_subtitulos_texto = instance.item_subtitulo.subtitulo.subtitulo
-
-    # Retorna sin hacer nada si el texto del subtitulo es "Sub. 21"
-    if item_subtitulo_subtitulos_texto == "Sub. 21":
-        return
 
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
@@ -63,10 +58,22 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
             formulario_gore=formulario_gore,
             sector=sector,
             item_subtitulo=instance.item_subtitulo,
-            defaults={'total_anual_sector': instance.total_anual}  # Ajusta según el modelo
+            defaults={
+                'total_anual_sector': instance.total_anual,
+                # Define 'descripcion' en los defaults solo si es Sub. 21
+                'descripcion': instance.descripcion if item_subtitulo_subtitulos_texto == 'Sub. 21' else ''
+            }
         )
-        if not created and not created_gore:
-            obj.total_anual_sector = instance.total_anual  # Ajusta según el modelo
+
+        # Siempre actualiza 'total_anual_sector' independientemente del subtítulo.
+        obj.total_anual_sector = instance.total_anual
+
+        # Actualiza 'descripcion' solo si el subtítulo es 'Sub. 21' y la instancia no fue recién creada.
+        if item_subtitulo_subtitulos_texto == 'Sub. 21' and not created_gore:
+            obj.descripcion = instance.descripcion
+
+        # Guarda los cambios en la instancia del modelo gore si hubo alguna actualización.
+        if not created_gore or item_subtitulo_subtitulos_texto == 'Sub. 21':
             obj.save()
 
 
