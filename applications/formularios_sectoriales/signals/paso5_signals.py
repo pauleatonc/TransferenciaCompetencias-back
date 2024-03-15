@@ -76,7 +76,6 @@ def regenerar_resumen_costos(formulario_sectorial_id):
     ).delete()
 
 
-
 def calcular_y_actualizar_variacion(formulario_sectorial_id):
     subtitulos_ids = EvolucionGastoAsociado.objects.filter(
         formulario_sectorial_id=formulario_sectorial_id
@@ -98,7 +97,7 @@ def calcular_y_actualizar_variacion(formulario_sectorial_id):
                 for i in range(len(costos) - 1):
                     costo_actual = costos[i].costo if costos[i] and costos[i].costo is not None else 0
                     variacion = costo_actual - gasto_n_1
-                    variaciones[f'variacion_gasto_n_{5-i}'] = variacion
+                    variaciones[f'variacion_gasto_n_{5 - i}'] = variacion
 
                 VariacionPromedio.objects.update_or_create(
                     formulario_sectorial_id=formulario_sectorial_id,
@@ -142,7 +141,6 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
         subtitulo_id__in=subtitulos_unicos_ids).delete()
     VariacionPromedio.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
         subtitulo_id__in=subtitulos_unicos_ids).delete()
-
 
 
 @receiver(post_save, sender=CostosDirectos)
@@ -189,7 +187,7 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
         for i in range(len(costos) - 1):
             costo_actual = costos[i].costo if costos[i].costo is not None else 0
             variacion = costo_actual - gasto_n_1
-            variaciones[f'variacion_gasto_n_{5-i}'] = variacion
+            variaciones[f'variacion_gasto_n_{5 - i}'] = variacion
 
         evolucion_gasto = EvolucionGastoAsociado.objects.get(id=evolucion_gasto_id)
         VariacionPromedio.objects.update_or_create(
@@ -202,8 +200,10 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
 def get_item_subtitulo(item):
     return ItemSubtitulo.objects.get(item=item)
 
+
 def get_calidad_juridica(calidad):
     return CalidadJuridica.objects.get(calidad_juridica=calidad)
+
 
 def calcular_total_por_item(modelo, paso5_instance, item_subtitulo):
     return sum((item.total_anual or 0) for item in modelo.objects.filter(
@@ -226,11 +226,20 @@ def calcular_costos_por_justificar(paso5_instance, campos):
         setattr(paso5_instance, campo_por_justificar, por_justificar)
 
 
-def calcular_total_por_calidad_directo(modelo, paso5_instance, calidad_juridica):
-    return sum((personal.renta_bruta or 0) for personal in modelo.objects.filter(
+def calcular_total_por_calidad(modelo, paso5_instance, calidad_juridica):
+    if modelo == PersonalDirecto:
+        campo_suma = 'renta_bruta'
+    elif modelo == PersonalIndirecto:
+        campo_suma = 'total_rentas'
+    else:
+        return 0
+
+    return sum((getattr(personal, campo_suma) or 0) for personal in modelo.objects.filter(
         formulario_sectorial=paso5_instance.formulario_sectorial,
         calidad_juridica=calidad_juridica
     ))
+
+
 
 items_y_campos_directos = {
     "01 - Personal de Planta": "sub21_total_personal_planta",
@@ -245,66 +254,15 @@ calidades_y_campos_directos = {
     "Honorario a suma alzada": "sub21_otras_remuneraciones_justificado",
 }
 
-@receiver([post_save, post_delete], sender=CostosDirectos)
-@receiver([post_save, post_delete], sender=PersonalDirecto)
-# Realiza los cálculos de los campos directos y los costos por justificar
-def actualizar_campos_paso5_directo(sender, instance, **kwargs):
-    if isinstance(instance, Paso5):
-        return
-
-    # Si el formulario sectorial existe, procede con la lógica restante
-    try:
-        paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
-        total_especifico = 0
-
-        for item, campo in items_y_campos_directos.items():
-            item_subtitulo = get_item_subtitulo(item)
-            total = calcular_total_por_item(CostosDirectos, paso5_instance, item_subtitulo)
-            setattr(paso5_instance, campo, total)
-
-        for calidad, campo in calidades_y_campos_directos.items():
-            calidad_juridica = get_calidad_juridica(calidad)
-            total = calcular_total_por_calidad_directo(PersonalDirecto, paso5_instance, calidad_juridica)
-            setattr(paso5_instance, campo, total)
-            total_especifico += total  # Acumula los totales específicos
-
-        # Calcular el total general de todas las calidades
-        total_general = sum(
-            (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
-                formulario_sectorial=paso5_instance.formulario_sectorial
-            )
-        )
-
-        # Calcular el total de "otras calidades"
-        total_otras_calidades = total_general - total_especifico
-        paso5_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
-
-        """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
-
-        campos_directos = [
-            ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
-            ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado',
-             'sub21_personal_contrata_justificar'),
-            ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
-             'sub21_otras_remuneraciones_justificar'),
-            ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
-             'sub21_gastos_en_personal_justificar'),
-        ]
-
-        calcular_costos_por_justificar(paso5_instance, campos_directos)
-
-        paso5_instance.save()
-
-    except Paso5.DoesNotExist:
-        return
-
-
-    
-def calcular_total_por_calidad_indirecto(modelo, paso5_instance, calidad_juridica):
-    return sum((personal.total_rentas or 0) for personal in modelo.objects.filter(
-        formulario_sectorial=paso5_instance.formulario_sectorial,
-        calidad_juridica=calidad_juridica
-    ))
+campos_directos = [
+    ('sub21_total_personal_planta', 'sub21_personal_planta_justificado', 'sub21_personal_planta_justificar'),
+    ('sub21_total_personal_contrata', 'sub21_personal_contrata_justificado',
+     'sub21_personal_contrata_justificar'),
+    ('sub21_total_otras_remuneraciones', 'sub21_otras_remuneraciones_justificado',
+     'sub21_otras_remuneraciones_justificar'),
+    ('sub21_total_gastos_en_personal', 'sub21_gastos_en_personal_justificado',
+     'sub21_gastos_en_personal_justificar'),
+]
 
 items_y_campos_indirectos = {
     "01 - Personal de Planta": "sub21b_total_personal_planta",
@@ -319,30 +277,37 @@ calidades_y_campos_indirectos = {
     "Honorario a suma alzada": "sub21b_otras_remuneraciones_justificado",
 }
 
+campos_indirectos = [
+    ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
+    ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado', 'sub21b_personal_contrata_justificar'),
+    ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
+     'sub21b_otras_remuneraciones_justificar'),
+    ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
+     'sub21b_gastos_en_personal_justificar'),
+]
 
-@receiver([post_save, post_delete], sender=CostosIndirectos)
-@receiver([post_save, post_delete], sender=PersonalIndirecto)
-# Realiza los cálculos de los campos indirectos y los costos por justificar
-def actualizar_campos_paso5_indirecto(sender, instance, **kwargs):
+
+def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, items_y_campos, calidades_y_campos,
+                            campos_costos_justificar, **kwargs):
     if isinstance(instance, Paso5):
         return
 
-    # Si el formulario sectorial existe, procede con la lógica restante
     try:
-
         paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
         total_especifico = 0
 
-        for item, campo in items_y_campos_indirectos.items():
+        # Calcular totales por item
+        for item, campo in items_y_campos.items():
             item_subtitulo = get_item_subtitulo(item)
-            total = calcular_total_por_item(CostosIndirectos, paso5_instance, item_subtitulo)
+            total = calcular_total_por_item(modelo_costos, paso5_instance, item_subtitulo)
             setattr(paso5_instance, campo, total)
 
-        for calidad, campo in calidades_y_campos_indirectos.items():
+        # Calcular totales por calidad
+        for calidad, campo in calidades_y_campos.items():
             calidad_juridica = get_calidad_juridica(calidad)
-            total = calcular_total_por_calidad_indirecto(PersonalIndirecto, paso5_instance, calidad_juridica)
+            total = calcular_total_por_calidad(modelo_personal, paso5_instance, calidad_juridica)
             setattr(paso5_instance, campo, total)
-            total_especifico += total  # Acumula los totales específicos
+            total_especifico += total
 
         # Calcular el total general de todas las calidades
         total_general = sum(
@@ -355,22 +320,41 @@ def actualizar_campos_paso5_indirecto(sender, instance, **kwargs):
         total_otras_calidades = total_general - total_especifico
         paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
 
-        """ Calcula los costos por justificar en cada caso: Planta, Contrata, resto de calidades juridicas"""
+        # Calcular costos por justificar usando el argumento `campos_costos_justificar`
+        calcular_costos_por_justificar(paso5_instance, campos_costos_justificar)
 
-        campos_indirectos = [
-            ('sub21b_total_personal_planta', 'sub21b_personal_planta_justificado', 'sub21b_personal_planta_justificar'),
-            ('sub21b_total_personal_contrata', 'sub21b_personal_contrata_justificado', 'sub21b_personal_contrata_justificar'),
-            ('sub21b_total_otras_remuneraciones', 'sub21b_otras_remuneraciones_justificado',
-             'sub21b_otras_remuneraciones_justificar'),
-            ('sub21b_total_gastos_en_personal', 'sub21b_gastos_en_personal_justificado',
-             'sub21b_gastos_en_personal_justificar'),
-        ]
-
-        calcular_costos_por_justificar(paso5_instance, campos_indirectos)
         paso5_instance.save()
 
     except Paso5.DoesNotExist:
         return
+
+@receiver([post_save, post_delete], sender=CostosDirectos)
+@receiver([post_save, post_delete], sender=PersonalDirecto)
+def handler_directo(sender, instance, **kwargs):
+    actualizar_campos_paso5(
+        sender,
+        instance,
+        **kwargs,
+        modelo_costos=CostosDirectos,
+        modelo_personal=PersonalDirecto,
+        items_y_campos=items_y_campos_directos,
+        calidades_y_campos=calidades_y_campos_directos,
+        campos_costos_justificar=campos_directos
+    )
+
+@receiver([post_save, post_delete], sender=CostosIndirectos)
+@receiver([post_save, post_delete], sender=PersonalIndirecto)
+def handler_indirecto(sender, instance, **kwargs):
+    actualizar_campos_paso5(
+        sender,
+        instance,
+        **kwargs,
+        modelo_costos=CostosIndirectos,
+        modelo_personal=PersonalIndirecto,
+        items_y_campos=items_y_campos_indirectos,
+        calidades_y_campos=calidades_y_campos_indirectos,
+        campos_costos_justificar=campos_indirectos
+    )
 
 
 # Mapeo entre ItemSubtitulo y CalidadJuridica
@@ -382,66 +366,46 @@ relacion_item_calidad = {
 }
 
 
-def crear_instancias_personal(modelo_costos, modelo_personal, instance, created):
-    # Crea instancias para los modelos de PersonalDirecto y PersonalIndirecto en relación con la creación de
-    # Costos Directos e Indirectos
-    if created:
+def actualizar_instancias_personal(modelo_costos, modelo_personal, instance):
+    """
+    Actualiza las instancias de Personal (Directo o Indirecto) basándose en el item_subtitulo
+    seleccionado en el modelo de costos. Crea nuevas instancias de personal si el item_subtitulo es
+    añadido o actualizado y elimina instancias de personal si el item_subtitulo es eliminado.
+    """
+    # Verifica si el item_subtitulo está definido
+    if instance.item_subtitulo:
         item_subtitulo_texto = instance.item_subtitulo.item
-        calidades = relacion_item_calidad.get(item_subtitulo_texto)
+        calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
 
-        if item_subtitulo_texto == "04 - Otros Gastos en Personal":
-            return  # No se crean instancias para este caso
-
-        if calidades:
-            if not isinstance(calidades, list):
-                calidades = [calidades]
-
-            for calidad in calidades:
-                calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
-                if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
-                                                      calidad_juridica=calidad_juridica_obj).exists():
-                    id_generado = int(time.time())  # Obtiene el timestamp actual en segundos
-                    modelo_personal.objects.create(
-                        id=id_generado,
-                        formulario_sectorial=instance.formulario_sectorial,
-                        calidad_juridica=calidad_juridica_obj
-                    )
-
-def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
-    item_subtitulo_texto = instance.item_subtitulo.item
-    calidades = relacion_item_calidad.get(item_subtitulo_texto)
-
-    if calidades:
         if not isinstance(calidades, list):
             calidades = [calidades]
 
         for calidad in calidades:
-            calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
-            existe_costo = modelo_costos.objects.filter(formulario_sectorial=instance.formulario_sectorial, item_subtitulo=instance.item_subtitulo).exists()
-
-            if not existe_costo:
-                modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial, calidad_juridica=calidad_juridica_obj).delete()
+            calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
+            # Solo crea la instancia de personal si aún no existe
+            if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
+                                                  calidad_juridica=calidad_juridica_obj).exists():
+                modelo_personal.objects.create(
+                    formulario_sectorial=instance.formulario_sectorial,
+                    calidad_juridica=calidad_juridica_obj
+                )
+    else:
+        # Si el item_subtitulo es eliminado o no está definido, verifica si hay instancias de personal a eliminar
+        personal_a_eliminar = modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial)
+        for personal in personal_a_eliminar:
+            # Verifica si hay otros costos asociados a este personal antes de eliminarlo
+            if not modelo_costos.objects.filter(formulario_sectorial=instance.formulario_sectorial,
+                                                item_subtitulo__isnull=False).exclude(id=instance.id).exists():
+                personal.delete()
 
 
 @receiver(post_save, sender=CostosDirectos)
-def post_save_costos_directos(sender, instance, created, **kwargs):
-    if instance.item_subtitulo:
-        crear_instancias_personal(CostosDirectos, PersonalDirecto, instance, created)
-
-
 @receiver(post_delete, sender=CostosDirectos)
-def post_delete_costos_directos(sender, instance, **kwargs):
-    if instance.item_subtitulo:
-        eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+def actualizar_personal_directo(sender, instance, **kwargs):
+    actualizar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
 
 
 @receiver(post_save, sender=CostosIndirectos)
-def post_save_costos_indirectos(sender, instance, created, **kwargs):
-    if instance.item_subtitulo:
-        crear_instancias_personal(CostosIndirectos, PersonalIndirecto, instance, created)
-
-
 @receiver(post_delete, sender=CostosIndirectos)
-def post_delete_costos_indirectos(sender, instance, **kwargs):
-    if instance.item_subtitulo:
-        eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+def actualizar_personal_indirecto(sender, instance, **kwargs):
+    actualizar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)

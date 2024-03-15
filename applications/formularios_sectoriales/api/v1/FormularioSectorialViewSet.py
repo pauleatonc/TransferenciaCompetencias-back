@@ -26,10 +26,12 @@ def manejar_formularios_pasos(request, formulario_sectorial, serializer_class):
     if request.method == 'PATCH':
         print("Datos recibidos para PATCH:", request.data)
 
-        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True, context={'request': request})
+        serializer = serializer_class(formulario_sectorial, data=request.data, partial=True,
+                                      context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
+        print("Errores de validación:", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     else:  # GET
 
