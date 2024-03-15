@@ -366,23 +366,35 @@ relacion_item_calidad = {
 }
 
 
-def actualizar_instancias_personal(modelo_costos, modelo_personal, instance):
+def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, created=False):
     """
-    Actualiza las instancias de Personal (Directo o Indirecto) basándose en el item_subtitulo
-    seleccionado en el modelo de costos. Crea nuevas instancias de personal si el item_subtitulo es
-    añadido o actualizado y elimina instancias de personal si el item_subtitulo es eliminado.
+    Actualiza o elimina las instancias de Personal (Directo o Indirecto) basándose en el estado del item_subtitulo
+    seleccionado en el modelo de costos. Específicamente, maneja la creación de instancias excluyendo el caso
+    "04 - Otros Gastos en Personal" y elimina instancias asociadas a este ítem si ya no existen costos vinculados.
     """
-    # Verifica si el item_subtitulo está definido
+    # Manejar la creación o actualización de costos
     if instance.item_subtitulo:
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
+
+        if item_subtitulo_texto == "04 - Otros Gastos en Personal" and not created:
+            # Si estamos actualizando y es el caso especial "04 - Otros Gastos en Personal",
+            # verifica si se deben eliminar instancias de personal asociadas
+            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo).exists():
+                # No hay más costos asociados a este ítem, eliminar todas las instancias de personal relacionadas
+                personal_asociado = modelo_personal.objects.filter(
+                    formulario_sectorial=instance.formulario_sectorial,
+                    calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in calidades]
+                )
+                personal_asociado.delete()
+            return  # Finaliza la ejecución para este caso
 
         if not isinstance(calidades, list):
             calidades = [calidades]
 
         for calidad in calidades:
             calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
-            # Solo crea la instancia de personal si aún no existe
+            # Solo crea la instancia de personal si aún no existe y no es el caso especial "04 - Otros Gastos en Personal"
             if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
                                                   calidad_juridica=calidad_juridica_obj).exists():
                 modelo_personal.objects.create(
@@ -390,10 +402,9 @@ def actualizar_instancias_personal(modelo_costos, modelo_personal, instance):
                     calidad_juridica=calidad_juridica_obj
                 )
     else:
-        # Si el item_subtitulo es eliminado o no está definido, verifica si hay instancias de personal a eliminar
+        # Manejar la eliminación de costos o la ausencia de item_subtitulo
         personal_a_eliminar = modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial)
         for personal in personal_a_eliminar:
-            # Verifica si hay otros costos asociados a este personal antes de eliminarlo
             if not modelo_costos.objects.filter(formulario_sectorial=instance.formulario_sectorial,
                                                 item_subtitulo__isnull=False).exclude(id=instance.id).exists():
                 personal.delete()
