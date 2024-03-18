@@ -49,6 +49,7 @@ class PersonalDirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalDirectoGORE
         fields = [
             'id',
+            'id_sectorial',
             'DELETE',
             'sector',
             'sector_nombre',
@@ -108,6 +109,7 @@ class PersonalIndirectoGoreSerializer(serializers.ModelSerializer):
         model = PersonalIndirectoGORE
         fields = [
             'id',
+            'id_sectorial',
             'DELETE',
             'sector',
             'sector_nombre',
@@ -472,9 +474,6 @@ class Paso3Serializer(WritableNestedModelSerializer):
 
     def to_internal_value(self, data):
 
-        for item in data.get('p_3_1_a_personal_directo', []):
-            logger.debug(f"Raw DELETE flag for item {item.get('id')}: {item.get('DELETE')}")
-
         # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
@@ -500,30 +499,20 @@ class Paso3Serializer(WritableNestedModelSerializer):
                         internal_nested_data.append(item_data)
                 internal_value[field_name] = internal_nested_data
 
-        for item in internal_value.get('p_3_1_a_personal_directo', []):
-            logger.debug(f"Transformed DELETE flag for item {item.get('id')}: {item.get('DELETE')}")
-
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
             item_id = data.get('id', None)
             delete_flag = data.get('DELETE', False)
-            logger.debug(f"Delete flag for {model.__name__} with ID {item_id}: {delete_flag}")
 
             if delete_flag and item_id:
-                logger.debug(f"Intentando eliminar {model.__name__} con ID {item_id}")
                 deleted, _ = model.objects.filter(id=item_id).delete()
-                if deleted:
-                    logger.debug(f"Eliminado {model.__name__} con ID {item_id}")
-                else:
-                    logger.debug(f"No se encontró {model.__name__} con ID {item_id} para eliminar")
 
             elif not delete_flag:
                 if item_id:
                     # Actualizar la instancia existente
                     obj = model.objects.get(id=item_id)
-                    logger.debug(f"Editando {model.__name__} con ID {item_id}")
                     for attr, value in data.items():
                         setattr(obj, attr, value)
                     obj.formulario_gore = instance  # Asegurar que la instancia está correctamente asociada
