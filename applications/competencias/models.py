@@ -35,6 +35,10 @@ class Competencia(BaseModel):
         ('FIN', 'Finalizada'),
         ('SU', 'Sin usuario sectorial')
     )
+    MODALIDAD_EJERCICIO = (
+        ('Exclusiva', 'Exclusiva'),
+        ('Compartida', 'Compartida')
+    )
 
     nombre = models.CharField(max_length=200, unique=True)
     creado_por = models.ForeignKey(
@@ -50,7 +54,8 @@ class Competencia(BaseModel):
         blank=False,
         verbose_name='Sectores'
     )
-    ambito_competencia = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='ambito_competencia', null=True, blank=True)
+    ambito_competencia = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='ambito_competencia',
+                                           null=True, blank=True)
     regiones = models.ManyToManyField(
         Region,
         blank=False,
@@ -58,11 +63,11 @@ class Competencia(BaseModel):
     )
     origen = models.CharField(max_length=5, choices=ORIGEN, default='OP')
     oficio_origen = models.FileField(upload_to='oficios_competencias',
-                                             validators=[
-                                                 FileExtensionValidator(
-                                                     ['pdf'], message='Solo se permiten archivos PDF.'),
-                                                 validate_file_size_twenty],
-                                             verbose_name='Oficio Origen Competencia', blank=True, null=True)
+                                     validators=[
+                                         FileExtensionValidator(
+                                             ['pdf'], message='Solo se permiten archivos PDF.'),
+                                         validate_file_size_twenty],
+                                     verbose_name='Oficio Origen Competencia', blank=True, null=True)
 
     fecha_inicio = models.DateTimeField(null=True, blank=True)
     fecha_fin = models.DateTimeField(null=True, blank=True)
@@ -106,18 +111,30 @@ class Competencia(BaseModel):
         limit_choices_to=Q(groups__name='GORE')
     )
 
+    # Campos para revisión final SUBDERE
+    ambito_definitivo_competencia = models.ForeignKey(Ambito, on_delete=models.CASCADE,
+                                                      related_name='ambito_definitivo_competencia',
+                                                      null=True, blank=True)
+    regiones_recomendadas = models.ManyToManyField(
+        Region,
+        blank=False,
+        related_name='regiones_recomendadas',
+        verbose_name='Regiones recomendadas'
+    )
+    recursos_requeridos = models.TextField(blank=True, null=True)
+    modalidad_ejercicio = models.CharField(max_length=20, choices=MODALIDAD_EJERCICIO, blank=True, null=True)
+    implementacion_acompanamiento = models.TextField(blank=True, null=True)
+    condiciones_ejercicio = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Competencia'
         verbose_name_plural = 'Competencias'
-
 
     def __str__(self):
         return self.nombre
 
     def clean(self):
         super().clean()
-
 
     def tiempo_transcurrido(self):
         """
@@ -142,8 +159,34 @@ class DocumentosComplementarios(BaseModel):
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
     nombre_documento = models.CharField(max_length=100, unique=True)
     documento = models.FileField(upload_to='documentos_competencias',
-                                           validators=[
-                                               FileExtensionValidator(
-                                                   ['pdf'], message='Solo se permiten archivos PDF.'),
-                                               validate_file_size_five],
-                                           verbose_name='Documentos complementarios Competencia', blank=True, null=True)
+                                 validators=[
+                                     FileExtensionValidator(
+                                         ['pdf'], message='Solo se permiten archivos PDF.'),
+                                     validate_file_size_five],
+                                 verbose_name='Documentos complementarios Competencia', blank=True, null=True)
+
+
+
+# Modelos para revisión final SUBDERE
+class RecomendacionesDesfavorables(BaseModel):
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='recomendaciones_desfavorables')
+    justificacion = models.TextField(max_length=500)
+    region = models.ForeignKey(Region, on_delete=models.CASCADE)
+
+
+class Temporalidad(BaseModel):
+    TEMPORALIDAD = (
+        ('Definitiva', 'Definitiva'),
+        ('Temporal', 'Temporal')
+    )
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='temporalidad')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
+    temporalidad = models.CharField(max_length=10, choices=TEMPORALIDAD, blank=True, null=True)
+    justificacion_temporalidad = models.TextField(max_length=500, blank=True, null=True)
+
+
+class Gradualidad(BaseModel):
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='gradualidad')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, blank=True, null=True)
+    gradualidad_meses = models.IntegerField(blank=True, null=True)
+    justificacion_gradualidad = models.TextField(max_length=500, blank=True, null=True)
