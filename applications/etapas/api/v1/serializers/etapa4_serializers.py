@@ -39,6 +39,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'fecha_ultima_modificacion',
             'usuarios_gore',
             'oficio_inicio_gore',
+            'oficio_origen',
             'formularios_gore',
             'tipo_usuario'
         ]
