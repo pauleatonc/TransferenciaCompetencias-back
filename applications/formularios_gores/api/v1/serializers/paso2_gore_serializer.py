@@ -11,6 +11,10 @@ from applications.formularios_gores.models import (
     FluctuacionPresupuestaria,
     CostoAnioGore
 )
+from applications.formularios_sectoriales.models import ItemSubtitulo, Subtitulos, EtapasEjercicioCompetencia, \
+    FormularioSectorial
+
+from applications.formularios_sectoriales.api.v1.serializers import ItemSubtituloSerializer, SubtitulosSerializer
 
 User = get_user_model()
 
@@ -197,6 +201,40 @@ def eliminar_instancia_costo(modelo, instancia_id):
         pass
 
 
+def get_subtitulos_disponibles(modelo_costos, formulario_obj):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo_costos para este formulario
+    items_utilizados = modelo_costos.objects.filter(
+        formulario_gore=formulario_obj).values_list('item_subtitulo__id', flat=True)
+
+    # Filtra ItemSubtitulo para excluir los utilizados
+    item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados)
+
+    # Obtiene los Subtitulos asociados a los item_subtitulos disponibles
+    subtitulos_ids = item_subtitulos_disponibles.values_list('subtitulo__id', flat=True).distinct()
+    subtitulos_disponibles = Subtitulos.objects.filter(id__in=subtitulos_ids)
+
+    return subtitulos_disponibles
+
+
+def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo de costos para este formulario
+    items_utilizados = modelo_costos.objects.filter(
+        formulario_gore=formulario_obj).values_list('item_subtitulo__id', flat=True)
+
+    # Filtra ItemSubtitulo para excluir los utilizados
+    item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados).select_related('subtitulo')
+
+    # Agrupa los ItemSubtitulo disponibles por Subtitulos
+    items_agrupados = {}
+    for item in item_subtitulos_disponibles:
+        subtitulo = item.subtitulo.subtitulo
+        if subtitulo not in items_agrupados:
+            items_agrupados[subtitulo] = []
+        items_agrupados[subtitulo].append(ItemSubtituloSerializer(item).data)
+
+    return items_agrupados
+
+
 class Paso2Serializer(WritableNestedModelSerializer):
     paso2_gore = Paso2EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
@@ -210,6 +248,11 @@ class Paso2Serializer(WritableNestedModelSerializer):
     costos_indirectos_gore = serializers.SerializerMethodField()
     resumen_costos = ResumenCostosGORESerializer(many=True)
     p_2_1_c_fluctuaciones_presupuestarias = FluctuacionPresupuestariaSerializer(many=True, read_only=False)
+    listado_subtitulos_directos = serializers.SerializerMethodField()
+    listado_subtitulos_indirectos = serializers.SerializerMethodField()
+    listado_item_subtitulos_directos = serializers.SerializerMethodField()
+    listado_item_subtitulos_indirectos = serializers.SerializerMethodField()
+    listado_etapas = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioGORE
@@ -227,6 +270,12 @@ class Paso2Serializer(WritableNestedModelSerializer):
             'costos_indirectos_gore',
             'resumen_costos',
             'p_2_1_c_fluctuaciones_presupuestarias',
+            'listado_subtitulos_directos',
+            'listado_subtitulos_indirectos',
+            'listado_item_subtitulos_directos',
+            'listado_item_subtitulos_indirectos',
+            'listado_etapas'
+
         ]
 
     def get_solo_lectura(self, obj):
@@ -302,6 +351,35 @@ class Paso2Serializer(WritableNestedModelSerializer):
     def get_costos_indirectos_gore(self, obj):
         queryset = CostosIndirectosGore.objects.filter(formulario_gore=obj, sector__isnull=True)
         return CostosIndirectosGORESerializer(queryset, many=True).data
+
+    def get_listado_item_subtitulos_directos(self, obj):
+        items_agrupados_directos = get_item_subtitulos_disponibles_y_agrupados(CostosDirectosGore, obj)
+        return items_agrupados_directos
+
+    def get_listado_item_subtitulos_indirectos(self, obj):
+        items_agrupados_indirectos = get_item_subtitulos_disponibles_y_agrupados(CostosIndirectosGore, obj)
+        return items_agrupados_indirectos
+
+    def get_listado_subtitulos_directos(self, obj):
+        subtitulos_disponibles = get_subtitulos_disponibles(CostosDirectosGore, obj)
+        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
+
+    def get_listado_subtitulos_indirectos(self, obj):
+        subtitulos_disponibles = get_subtitulos_disponibles(CostosIndirectosGore, obj)
+        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
+
+    def get_listado_etapas(self, obj):
+        # obj es una instancia de FormularioGORE
+        competencia = obj.competencia
+
+        # Usamos la competencia para encontrar todos los formularios sectoriales relacionados
+        formularios_sectoriales = FormularioSectorial.objects.filter(competencia=competencia)
+
+        # Luego, usamos esos formularios sectoriales para filtrar las etapas
+        etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+
+        return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa, 'descripcion_etapa': etapa.descripcion_etapa} for
+                etapa in etapas]
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
