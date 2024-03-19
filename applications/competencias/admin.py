@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from .models import Competencia
+from .models import Competencia, Gradualidad
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
@@ -46,6 +46,11 @@ class FormularioGOREInline(admin.TabularInline):  # O puedes usar admin.StackedI
     extra = 0
     fields = ('region', 'nombre', 'formulario_enviado')
 
+class GradualidadInline(admin.TabularInline):
+    model = Gradualidad
+    extra = 0
+    fields = ('region', 'gradualidad_meses', 'justificacion_gradualidad')
+
 
 class CompetenciaResource(ModelResource):
     class Meta:
@@ -69,7 +74,16 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
             'fields': ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')
         }),
     )
-    inlines = [Etapa1Inline, Etapa2Inline, Etapa3Inline, Etapa4Inline, Etapa5Inline, FormularioSectorialInline, FormularioGOREInline]  # Añade el nuevo inline aquí
+    inlines = [
+        Etapa1Inline,
+        Etapa2Inline,
+        Etapa3Inline,
+        Etapa4Inline,
+        Etapa5Inline,
+        FormularioSectorialInline,
+        FormularioGOREInline,
+        GradualidadInline,
+    ]  # Añade el nuevo inline aquí
 
     def get_queryset(self, request):
         # Personaliza el queryset para optimizar consultas a la base de datos si es necesario
