@@ -117,7 +117,7 @@ class Competencia(BaseModel):
                                                       null=True, blank=True)
     regiones_recomendadas = models.ManyToManyField(
         Region,
-        blank=False,
+        blank=True,
         related_name='regiones_recomendadas',
         verbose_name='Regiones recomendadas'
     )
