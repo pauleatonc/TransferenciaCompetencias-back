@@ -3,9 +3,11 @@ from rest_framework.routers import DefaultRouter
 from .competenciasViewSet import CompetenciaViewSet
 from .ambitoApiView import AmbitoViewSet
 from .origenApiView import OrigenAPIView
+from .revisionFinalViewSet import RevisionFinalCompetenciaViewSet
 
 router = DefaultRouter()
 router.register(r'competencias', CompetenciaViewSet)
+router.register(r'revision-final-competencia', RevisionFinalCompetenciaViewSet)
 router.register(r'ambitos', AmbitoViewSet)
 
 urlpatterns = [
