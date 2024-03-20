@@ -203,8 +203,10 @@ def eliminar_instancia_costo(modelo, instancia_id):
 
 def get_subtitulos_disponibles(modelo_costos, formulario_obj):
     # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo_costos para este formulario
+    # Asegura que solo se consideren las instancias con un item_subtitulo definido
     items_utilizados = modelo_costos.objects.filter(
-        formulario_gore=formulario_obj).values_list('item_subtitulo__id', flat=True)
+        formulario_gore=formulario_obj, item_subtitulo__isnull=False
+    ).values_list('item_subtitulo__id', flat=True)
 
     # Filtra ItemSubtitulo para excluir los utilizados
     item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados)
@@ -216,10 +218,13 @@ def get_subtitulos_disponibles(modelo_costos, formulario_obj):
     return subtitulos_disponibles
 
 
+
 def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
     # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo de costos para este formulario
+    # Asegura que solo se consideren las instancias con un item_subtitulo definido
     items_utilizados = modelo_costos.objects.filter(
-        formulario_gore=formulario_obj).values_list('item_subtitulo__id', flat=True)
+        formulario_gore=formulario_obj, item_subtitulo__isnull=False
+    ).values_list('item_subtitulo__id', flat=True)
 
     # Filtra ItemSubtitulo para excluir los utilizados
     item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados).select_related('subtitulo')
@@ -233,6 +238,7 @@ def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
         items_agrupados[subtitulo].append(ItemSubtituloSerializer(item).data)
 
     return items_agrupados
+
 
 
 class Paso2Serializer(WritableNestedModelSerializer):
