@@ -113,6 +113,10 @@ class Paso3(PasoBase):
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     '''3.2 Resumen costos GORE'''
+    #subtitulo_22 = models.IntegerField(null=True, blank=True)
+
+
+
     costos_informados_gore = models.IntegerField(null=True, blank=True)
     costos_justificados_gore = models.IntegerField(null=True, blank=True)
     costos_justificar_gore = models.IntegerField(null=True, blank=True)

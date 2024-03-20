@@ -258,6 +258,12 @@ def handler_indirecto(sender, instance, **kwargs):
 @receiver(post_save, sender=CostosDirectosGore)
 @receiver(post_save, sender=CostosIndirectosGore)
 def actualizar_recursos_comparados(sender, instance, **kwargs):
+    # Primero, verifica si instance.item_subtitulo existe y no es None
+    if instance.item_subtitulo is None:
+        return
+
+    # Segundo, verifica si el subtitulo del ItemSubtitulo es el deseado y crea instancias de RecursosComparados
+    # que cumplan el criterio
     subtitulos_deseados = ["Sub. 22", "Sub. 29"]
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
 
@@ -304,48 +310,53 @@ def actualizar_recursos_comparados(sender, instance, **kwargs):
         )
 
 
-@receiver(post_save, sender=RecursosComparados)
+@receiver([post_save, post_delete], sender=RecursosComparados)
 def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
-    # Logica para SistemasInformaticos y RecursosFisicosInfraestructura
-
-    # Sistemas Informaticos
-    if instance.item_subtitulo.item == '07 - Programas Informáticos':
-        SistemasInformaticos.objects.get_or_create(
+    # Sistemas Informáticos
+    if instance.item_subtitulo and instance.item_subtitulo.item == '07 - Programas Informáticos':
+        existen_recursos = RecursosComparados.objects.filter(
             formulario_gore=instance.formulario_gore,
             sector=instance.sector,
-            item_subtitulo=instance.item_subtitulo
-        )
+            item_subtitulo__item='07 - Programas Informáticos'
+        ).exists()
+
+        if existen_recursos:
+            # Asegúrate de crear la instancia solo si no existe.
+            SistemasInformaticos.objects.get_or_create(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo=instance.item_subtitulo
+            )
+        else:
+            # Elimina todas las instancias de SistemasInformaticos si no existen RecursosComparados correspondientes.
+            SistemasInformaticos.objects.filter(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo=instance.item_subtitulo
+            ).delete()
 
     # Recursos Fisicos Infraestructura
     subtitulos_deseados = ["Sub. 22", "Sub. 29"]
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
-    if instance.item_subtitulo.subtitulo_id in subtitulos_ids and instance.item_subtitulo.item != '07 - Programas Informáticos':
-        RecursosFisicosInfraestructura.objects.get_or_create(
+
+    if instance.item_subtitulo and instance.item_subtitulo.subtitulo_id in subtitulos_ids:
+        existen_recursos = RecursosComparados.objects.filter(
             formulario_gore=instance.formulario_gore,
             sector=instance.sector,
-            item_subtitulo=instance.item_subtitulo
-        )
+            item_subtitulo__subtitulo_id__in=subtitulos_ids
+        ).exists()
 
-
-
-
-'''@receiver(post_delete, sender=RecursosComparados)
-@receiver(post_delete, sender=CostosIndirectosGore)
-def eliminar_instancias_relacionadas(sender, instance, **kwargs):
-
-    # Identificar y manejar la eliminación para Sistemas Informaticos y Recursos Fisicos Infraestructura
-    programas_informaticos = ItemSubtitulo.objects.filter(item='07 - Programas Informáticos').first()
-    if programas_informaticos and instance.item_subtitulo == programas_informaticos:
-        SistemasInformaticos.objects.filter(
-            formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
-            item_subtitulo=programas_informaticos
-        ).delete()
-
-    # Excluir el item "07 - Programas Informáticos" para Recursos Fisicos Infraestructura
-    if instance.item_subtitulo.subtitulo.subtitulo in subtitulos_deseados and instance.item_subtitulo != programas_informaticos:
-        RecursosFisicosInfraestructura.objects.filter(
-            formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
-            item_subtitulo=instance.item_subtitulo
-        ).delete()'''
+        if existen_recursos:
+            # Asegúrate de crear la instancia solo si no existe.
+            RecursosFisicosInfraestructura.objects.get_or_create(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo=instance.item_subtitulo
+            )
+        else:
+            # Elimina todas las instancias de RecursosFisicosInfraestructura si no existen RecursosComparados correspondientes.
+            RecursosFisicosInfraestructura.objects.filter(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo=instance.item_subtitulo
+            ).delete()
