@@ -113,13 +113,41 @@ class Paso3(PasoBase):
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     '''3.2 Resumen costos GORE'''
-    #subtitulo_22 = models.IntegerField(null=True, blank=True)
+    subtitulo_22_diferencia_sector = models.IntegerField(null=True, blank=True)
+    subtitulo_22_justificados_gore = models.IntegerField(null=True, blank=True)
+    subtitulo_22_por_justificar = models.IntegerField(null=True, blank=True)
 
-
+    subtitulo_29_diferencia_sector = models.IntegerField(null=True, blank=True)
+    subtitulo_29_justificados_gore = models.IntegerField(null=True, blank=True)
+    subtitulo_29_por_justificar = models.IntegerField(null=True, blank=True)
 
     costos_informados_gore = models.IntegerField(null=True, blank=True)
     costos_justificados_gore = models.IntegerField(null=True, blank=True)
     costos_justificar_gore = models.IntegerField(null=True, blank=True)
+
+    def calcular_por_justificar(self, diferencia_sector, justificados_gore):
+        """
+        Calcula el valor por justificar basado en la diferencia_sector y los justificados_gore.
+        Retorna None si cualquiera de los valores no está definido.
+        """
+        if diferencia_sector is not None and justificados_gore is not None:
+            return diferencia_sector - justificados_gore
+        return None
+
+    def save(self, *args, **kwargs):
+        # Calcula 'por justificar' para el subtitulo 22
+        self.subtitulo_22_por_justificar = self.calcular_por_justificar(
+            self.subtitulo_22_diferencia_sector,
+            self.subtitulo_22_justificados_gore
+        )
+
+        # Calcula 'por justificar' para el subtitulo 29
+        self.subtitulo_29_por_justificar = self.calcular_por_justificar(
+            self.subtitulo_29_diferencia_sector,
+            self.subtitulo_29_justificados_gore
+        )
+
+        super().save(*args, **kwargs)
 
 
 class PersonalDirectoGORE(BaseModel):
