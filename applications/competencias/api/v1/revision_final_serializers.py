@@ -1,3 +1,5 @@
+from django.utils import timezone
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from drf_writable_nested.serializers import WritableNestedModelSerializer
 from applications.competencias.models import (
@@ -15,17 +17,28 @@ from applications.competencias.api.v1.serializers import (
 )
 
 from applications.regioncomuna.api.v1.serializer import RegionSerializer
-from applications.regioncomuna.models import Region
+
+
+User = get_user_model()
 
 
 class RecomendacionesDesfavorablesSerializer(serializers.ModelSerializer):
+    region_label_value = serializers.SerializerMethodField()
     class Meta:
         model = RecomendacionesDesfavorables
         fields = [
             'id',
             'region',
+            'region_label_value',
             'justificacion'
         ]
+
+    def get_region_label_value(self, obj):
+        # Obtiene todas las regiones asociadas y las transforma al formato {label, value}
+        return [{
+            'label': region.region,  # Usamos nombre_region para el label
+            'value': str(region.id)  # El ID de la region como value
+        } for region in obj.region.all()]
 
 
 class TemporalidadSerializer(serializers.ModelSerializer):
@@ -111,6 +124,45 @@ class Paso2RevisionFinalSubdereSerializer(serializers.ModelSerializer):
     def avance(self, obj):
         return obj.avance()
 
+
+class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
+    tiempo_transcurrido = serializers.SerializerMethodField()
+    ultimo_editor = serializers.SerializerMethodField()
+    fecha_ultima_modificacion = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Competencia
+        fields = [
+            'id',
+            'nombre',
+            'sectores',
+            'tiempo_transcurrido',
+            'ultimo_editor',
+            'fecha_ultima_modificacion',
+        ]
+
+    def get_tiempo_transcurrido(self, obj):
+        return obj.tiempo_transcurrido()
+
+    def get_ultimo_editor(self, obj):
+        historial = obj.historical.all().order_by('-history_date')
+        for record in historial:
+            if record.history_user:
+                return {
+                    'nombre_completo': record.history_user.nombre_completo,
+                    'perfil': record.history_user.perfil
+                }
+        return None
+
+    def get_fecha_ultima_modificacion(self, obj):
+        try:
+            ultimo_registro = obj.historical.latest('history_date')
+            if ultimo_registro:
+                fecha_local = timezone.localtime(ultimo_registro.history_date)
+                return fecha_local.strftime('%d/%m/%Y - %H:%M')
+            return None
+        except obj.historical.model.DoesNotExist:
+            return None
 
 
 class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):

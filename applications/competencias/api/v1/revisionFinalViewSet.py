@@ -5,7 +5,8 @@ from rest_framework.decorators import action
 from applications.competencias.models import Competencia
 from applications.competencias.api.v1.revision_final_serializers import (
     RevisionFinalCompetenciaPaso1Serializer,
-    RevisionFinalCompetenciaPaso2Serializer
+    RevisionFinalCompetenciaPaso2Serializer,
+    RevisionFinalCompetenciaDetailSerializer
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
@@ -42,6 +43,7 @@ def manejar_permiso_patch(request, formulario_gore, serializer_class):
 class RevisionFinalCompetenciaViewSet(viewsets.ModelViewSet):
     queryset = Competencia.objects.all()
     permission_classes = [IsAuthenticated]
+    serializer_class = RevisionFinalCompetenciaDetailSerializer
 
     def get_permissions(self):
         """

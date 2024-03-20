@@ -24,29 +24,43 @@ from .serializers import (
 
 from rest_framework.permissions import BasePermission
 
-class IsDIPRESAndAssignedToCompetition(BasePermission):
+
+class IsDIPRESOrSUBDEREOrSuperuser(BasePermission):
     """
-    Permite el acceso solo a los usuarios DIPRES asignados a la competencia relacionada con la etapa.
+    Permite el acceso solo a usuarios que son superusuarios, pertenecen al grupo SUBDERE o al grupo DIPRES,
+    y además están asignados a la misma competencia que la etapa.
     """
 
     def has_permission(self, request, view):
-        # Esta implementación es solo un esquema. Deberás adaptarla según tu modelo y lógica específica.
-        user = request.user
-        # Asumiendo que puedes obtener la instancia de la etapa (Etapa3, Etapa5, etc.) de esta manera
-        etapa = view.get_object()
-        competencia = etapa.competencia
+        # Permitir si es superusuario.
+        if request.user and request.user.is_superuser:
+            return True
 
-        # Verificación de pertenencia al grupo DIPRES y asignación a la competencia
-        return user.groups.filter(name='DIPRES').exists() and competencia.usuarios_dipres.filter(id=user.id).exists()
+        user_groups = request.user.groups.values_list('name', flat=True)
+        is_subdere_or_dipres = 'SUBDERE' in user_groups or 'DIPRES' in user_groups
+
+        # Para las operaciones que no requieren un objeto específico (como POST), se retorna True aquí.
+        # Esto porque la verificación detallada se hace en has_object_permission.
+        return is_subdere_or_dipres
 
     def has_object_permission(self, request, view, obj):
-        # Implementación similar a has_permission, pero aplicada a nivel de objeto.
-        # Aquí, obj es la instancia específica de la etapa.
-        user = request.user
-        competencia = obj.competencia
+        if request.user and request.user.is_superuser:
+            return True
 
-        return user.groups.filter(name='DIPRES').exists() and competencia.usuarios_dipres.filter(id=user.id).exists()
+        user_groups = request.user.groups.values_list('name', flat=True)
+        is_subdere = 'SUBDERE' in user_groups
+        is_dipres = 'DIPRES' in user_groups
 
+        # Si el usuario es SUBDERE, solo se verifica la pertenencia al grupo.
+        if is_subdere:
+            return True
+
+        # Si el usuario es DIPRES, se verifica además que pertenezca a la misma competencia.
+        if is_dipres:
+            competencia = obj.competencia  # Asumiendo que 'obj' tiene un atributo 'competencia'.
+            return request.user in competencia.usuarios_dipres.all()
+
+        return False
 
 
 class Etapa1ViewSet(viewsets.ModelViewSet):
@@ -64,16 +78,7 @@ class  Etapa2ViewSet(viewsets.ModelViewSet):
 class Etapa3ViewSet(viewsets.ModelViewSet):
     queryset = Etapa3.objects.all()
     serializer_class = Etapa3Serializer
-
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action in ['update', 'partial_update', 'destroy']:
-            permission_classes = [IsSUBDEREOrSuperuser, IsDIPRESAndAssignedToCompetition]
-        else:
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
+    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser]
 
 
 class  Etapa4ViewSet(viewsets.ModelViewSet):
@@ -85,13 +90,4 @@ class  Etapa4ViewSet(viewsets.ModelViewSet):
 class Etapa5ViewSet(viewsets.ModelViewSet):
     queryset = Etapa5.objects.all()
     serializer_class = Etapa5Serializer
-
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action in ['update', 'partial_update', 'destroy']:
-            permission_classes = [IsSUBDEREOrSuperuser, IsDIPRESAndAssignedToCompetition]
-        else:
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
+    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser]
