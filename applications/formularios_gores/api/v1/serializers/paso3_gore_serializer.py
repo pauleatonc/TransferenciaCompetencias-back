@@ -365,7 +365,11 @@ class Paso3Serializer(WritableNestedModelSerializer):
     paso3_gore = Paso3EncabezadoSerializer()
     solo_lectura = serializers.SerializerMethodField()
     p_3_1_a_personal_directo = PersonalDirectoGoreSerializer(many=True, read_only=False)
+    p3_personal_directo_sector = serializers.SerializerMethodField()
+    p3_personal_directo_gore = serializers.SerializerMethodField()
     p_3_1_b_personal_indirecto = PersonalIndirectoGoreSerializer(many=True, read_only=False)
+    p3_personal_indirecto_sector = serializers.SerializerMethodField()
+    p3_personal_indirecto_gore = serializers.SerializerMethodField()
     p_3_2_recursos_comparados = RecursosComparadosSerializer(many=True, read_only=False)
     p_3_2_a_sistemas_informaticos = SistemasInformaticosSerializer(many=True, read_only=False)
     p_3_2_b_recursos_fisicos_infraestructura = RecursosFisicosInfraestructuraSerializer(many=True, read_only=False)
@@ -382,12 +386,17 @@ class Paso3Serializer(WritableNestedModelSerializer):
             'paso3_gore',
             'solo_lectura',
             'p_3_1_a_personal_directo',
+            'p3_personal_directo_sector',
+            'p3_personal_directo_gore',
             'p_3_1_b_personal_indirecto',
+            'p3_personal_indirecto_sector',
+            'p3_personal_indirecto_gore',
             'p_3_2_recursos_comparados',
             'p_3_2_a_sistemas_informaticos',
             'p_3_2_b_recursos_fisicos_infraestructura',
             'listado_subtitulos',
             'listado_item_subtitulos',
+            'listado_estamentos',
             'listado_estamentos',
             'listado_calidades_juridicas_directas',
             'listado_calidades_juridicas_indirectas'
@@ -410,6 +419,22 @@ class Paso3Serializer(WritableNestedModelSerializer):
             paso3_instance.save()
         else:
             Paso3.objects.create(formulario_gore=instance, **paso3_data)
+
+    def get_p3_personal_directo_sector(self, obj):
+        queryset = PersonalDirectoGORE.objects.filter(formulario_gore=obj, sector__isnull=False)
+        return PersonalDirectoGoreSerializer(queryset, many=True).data
+
+    def get_p3_personal_directo_gore(self, obj):
+        queryset = PersonalDirectoGORE.objects.filter(formulario_gore=obj, sector__isnull=True)
+        return PersonalDirectoGoreSerializer(queryset, many=True).data
+
+    def get_p3_personal_indirecto_sector(self, obj):
+        queryset = PersonalIndirectoGORE.objects.filter(formulario_gore=obj, sector__isnull=False)
+        return PersonalIndirectoGoreSerializer(queryset, many=True).data
+
+    def get_p3_personal_indirecto_gore(self, obj):
+        queryset = PersonalIndirectoGORE.objects.filter(formulario_gore=obj, sector__isnull=True)
+        return PersonalIndirectoGoreSerializer(queryset, many=True).data
 
     def get_listado_subtitulos(self, obj):
         # Obtener IDs de subtitulos usados en RecursosComparados para un formulario_gore específico

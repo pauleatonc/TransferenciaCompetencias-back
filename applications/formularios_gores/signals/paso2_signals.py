@@ -9,12 +9,13 @@ from applications.formularios_gores.models import (
     CostosIndirectosGore,
     FluctuacionPresupuestaria,
     CostoAnioGore,
-    ResumenCostosGore
+    ResumenCostosGore,
+    Paso3
 )
 
 from applications.formularios_sectoriales.models import (
     CostosDirectos as CostosDirectosSectorial,
-    CostosIndirectos as CostosIndirectosSectorial,
+    CostosIndirectos as CostosIndirectosSectorial, Subtitulos,
 )
 
 
@@ -98,6 +99,23 @@ def eliminar_costos_gore_correspondiente(sender, instance, **kwargs):
             eliminar_instancias_gore_correspondientes(CostosIndirectosGore, instance)
 
 
+@receiver(post_save, sender=FluctuacionPresupuestaria)
+def handle_fluctuacion_presupuestaria_save(sender, instance, created, **kwargs):
+    # Crear CostoAnioGore para FluctuacionPresupuestaria
+    if created:
+        competencia = instance.formulario_gore.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            # Ajuste para crear instancias para los 5 años siguientes al año_actual
+            año_final = año_actual + 5  # Esto incluirá desde el año siguiente al actual hasta 5 años después
+            for año in range(año_actual + 1,
+                             año_final + 1):  # +1 para empezar en el siguiente año y +1 para incluir el año final en el rango
+                CostoAnioGore.objects.get_or_create(
+                    evolucion_gasto=instance,
+                    anio=año
+                )
+
+
 def actualizar_fluctuaciones_presupuestarias(formulario_gore_id):
     subtitulos_directos_ids = CostosDirectosGore.objects.filter(
         formulario_gore_id=formulario_gore_id
@@ -121,37 +139,25 @@ def actualizar_fluctuaciones_presupuestarias(formulario_gore_id):
         subtitulo_id__in=subtitulos_unicos_ids).delete()
 
 
-@receiver(post_save, sender=CostosDirectosGore)
-@receiver(post_save, sender=CostosIndirectosGore)
-@receiver(post_delete, sender=CostosDirectosGore)
-@receiver(post_delete, sender=CostosIndirectosGore)
-def actualizar_resumen_costos(sender, instance, **kwargs):
-    # regenerar_resumen_costos(instance.formulario_gore_id)
-    actualizar_fluctuaciones_presupuestarias(instance.formulario_gore_id)
+def actualizar_subtitulo_21_informados_gore(formulario_gore):
+    sub_21, _ = Subtitulos.objects.get_or_create(subtitulo="Sub. 21")
 
+    suma_costos_directos = CostosDirectosGore.objects.filter(
+        formulario_gore=formulario_gore,
+        sector__isnull=True,
+        subtitulo=sub_21
+    ).aggregate(suma_total_anual_gore=Sum('total_anual_gore'))['suma_total_anual_gore'] or 0
 
-@receiver(post_save, sender=FluctuacionPresupuestaria)
-def handle_fluctuacion_presupuestaria_save(sender, instance, created, **kwargs):
-    # Crear CostoAnioGore para FluctuacionPresupuestaria
-    if created:
-        competencia = instance.formulario_gore.competencia
-        if competencia and competencia.fecha_inicio:
-            año_actual = competencia.fecha_inicio.year
-            # Ajuste para crear instancias para los 5 años siguientes al año_actual
-            año_final = año_actual + 5  # Esto incluirá desde el año siguiente al actual hasta 5 años después
-            for año in range(año_actual + 1,
-                             año_final + 1):  # +1 para empezar en el siguiente año y +1 para incluir el año final en el rango
-                CostoAnioGore.objects.get_or_create(
-                    evolucion_gasto=instance,
-                    anio=año
-                )
+    suma_costos_indirectos = CostosIndirectosGore.objects.filter(
+        formulario_gore=formulario_gore,
+        sector__isnull=True,
+        subtitulo=sub_21
+    ).aggregate(suma_total_anual_gore=Sum('total_anual_gore'))['suma_total_anual_gore'] or 0
 
-
-@receiver([post_save, post_delete], sender=CostosDirectosGore)
-@receiver([post_save, post_delete], sender=CostosIndirectosGore)
-def actualizar_resumen_costos(sender, instance, **kwargs):
-    formulario_gore_id = instance.formulario_gore_id
-    actualizar_resumen(formulario_gore_id)
+    # Actualiza el campo en Paso3
+    paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+    paso3_instance.subtitulo_21_informados_gore = suma_costos_directos + suma_costos_indirectos
+    paso3_instance.save()
 
 
 def actualizar_resumen(formulario_gore_id):
@@ -189,3 +195,12 @@ def actualizar_resumen(formulario_gore_id):
 
     # Guardar el resumen actualizado
     resumen.save()
+
+
+@receiver([post_save, post_delete], sender=CostosDirectosGore)
+@receiver([post_save, post_delete], sender=CostosIndirectosGore)
+def actualizar_resumen_costos(sender, instance, **kwargs):
+    formulario_gore_id = instance.formulario_gore_id
+    actualizar_resumen(formulario_gore_id)
+    actualizar_subtitulo_21_informados_gore(instance.formulario_gore)
+    actualizar_fluctuaciones_presupuestarias(formulario_gore_id)
