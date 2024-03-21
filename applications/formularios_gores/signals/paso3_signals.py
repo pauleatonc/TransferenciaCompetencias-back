@@ -331,7 +331,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Elimina todas las instancias de SistemasInformaticos si no existen RecursosComparados correspondientes.
             SistemasInformaticos.objects.filter(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             ).delete()
 
@@ -340,11 +339,13 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
 
     if instance.item_subtitulo and instance.item_subtitulo.subtitulo_id in subtitulos_ids:
-        existen_recursos = RecursosComparados.objects.filter(
-            formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
-            item_subtitulo__subtitulo_id__in=subtitulos_ids
-        ).exists()
+        # Excepción para no manejar '07 - Programas Informáticos' en RecursosFisicosInfraestructura
+        if instance.item_subtitulo.item != '07 - Programas Informáticos':
+            existen_recursos = RecursosComparados.objects.filter(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo__subtitulo_id__in=subtitulos_ids
+            ).exists()
 
         if existen_recursos:
             # Asegúrate de crear la instancia solo si no existe.
@@ -357,7 +358,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Elimina todas las instancias de RecursosFisicosInfraestructura si no existen RecursosComparados correspondientes.
             RecursosFisicosInfraestructura.objects.filter(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             ).delete()
 
