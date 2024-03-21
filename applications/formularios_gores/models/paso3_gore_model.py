@@ -112,6 +112,10 @@ class Paso3(PasoBase):
     sub21b_gastos_en_personal_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
+    subtitulo_21_informados_gore = models.IntegerField(null=True, blank=True)
+    subtitulo_21_justificados_gore = models.IntegerField(null=True, blank=True)
+    subtitulo_21_por_justificar = models.IntegerField(null=True, blank=True)
+
     '''3.2 Resumen costos GORE'''
     subtitulo_22_diferencia_sector = models.IntegerField(null=True, blank=True)
     subtitulo_22_justificados_gore = models.IntegerField(null=True, blank=True)
@@ -135,6 +139,12 @@ class Paso3(PasoBase):
         return None
 
     def save(self, *args, **kwargs):
+        # Calcula 'por justificar' para el subtitulo 21
+        self.subtitulo_21_por_justificar = self.calcular_por_justificar(
+            self.subtitulo_21_informados_gore,
+            self.subtitulo_21_justificados_gore
+        )
+
         # Calcula 'por justificar' para el subtitulo 22
         self.subtitulo_22_por_justificar = self.calcular_por_justificar(
             self.subtitulo_22_diferencia_sector,

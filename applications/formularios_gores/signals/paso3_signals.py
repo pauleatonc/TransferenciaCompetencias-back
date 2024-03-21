@@ -411,3 +411,28 @@ def actualizar_justificados_gore(formulario_gore):
 def actualizar_justificados_por_subtitulos(sender, instance, **kwargs):
     actualizar_justificados_gore(instance.formulario_gore)
 
+
+def actualizar_subtitulo_21(sender, instance, **kwargs):
+    formulario_gore = instance.formulario_gore
+    paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+
+    suma_directo = PersonalDirectoGORE.objects.filter(
+        formulario_gore=formulario_gore,
+        sector__isnull=True
+    ).aggregate(suma_renta_bruta=Sum('renta_bruta'))['suma_renta_bruta'] or 0
+
+    suma_indirecto = PersonalIndirectoGORE.objects.filter(
+        formulario_gore=formulario_gore,
+        sector__isnull=True
+    ).aggregate(suma_total_rentas=Sum('total_rentas'))['suma_total_rentas'] or 0
+
+    paso3_instance.subtitulo_21_justificados_gore = suma_directo + suma_indirecto
+    paso3_instance.save()
+
+
+@receiver(post_save, sender=PersonalDirectoGORE)
+@receiver(post_save, sender=PersonalIndirectoGORE)
+@receiver(post_delete, sender=PersonalDirectoGORE)
+@receiver(post_delete, sender=PersonalIndirectoGORE)
+def actualizar_subtitulo_21_signal(sender, instance, **kwargs):
+    actualizar_subtitulo_21(sender, instance)

@@ -34,11 +34,12 @@ class RecomendacionesDesfavorablesSerializer(serializers.ModelSerializer):
         ]
 
     def get_region_label_value(self, obj):
-        # Obtiene todas las regiones asociadas y las transforma al formato {label, value}
+        # Asume que obj.region es una única instancia de Region y no un conjunto (QuerySet).
+        region = obj.region
         return [{
-            'label': region.region,  # Usamos nombre_region para el label
-            'value': str(region.id)  # El ID de la region como value
-        } for region in obj.region.all()]
+            'label': region.region,  # Asume que 'region' es el campo que quieres usar como etiqueta.
+            'value': str(region.id)  # El ID de la región como valor.
+        }]
 
 
 class TemporalidadSerializer(serializers.ModelSerializer):
