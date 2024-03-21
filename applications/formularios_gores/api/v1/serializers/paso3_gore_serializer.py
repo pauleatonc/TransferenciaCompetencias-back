@@ -337,6 +337,14 @@ class Paso3EncabezadoSerializer(serializers.ModelSerializer):
             'sub21b_total_gastos_en_personal',
             'sub21b_gastos_en_personal_justificado',
             'sub21b_gastos_en_personal_justificar',
+
+            'subtitulo_22_diferencia_sector',
+            'subtitulo_22_justificados_gore',
+            'subtitulo_22_por_justificar',
+
+            'subtitulo_29_diferencia_sector',
+            'subtitulo_29_justificados_gore',
+            'subtitulo_29_por_justificar',
             
             'costos_informados_gore',
             'costos_justificados_gore',

@@ -331,7 +331,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Elimina todas las instancias de SistemasInformaticos si no existen RecursosComparados correspondientes.
             SistemasInformaticos.objects.filter(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             ).delete()
 
@@ -340,11 +339,13 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
     subtitulos_ids = Subtitulos.objects.filter(subtitulo__in=subtitulos_deseados).values_list('id', flat=True)
 
     if instance.item_subtitulo and instance.item_subtitulo.subtitulo_id in subtitulos_ids:
-        existen_recursos = RecursosComparados.objects.filter(
-            formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
-            item_subtitulo__subtitulo_id__in=subtitulos_ids
-        ).exists()
+        # Excepción para no manejar '07 - Programas Informáticos' en RecursosFisicosInfraestructura
+        if instance.item_subtitulo.item != '07 - Programas Informáticos':
+            existen_recursos = RecursosComparados.objects.filter(
+                formulario_gore=instance.formulario_gore,
+                sector=instance.sector,
+                item_subtitulo__subtitulo_id__in=subtitulos_ids
+            ).exists()
 
         if existen_recursos:
             # Asegúrate de crear la instancia solo si no existe.
@@ -357,6 +358,56 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Elimina todas las instancias de RecursosFisicosInfraestructura si no existen RecursosComparados correspondientes.
             RecursosFisicosInfraestructura.objects.filter(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             ).delete()
+
+
+@receiver([post_save, post_delete], sender=RecursosComparados)
+def actualizar_diferencias_recursos_comparados(sender, instance, **kwargs):
+    if not instance.formulario_gore.paso3_gore:
+        # Crea la instancia de Paso3 si no existe
+        Paso3.objects.create(formulario_gore=instance.formulario_gore)
+
+    paso3 = instance.formulario_gore.paso3_gore
+    for subtitulo in ['22', '29']:
+        subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
+                                                                                                          flat=True)
+        diferencia_monto = RecursosComparados.objects.filter(
+            item_subtitulo__subtitulo_id__in=subtitulos_ids,
+            formulario_gore=instance.formulario_gore
+        ).aggregate(Sum('diferencia_monto'))['diferencia_monto__sum'] or 0
+
+        setattr(paso3, f'subtitulo_{subtitulo}_diferencia_sector', diferencia_monto)
+    paso3.save()
+
+
+def actualizar_justificados_gore(formulario_gore):
+    paso3 = formulario_gore.paso3_gore
+    if not paso3:
+        # Crea la instancia de Paso3 si no existe
+        Paso3.objects.create(formulario_gore=formulario_gore)
+
+    for subtitulo in ['22', '29']:
+        subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
+                                                                                                          flat=True)
+
+        costo_total_rf = RecursosFisicosInfraestructura.objects.filter(
+            item_subtitulo__subtitulo_id__in=subtitulos_ids,
+            formulario_gore=formulario_gore
+        ).aggregate(Sum('costo_total'))['costo_total__sum'] or 0
+
+        if subtitulo == '29':
+            costo_total_si = SistemasInformaticos.objects.filter(
+                formulario_gore=formulario_gore
+            ).aggregate(Sum('costo'))['costo__sum'] or 0
+            costo_total_rf += costo_total_si
+
+        setattr(paso3, f'subtitulo_{subtitulo}_justificados_gore', costo_total_rf)
+    paso3.save()
+
+
+@receiver([post_save, post_delete], sender=RecursosFisicosInfraestructura)
+@receiver([post_save, post_delete], sender=SistemasInformaticos)
+def actualizar_justificados_por_subtitulos(sender, instance, **kwargs):
+    actualizar_justificados_gore(instance.formulario_gore)
+
