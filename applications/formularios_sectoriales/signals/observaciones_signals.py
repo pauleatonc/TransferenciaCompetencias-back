@@ -7,9 +7,3 @@ from applications.formularios_sectoriales.models import FormularioSectorial, Obs
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
         ObservacionesSubdereFormularioSectorial.objects.create(formulario_sectorial=instance)
-
-
-@receiver(post_delete, sender=FormularioSectorial)
-def eliminar_instancias_relacionadas(sender, instance, **kwargs):
-    # Eliminar ObservacionesSubdereFormularioSectorial relacionadas
-    ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial=instance).delete()

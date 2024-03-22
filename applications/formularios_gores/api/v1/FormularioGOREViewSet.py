@@ -16,6 +16,7 @@ from .serializers import (
     Paso1Serializer,
     Paso2Serializer,
     Paso3Serializer,
+    ObservacionesSubdereSerializer, ResumenFormularioSerializer
 )
 
 
@@ -120,18 +121,8 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
         formulario_gore = self.get_object()
         return manejar_permiso_patch(request, formulario_gore, Paso3Serializer)
 
-    '''
-    @action(detail=True, methods=['get'], url_path='resumen')
-    def resumen(self, request, pk=None):
-        """
-        API para obtener el resumen de todos los pasos del Formulario Sectorial
-        """
-        formulario_gore = self.get_object()
-        serializer = ResumenFormularioSerializer(formulario_gore)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=['get', 'patch'], url_path='observaciones-subdere-sectorial')
-    def observaciones_sectoriales(self, request, pk=None):
+    @action(detail=True, methods=['get', 'patch'], url_path='observaciones-subdere-gore')
+    def observaciones_gore(self, request, pk=None):
         formulario_gore = self.get_object()
         competencia = formulario_gore.competencia
 
@@ -140,7 +131,18 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
             return Response({"detail": "No autorizado para editar las observaciones de SUBDERE."},
                             status=status.HTTP_403_FORBIDDEN)
 
-        return manejar_formularios_pasos(request, formulario_gore, ObservacionesSubdereSerializer)'''
+        return manejar_formularios_pasos(request, formulario_gore, ObservacionesSubdereSerializer)
+
+
+    @action(detail=True, methods=['get'], url_path='resumen')
+    def resumen(self, request, pk=None):
+        """
+        API para obtener el resumen de todos los pasos del Formulario GORE
+        """
+        formulario_gore = self.get_object()
+        serializer = ResumenFormularioSerializer(formulario_gore)
+        return Response(serializer.data)
+
 
     @action(detail=True, methods=['patch'], url_path='update-flujograma-competencia',
         parser_classes=(MultiPartParser, FormParser))

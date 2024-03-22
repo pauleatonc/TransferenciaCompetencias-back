@@ -36,6 +36,10 @@ class FluctuacionesPresupuestariasInline(admin.TabularInline):
     model = FluctuacionPresupuestaria
     extra = 0
 
+class ObservacionesSubdereInline(admin.TabularInline):
+    model = ObservacionesSubdereFormularioGORE
+    extra = 0
+
 
 @admin.register(FormularioGORE)
 class FormularioSectorialAdmin(admin.ModelAdmin):
@@ -50,6 +54,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         Paso3Inline,
         FluctuacionesPresupuestariasInline,
         FlujogramaEjercicioInline,
+        ObservacionesSubdereInline
     ]
 
     def get_competencia_nombre(self, obj):
