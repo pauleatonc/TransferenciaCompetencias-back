@@ -157,6 +157,24 @@ class Paso3(PasoBase):
             self.subtitulo_29_justificados_gore
         )
 
+        # Suma de valores informados y justificados, considerando None como 0
+        valores_informados = [
+            self.subtitulo_21_informados_gore or 0,
+            self.subtitulo_22_diferencia_sector or 0,
+            self.subtitulo_29_diferencia_sector or 0
+        ]
+        valores_justificados = [
+            self.subtitulo_21_justificados_gore or 0,
+            self.subtitulo_22_justificados_gore or 0,
+            self.subtitulo_29_justificados_gore or 0
+        ]
+
+        self.costos_informados_gore = sum(valores_informados)
+        self.costos_justificados_gore = sum(valores_justificados)
+
+        # Cálculo de costos por justificar como la resta de informados y justificados
+        self.costos_justificar_gore = self.costos_informados_gore - self.costos_justificados_gore
+
         super().save(*args, **kwargs)
 
 
