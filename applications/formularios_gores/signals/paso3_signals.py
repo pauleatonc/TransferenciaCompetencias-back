@@ -97,14 +97,14 @@ def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, cre
     "04 - Otros Gastos en Personal".
     """
     # Manejar la creación o actualización de costos
-    if instance.item_subtitulo:
+    if instance.item_subtitulo and instance.sector is None:
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
 
         if item_subtitulo_texto == "04 - Otros Gastos en Personal" and not created:
             # Si estamos actualizando y es el caso especial "04 - Otros Gastos en Personal",
             # verifica si se deben eliminar instancias de personal asociadas
-            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo).exists():
+            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo, sector__isnull=True).exists():
                 # No hay más costos asociados a este ítem, eliminar todas las instancias de personal relacionadas
                 personal_asociado = modelo_personal.objects.filter(
                     formulario_gore=instance.formulario_gore,
@@ -138,7 +138,7 @@ def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
             try:
                 calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
                 if not modelo_costos.objects.filter(formulario_gore=instance.formulario_gore,
-                                                    item_subtitulo__item=calidad).exists():
+                                                    item_subtitulo__item=calidad, sector__isnull=True).exists():
                     modelo_personal.objects.filter(formulario_gore=instance.formulario_gore,
                                                    calidad_juridica=calidad_juridica_obj).delete()
             except CalidadJuridica.DoesNotExist:
