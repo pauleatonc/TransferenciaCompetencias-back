@@ -127,7 +127,7 @@ class Paso2RevisionFinalSubdereSerializer(serializers.ModelSerializer):
 
 
 class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
-    tiempo_transcurrido = serializers.SerializerMethodField()
+    calcular_tiempo_transcurrido = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
 
@@ -137,12 +137,12 @@ class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
             'id',
             'nombre',
             'sectores',
-            'tiempo_transcurrido',
+            'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
         ]
 
-    def get_tiempo_transcurrido(self, obj):
+    def get_calcular_tiempo_transcurrido(self, obj):
         return obj.tiempo_transcurrido()
 
     def get_ultimo_editor(self, obj):
