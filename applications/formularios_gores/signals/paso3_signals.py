@@ -147,22 +147,22 @@ def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
 
 @receiver(post_save, sender=CostosDirectosGore)
 def actualizar_personal_directo(sender, instance, **kwargs):
-    actualizar_instancias_personal(CostosDirectosGore, PersonalDirecto, instance)
+    actualizar_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance)
 
 
 @receiver(post_delete, sender=CostosDirectosGore)
 def eliminar_personal_directo(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosDirectosGore, PersonalDirecto, instance)
+    eliminar_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance)
 
 
 @receiver(post_save, sender=CostosIndirectosGore)
 def actualizar_personal_indirecto(sender, instance, **kwargs):
-    actualizar_instancias_personal(CostosIndirectosGore, PersonalIndirecto, instance)
+    actualizar_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance)
 
 
 @receiver(post_delete, sender=CostosIndirectosGore)
 def eliminar_personal_indirecto(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosIndirectosGore, PersonalIndirecto, instance)
+    eliminar_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance)
 
 
 def get_item_subtitulo(item):
