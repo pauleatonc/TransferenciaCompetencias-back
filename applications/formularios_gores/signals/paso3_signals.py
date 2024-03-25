@@ -399,7 +399,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
     if instance.item_subtitulo and instance.item_subtitulo.item == '07 - Programas Informáticos':
         existen_recursos = RecursosComparados.objects.filter(
             formulario_gore=instance.formulario_gore,
-            sector=instance.sector,
             item_subtitulo__item='07 - Programas Informáticos'
         ).exists()
 
@@ -407,7 +406,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Asegúrate de crear la instancia solo si no existe.
             SistemasInformaticos.objects.get_or_create(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             )
         else:
@@ -426,7 +424,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
         if instance.item_subtitulo.item != '07 - Programas Informáticos':
             existen_recursos = RecursosComparados.objects.filter(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo__subtitulo_id__in=subtitulos_ids
             ).exists()
 
@@ -434,7 +431,6 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
             # Asegúrate de crear la instancia solo si no existe.
             RecursosFisicosInfraestructura.objects.get_or_create(
                 formulario_gore=instance.formulario_gore,
-                sector=instance.sector,
                 item_subtitulo=instance.item_subtitulo
             )
         else:
