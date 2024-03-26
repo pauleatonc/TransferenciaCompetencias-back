@@ -263,8 +263,8 @@ class RecursosFisicosInfraestructura(BaseModel):
     fundamentacion = models.TextField(max_length=500, blank=True)
 
     def save(self, *args, **kwargs):
-        if self.costo_unitario is not None and self.cantidad is not None:
-            self.costo_total = self.costo_unitario * self.cantidad
+        if self.costo_total is not None and self.cantidad is not None:
+            self.costo_unitario = self.costo_total / self.cantidad
         else:
             self.costo_total = None
         super().save(*args, **kwargs)
