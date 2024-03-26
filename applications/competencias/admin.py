@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from .models import Competencia, Gradualidad
+from .models import *
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
@@ -56,6 +56,14 @@ class CompetenciaResource(ModelResource):
     class Meta:
         model = Competencia
 
+class Paso1InLine(admin.TabularInline):
+    model = Paso1RevisionFinalSubdere
+    extra = 0
+
+class Paso2InLine(admin.TabularInline):
+    model = Paso2RevisionFinalSubdere
+    extra = 0
+
 
 @admin.register(Competencia)
 class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
@@ -83,6 +91,8 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
         FormularioSectorialInline,
         FormularioGOREInline,
         GradualidadInline,
+        Paso1InLine,
+        Paso2InLine
     ]  # Añade el nuevo inline aquí
 
     def get_queryset(self, request):

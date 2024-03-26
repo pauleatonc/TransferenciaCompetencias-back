@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.utils.encoding import force_str
 from rest_framework import serializers
 from drf_writable_nested.serializers import WritableNestedModelSerializer
 from applications.competencias.models import (
@@ -127,6 +128,8 @@ class Paso2RevisionFinalSubdereSerializer(serializers.ModelSerializer):
 
 
 class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
+    competencia_nombre = serializers.SerializerMethodField()
+    sector_nombre = serializers.SerializerMethodField()
     calcular_tiempo_transcurrido = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
@@ -135,12 +138,24 @@ class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
         model = Competencia
         fields = [
             'id',
-            'nombre',
+            'competencia_nombre',
+            'sector_nombre',
             'sectores',
             'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion',
         ]
+
+
+    def get_competencia_nombre(self, obj):
+        if obj:
+            return obj.nombre
+        return None
+
+    def get_sector_nombre(self, obj):
+        # Usamos force_str para asegurar que los nombres se conviertan a string correctamente.
+        sectores_nombres = [force_str(sect.nombre) for sect in obj.sectores.all()]
+        return ', '.join(sectores_nombres)
 
     def get_calcular_tiempo_transcurrido(self, obj):
         return obj.tiempo_transcurrido()

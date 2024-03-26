@@ -6,4 +6,4 @@ from applications.formularios_gores.models import ObservacionesSubdereFormulario
 @receiver(post_save, sender=FormularioGORE)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
-        ObservacionesSubdereFormularioGORE.objects.create(formulario_sectorial=instance)
+        ObservacionesSubdereFormularioGORE.objects.create(formulario_gore=instance)
