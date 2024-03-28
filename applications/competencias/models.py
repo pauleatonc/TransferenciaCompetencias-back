@@ -182,6 +182,7 @@ class Temporalidad(BaseModel):
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='temporalidad')
     region = models.ManyToManyField(Region, blank=True, related_name='regiones_temporalidad')
     temporalidad = models.CharField(max_length=10, choices=TEMPORALIDAD, blank=True, null=True)
+    anios = models.IntegerField(blank=True, null=True)
     justificacion_temporalidad = models.TextField(max_length=500, blank=True, null=True)
 
 
@@ -272,8 +273,14 @@ class Paso2RevisionFinalSubdere(PasoBase):
         # Comprobaciones para Temporalidad
         temporalidades = self.competencia.temporalidad.all()
         for temporalidad in temporalidades:
+            # Se comprueba que haya regiones asociadas, que temporalidad no esté vacío, y que justificacion_temporalidad no esté vacío
             if temporalidad.region.count() > 0 and temporalidad.temporalidad and temporalidad.justificacion_temporalidad:
-                completados += 1
+                # Si temporalidad es 'Temporal', entonces también se requiere que anios no sea None
+                if temporalidad.temporalidad == 'Temporal' and temporalidad.anios is not None:
+                    completados += 1
+                # Si la temporalidad no es 'Temporal', se cuenta como completado sin necesidad de verificar el campo anios
+                elif temporalidad.temporalidad == 'Definitiva':
+                    completados += 1
             total_campos += 1
 
         # Comprobaciones para Gradualidad

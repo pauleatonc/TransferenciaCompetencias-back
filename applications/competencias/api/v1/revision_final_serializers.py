@@ -18,7 +18,7 @@ from applications.competencias.api.v1.serializers import (
 )
 
 from applications.regioncomuna.api.v1.serializer import RegionSerializer
-
+from applications.regioncomuna.models import Region
 
 User = get_user_model()
 
@@ -185,7 +185,7 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
     paso1_revision_final_subdere = Paso1RevisionFinalSubdereSerializer()
     ambito_definitivo_competencia = AmbitoSerializer()
     sectores = SectorSerializer(many=True, read_only=True)
-    regiones_recomendadas = serializers.SerializerMethodField()
+    regiones_recomendadas_listado = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -195,10 +195,11 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
             'nombre',
             'sectores',
             'ambito_definitivo_competencia',
-            'regiones_recomendadas'
+            'regiones_recomendadas',
+            'regiones_recomendadas_listado'
         ]
 
-    def get_regiones_recomendadas(self, obj):
+    def get_regiones_recomendadas_listado(self, obj):
         # Filtramos las regiones que ya están en 'regiones' para la competencia.
         regiones_qs = obj.regiones.all()
 
@@ -212,6 +213,8 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
     temporalidad = TemporalidadSerializer(many=True, read_only=False)
     gradualidad = GradualidadSerializer(many=True, read_only=False)
     sectores = SectorSerializer(many=True, read_only=True)
+    regiones_temporalidad = serializers.SerializerMethodField()
+    regiones_gradualidad = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -220,6 +223,7 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             'paso2_revision_final_subdere',
             'nombre',
             'sectores',
+            'regiones_recomendadas',
             'recomendaciones_desfavorables',
             'temporalidad',
             'gradualidad',
@@ -227,7 +231,39 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             'modalidad_ejercicio',
             'implementacion_acompanamiento',
             'condiciones_ejercicio',
+            'regiones_temporalidad',
+            'regiones_gradualidad'
         ]
+
+    def get_unused_regions(self, obj, related_name):
+        # Asume que el campo regiones_recomendadas almacena directamente los IDs de las regiones recomendadas
+        # Obtiene las instancias de Region basadas en los IDs almacenados en regiones_recomendadas
+        regiones_recomendadas = Region.objects.filter(id__in=obj.regiones_recomendadas.all())
+
+        # Obtiene las IDs de las regiones ya usadas en la relación especificada
+        # Asegúrate de que solo se consideren instancias con regiones asociadas
+        regiones_usadas = getattr(obj, related_name).all().exclude(region__isnull=True)
+        regiones_usadas_ids = regiones_usadas.values_list('region__id', flat=True).distinct()
+
+        # Filtra las recomendadas que no están usadas
+        if regiones_usadas_ids:
+            regiones_no_usadas = regiones_recomendadas.exclude(id__in=regiones_usadas_ids)
+        else:
+            regiones_no_usadas = regiones_recomendadas
+
+        # Transforma las regiones restantes al formato deseado
+        regiones_no_usadas_label_value = [{
+            'label': region.region,
+            'value': str(region.id)
+        } for region in regiones_no_usadas]
+
+        return regiones_no_usadas_label_value
+
+    def get_regiones_temporalidad(self, obj):
+        return self.get_unused_regions(obj, 'temporalidad')
+
+    def get_regiones_gradualidad(self, obj):
+        return self.get_unused_regions(obj, 'gradualidad')
 
     def to_internal_value(self, data):
 
