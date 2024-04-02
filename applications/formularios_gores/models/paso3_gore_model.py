@@ -30,7 +30,7 @@ class Paso3(PasoBase):
         return PersonalIndirectoGORE.objects.filter(
             formulario_gore=self.formulario_gore,
             estamento__isnull=False,
-            numero_personas__isnull=False,
+            numero_personas_gore__isnull=False,
             renta_bruta__isnull=False
         ).exists()
 
@@ -202,7 +202,8 @@ class PersonalIndirectoGORE(BaseModel):
                                blank=True, null=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto_gore', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto_gore', null=True, blank=True)
-    numero_personas = models.IntegerField(null=True, blank=True)
+    numero_personas_sectorial = models.IntegerField(null=True, blank=True)
+    numero_personas_gore = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_rentas = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     grado = models.IntegerField(null=True, blank=True, default=None)
@@ -214,8 +215,8 @@ class PersonalIndirectoGORE(BaseModel):
         ordering = ['created_date']
 
     def save(self, *args, **kwargs):
-        if self.renta_bruta is not None and self.numero_personas is not None:
-            self.total_rentas = self.renta_bruta * self.numero_personas
+        if self.renta_bruta is not None and self.numero_personas_gore is not None:
+            self.total_rentas = self.renta_bruta * self.numero_personas_gore
         else:
             self.total_rentas = None
         super().save(*args, **kwargs)
