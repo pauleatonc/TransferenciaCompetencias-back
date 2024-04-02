@@ -412,7 +412,7 @@ class Paso3Serializer(WritableNestedModelSerializer):
             return user.perfil != 'GORE'
 
     def update_paso3_instance(self, instance, paso3_data):
-        paso3_instance = getattr(instance, 'paso3', None)
+        paso3_instance = getattr(instance, 'paso3_gore', None)
         if paso3_instance:
             for attr, value in paso3_data.items():
                 setattr(paso3_instance, attr, value)
@@ -558,7 +558,7 @@ class Paso3Serializer(WritableNestedModelSerializer):
                     new_obj.save()
 
     def update(self, instance, validated_data):
-        paso3 = validated_data.pop('paso3', None)
+        paso3 = validated_data.pop('paso3_gore', None)
         personal_directo_data = validated_data.pop('p_3_1_a_personal_directo', None)
         personal_indirecto_data = validated_data.pop('p_3_1_b_personal_indirecto', None)
         recursos_comparados_data = validated_data.pop('p_3_2_recursos_comparados', None)

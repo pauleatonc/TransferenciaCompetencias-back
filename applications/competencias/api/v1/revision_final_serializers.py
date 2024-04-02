@@ -215,6 +215,8 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
     sectores = SectorSerializer(many=True, read_only=True)
     regiones_temporalidad = serializers.SerializerMethodField()
     regiones_gradualidad = serializers.SerializerMethodField()
+    temporalidad_opciones = serializers.SerializerMethodField()
+    modalidad_ejercicio_opciones = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -223,7 +225,6 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             'paso2_revision_final_subdere',
             'nombre',
             'sectores',
-            'regiones_recomendadas',
             'recomendaciones_desfavorables',
             'temporalidad',
             'gradualidad',
@@ -232,7 +233,9 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             'implementacion_acompanamiento',
             'condiciones_ejercicio',
             'regiones_temporalidad',
-            'regiones_gradualidad'
+            'regiones_gradualidad',
+            'temporalidad_opciones',
+            'modalidad_ejercicio_opciones'
         ]
 
     def get_unused_regions(self, obj, related_name):
@@ -264,6 +267,14 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
 
     def get_regiones_gradualidad(self, obj):
         return self.get_unused_regions(obj, 'gradualidad')
+
+    def get_temporalidad_opciones(self, obj):
+        # Retornar las opciones de TEMPORALIDAD como una lista de diccionarios
+        return [{'key': key, 'value': value} for key, value in Temporalidad.TEMPORALIDAD]
+
+    def get_modalidad_ejercicio_opciones(self, obj):
+        # Retornar las opciones de MODALIDAD_EJERCICIO como una lista de diccionarios
+        return [{'key': key, 'value': value} for key, value in Competencia.MODALIDAD_EJERCICIO]
 
     def to_internal_value(self, data):
 
