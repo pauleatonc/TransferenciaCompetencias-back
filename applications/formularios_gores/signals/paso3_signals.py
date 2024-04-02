@@ -42,7 +42,7 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
     else:  # PersonalIndirecto
         modelo_gore = PersonalIndirectoGORE
         campos_adicionales = {
-            'numero_personas': instance.numero_personas,
+            'numero_personas_sectorial': instance.numero_personas,
             'total_rentas': instance.total_rentas
         }
 
