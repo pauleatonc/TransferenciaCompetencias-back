@@ -14,7 +14,8 @@ from .serializers import (
     CompetenciaUpdateSerializer,
     CompetenciaDetailSerializer,
     CompetenciaHomeListSerializer,
-    CompetenciaListAllSerializer
+    CompetenciaListAllSerializer,
+
 )
 
 from applications.users.permissions import IsSUBDEREOrSuperuser

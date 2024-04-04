@@ -6,7 +6,9 @@ from applications.competencias.models import Competencia
 from applications.competencias.api.v1.revision_final_serializers import (
     RevisionFinalCompetenciaPaso1Serializer,
     RevisionFinalCompetenciaPaso2Serializer,
-    RevisionFinalCompetenciaDetailSerializer
+    RevisionFinalCompetenciaDetailSerializer,
+    ImagenesRevisionSubdereSerializer,
+    ResumenFormularioSerializer
 )
 from applications.users.permissions import IsSUBDEREOrSuperuser
 
@@ -72,4 +74,19 @@ class RevisionFinalCompetenciaViewSet(viewsets.ModelViewSet):
         competencia = self.get_object()
         # Implementación similar a paso_1 para manejo de PATCH y GET
         return manejar_formularios_pasos(request, competencia, RevisionFinalCompetenciaPaso2Serializer)
+
+    @action(detail=True, methods=['get', 'patch'], url_path='resumen')
+    def resumen(self, request, pk=None):
+        """
+        API para obtener o actualizar el resumen de todos los pasos del Revision Final Subdere
+        """
+        competencia = self.get_object()
+
+        if request.method == 'PATCH':
+            # Aquí manejas el PATCH utilizando la lógica de permisos y actualización
+            return manejar_permiso_patch(request, competencia, ResumenFormularioSerializer)
+
+        # Si el método es GET, simplemente serializas y retornas los datos como antes
+        serializer = ResumenFormularioSerializer(competencia)
+        return Response(serializer.data)
 

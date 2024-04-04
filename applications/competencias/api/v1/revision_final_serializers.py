@@ -8,13 +8,15 @@ from applications.competencias.models import (
     RecomendacionesDesfavorables,
     Temporalidad,
     Gradualidad,
+    PasoBase,
     Paso1RevisionFinalSubdere,
     Paso2RevisionFinalSubdere,
+    ImagenesRevisionSubdere,
 )
 
 from applications.competencias.api.v1.serializers import (
     AmbitoSerializer,
-    SectorSerializer
+    SectorSerializer,
 )
 
 from applications.regioncomuna.api.v1.serializer import RegionSerializer
@@ -345,3 +347,70 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             self.update_or_create_nested_instances(Gradualidad, gradualidad_data, instance)
 
         return instance
+
+
+class ImagenesRevisionSubdereSerializer(serializers.ModelSerializer):
+    imagen = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = ImagenesRevisionSubdere
+        fields = ['imagen']
+
+
+class PasoBaseSerializer(serializers.ModelSerializer):
+    avance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PasoBase
+        fields = [
+            'pk',
+            'nombre_paso',
+            'numero_paso',
+            'avance',
+            'completado',
+            'estado_stepper',
+        ]
+
+    def avance(self, obj):
+        return obj.avance()
+
+
+class Paso1ResumenSerializer(PasoBaseSerializer):
+    class Meta(PasoBaseSerializer.Meta):
+        model = Paso1RevisionFinalSubdere
+
+
+class Paso2ResumenSerializer(PasoBaseSerializer):
+    class Meta(PasoBaseSerializer.Meta):
+        model = Paso2RevisionFinalSubdere
+
+
+class ResumenFormularioSerializer(serializers.ModelSerializer):
+    competencia_nombre = serializers.SerializerMethodField()
+    paso1_revision_final_subdere = Paso1ResumenSerializer(read_only=True)
+    paso2_revision_final_subdere = Paso2ResumenSerializer(read_only=True)
+    formulario_completo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Competencia
+        fields = [
+            'id',
+            'competencia_nombre',
+            'formulario_final_enviado',
+            'fecha_envio_formulario_final',
+            'paso1_revision_final_subdere',
+            'paso2_revision_final_subdere',
+            'formulario_completo',
+        ]
+
+    def get_competencia_nombre(self, obj):
+        return obj.nombre if obj else None
+
+    def get_formulario_completo(self, obj):
+        # Revisa si todos los pasos están completados
+        pasos_completados = [
+            obj.paso1.completado if hasattr(obj, 'paso1') else False,
+            obj.paso2.completado if hasattr(obj, 'paso2') else False,
+        ]
+        # Retorna True si todos los pasos están completados, False en caso contrario
+        return all(pasos_completados)
