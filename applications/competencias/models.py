@@ -181,11 +181,13 @@ class Temporalidad(BaseModel):
         ('Definitiva', 'Definitiva'),
         ('Temporal', 'Temporal')
     )
-    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='temporalidad')
-    region = models.ManyToManyField(Region, blank=True, related_name='regiones_temporalidad')
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='temporalidad_gradualidad')
+    region = models.ManyToManyField(Region, blank=True, related_name='regiones_temporalidad_gradualidad')
     temporalidad = models.CharField(max_length=10, choices=TEMPORALIDAD, blank=True, null=True)
     anios = models.IntegerField(blank=True, null=True)
     justificacion_temporalidad = models.TextField(max_length=500, blank=True, null=True)
+    gradualidad_meses = models.IntegerField(blank=True, null=True)
+    justificacion_gradualidad = models.TextField(max_length=500, blank=True, null=True)
 
 
 class Gradualidad(BaseModel):
@@ -273,7 +275,7 @@ class Paso2RevisionFinalSubdere(PasoBase):
             total_campos += 1
 
         # Comprobaciones para Temporalidad
-        temporalidades = self.competencia.temporalidad.all()
+        temporalidades = self.competencia.temporalidad_gradualidad.all()
         for temporalidad in temporalidades:
             # Se comprueba que haya regiones asociadas, que temporalidad no esté vacío, y que justificacion_temporalidad no esté vacío
             if temporalidad.region.count() > 0 and temporalidad.temporalidad and temporalidad.justificacion_temporalidad:
@@ -283,13 +285,6 @@ class Paso2RevisionFinalSubdere(PasoBase):
                 # Si la temporalidad no es 'Temporal', se cuenta como completado sin necesidad de verificar el campo anios
                 elif temporalidad.temporalidad == 'Definitiva':
                     completados += 1
-            total_campos += 1
-
-        # Comprobaciones para Gradualidad
-        gradualidades = self.competencia.gradualidad.all()
-        for gradualidad in gradualidades:
-            if gradualidad.region.count() > 0 and gradualidad.gradualidad_meses is not None and gradualidad.justificacion_gradualidad:
-                completados += 1
             total_campos += 1
 
         # Comprobaciones para campos de Competencia
