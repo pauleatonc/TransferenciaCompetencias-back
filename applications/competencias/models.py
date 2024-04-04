@@ -125,6 +125,8 @@ class Competencia(BaseModel):
     modalidad_ejercicio = models.CharField(max_length=20, choices=MODALIDAD_EJERCICIO, blank=True, null=True)
     implementacion_acompanamiento = models.TextField(blank=True, null=True)
     condiciones_ejercicio = models.TextField(blank=True, null=True)
+    formulario_final_enviado = models.BooleanField(default=False)
+    fecha_envio_formulario_final = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Competencia'
@@ -304,4 +306,10 @@ class Paso2RevisionFinalSubdere(PasoBase):
     def avance(self):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
+
+
+class ImagenesRevisionSubdere(BaseModel):
+    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
+    imagen = models.ImageField(upload_to='imagenes_revision_subdere/', blank=True, null=True)
+
 
