@@ -190,13 +190,6 @@ class Temporalidad(BaseModel):
     justificacion_gradualidad = models.TextField(max_length=500, blank=True, null=True)
 
 
-class Gradualidad(BaseModel):
-    competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='gradualidad')
-    region = models.ManyToManyField(Region, blank=True, related_name='regiones_gradualidad')
-    gradualidad_meses = models.IntegerField(blank=True, null=True)
-    justificacion_gradualidad = models.TextField(max_length=500, blank=True, null=True)
-
-
 class PasoBase(BaseModel):
 
     @property

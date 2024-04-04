@@ -46,11 +46,6 @@ class FormularioGOREInline(admin.TabularInline):  # O puedes usar admin.StackedI
     extra = 0
     fields = ('region', 'nombre', 'formulario_enviado')
 
-class GradualidadInline(admin.TabularInline):
-    model = Gradualidad
-    extra = 0
-    fields = ('region', 'gradualidad_meses', 'justificacion_gradualidad')
-
 
 class CompetenciaResource(ModelResource):
     class Meta:
@@ -90,7 +85,6 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
         Etapa5Inline,
         FormularioSectorialInline,
         FormularioGOREInline,
-        GradualidadInline,
         Paso1InLine,
         Paso2InLine
     ]  # Añade el nuevo inline aquí
