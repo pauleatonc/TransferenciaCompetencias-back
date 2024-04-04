@@ -185,6 +185,7 @@ class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
 
 class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
     paso1_revision_final_subdere = Paso1RevisionFinalSubdereSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     ambito_definitivo_competencia = AmbitoSerializer()
     sectores = SectorSerializer(many=True, read_only=True)
     regiones_recomendadas_listado = serializers.SerializerMethodField()
@@ -193,6 +194,7 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
         model = Competencia
         fields = [
             'id',
+            'solo_lectura',
             'paso1_revision_final_subdere',
             'nombre',
             'sectores',
@@ -200,6 +202,15 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
             'regiones_recomendadas',
             'regiones_recomendadas_listado'
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_final_enviado y el perfil del usuario
+        if obj.formulario_final_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'SUBDERE' pueden editar
+            return user.perfil != 'SUBDERE'
 
     def get_regiones_recomendadas_listado(self, obj):
         # Filtramos las regiones que ya están en 'regiones' para la competencia.
@@ -211,6 +222,7 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
 
 class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
     paso2_revision_final_subdere = Paso2RevisionFinalSubdereSerializer()
+    solo_lectura = serializers.SerializerMethodField()
     recomendaciones_desfavorables = RecomendacionesDesfavorablesSerializer(many=True, read_only=False)
     temporalidad = TemporalidadSerializer(many=True, read_only=False)
     gradualidad = GradualidadSerializer(many=True, read_only=False)
@@ -224,6 +236,7 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
         model = Competencia
         fields = [
             'id',
+            'solo_lectura',
             'paso2_revision_final_subdere',
             'nombre',
             'sectores',
@@ -239,6 +252,15 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
             'temporalidad_opciones',
             'modalidad_ejercicio_opciones'
         ]
+
+    def get_solo_lectura(self, obj):
+        user = self.context['request'].user
+        # La lógica se actualiza para considerar el estado de formulario_final_enviado y el perfil del usuario
+        if obj.formulario_final_enviado:
+            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+        else:
+            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'SUBDERE' pueden editar
+            return user.perfil != 'SUBDERE'
 
     def get_unused_regions(self, obj, related_name):
         # Asume que el campo regiones_recomendadas almacena directamente los IDs de las regiones recomendadas
