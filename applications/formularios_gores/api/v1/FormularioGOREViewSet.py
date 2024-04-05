@@ -134,12 +134,17 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
         return manejar_formularios_pasos(request, formulario_gore, ObservacionesSubdereSerializer)
 
 
-    @action(detail=True, methods=['get'], url_path='resumen')
+    @action(detail=True, methods=['get', 'patch'], url_path='resumen')
     def resumen(self, request, pk=None):
         """
-        API para obtener el resumen de todos los pasos del Formulario GORE
+        API para obtener o actualizar el resumen de todos los pasos del Formulario GORE
         """
         formulario_gore = self.get_object()
+
+        if request.method == 'PATCH':
+            # Aquí manejas el PATCH utilizando la lógica de permisos y actualización
+            return manejar_permiso_patch(request, formulario_gore, ResumenFormularioSerializer)
+
         serializer = ResumenFormularioSerializer(formulario_gore)
         return Response(serializer.data)
 
