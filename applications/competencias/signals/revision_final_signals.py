@@ -61,25 +61,36 @@ def manejar_cambios_en_regiones_recomendadas(sender, instance, action, **kwargs)
 
 @receiver(post_save, sender=Competencia)
 def update_competencia_status(sender, instance, **kwargs):
-    # Solo proceder si formulario_final_enviado ha sido marcado como True
-    if instance.formulario_final_enviado:
-        # Registrar fecha_fin si aún no está establecida
-        if not instance.fecha_envio_formulario_final:
-            instance.fecha_envio_formulario_final = timezone.now()
-            instance.save(update_fields=['fecha_envio_formulario_final'])
+    # Evitar recursión verificando un atributo personalizado
+    if hasattr(instance, '_updating_status'):
+        return
 
-        # Comparar conjuntos de regiones
-        regiones = set(instance.regiones.all())
-        regiones_recomendadas = set(instance.regiones_recomendadas.all())
+    # Marcar que estamos actualizando para prevenir re-entrada
+    setattr(instance, '_updating_status', True)
 
-        # Si ambas listas son idénticas, establecer como Favorable
-        if regiones == regiones_recomendadas:
-            instance.recomendacion_transferencia = 'Favorable'
-        # Si hay intersección pero no son idénticas, establecer como Favorable Parcial
-        elif regiones & regiones_recomendadas:
-            instance.recomendacion_transferencia = 'Favorable Parcial'
-        # Si no hay ninguna intersección, establecer como Desfavorable
-        else:
-            instance.recomendacion_transferencia = 'Desfavorable'
+    try:
+        if instance.formulario_final_enviado:
+            # Registrar fecha_envio_formulario_final si aún no está establecida
+            if not instance.fecha_envio_formulario_final:
+                instance.fecha_envio_formulario_final = timezone.now()
+                instance.save(update_fields=['fecha_envio_formulario_final'])
 
-        instance.save(update_fields=['recomendacion_transferencia'])
+            # Comparar conjuntos de regiones
+            regiones = set(instance.regiones.all())
+            regiones_recomendadas = set(instance.regiones_recomendadas.all())
+
+            # Establecer recomendacion_transferencia según la lógica proporcionada
+            if regiones == regiones_recomendadas:
+                recomendacion = 'Favorable'
+            elif regiones & regiones_recomendadas:
+                recomendacion = 'Favorable Parcial'
+            else:
+                recomendacion = 'Desfavorable'
+
+            # Solo actualizar si hay un cambio para evitar re-entrada
+            if instance.recomendacion_transferencia != recomendacion:
+                instance.recomendacion_transferencia = recomendacion
+                instance.save(update_fields=['recomendacion_transferencia'])
+    finally:
+        # Quitar marca para permitir futuras actualizaciones
+        delattr(instance, '_updating_status')
