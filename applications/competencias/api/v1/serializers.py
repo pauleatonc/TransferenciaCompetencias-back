@@ -75,10 +75,32 @@ class CompetenciaListAllSerializer(serializers.ModelSerializer):
 class CompetenciaHomeListSerializer(serializers.ModelSerializer):
 
     etapas_info = serializers.SerializerMethodField()
+    estado = serializers.SerializerMethodField()
+    ambito_definitivo_competencia = serializers.SerializerMethodField()
+    ambito_competencia_origen = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
-        fields = ['id', 'nombre', 'etapas_info', 'tiempo_transcurrido']
+        fields = [
+            'id',
+            'nombre',
+            'etapas_info',
+            'tiempo_transcurrido',
+            'estado',
+            'ambito_definitivo_competencia',
+            'ambito_competencia_origen',
+            'fecha_fin',
+            'recomendacion_transferencia'
+        ]
+
+    def get_estado(self, obj):
+        return obj.get_estado_display()
+
+    def get_ambito_definitivo_competencia(self, obj):
+        return obj.ambito_definitivo_competencia.nombre if obj.ambito_definitivo_competencia else None
+
+    def get_ambito_competencia_origen(self, obj):
+        return obj.ambito_competencia.nombre if obj.ambito_competencia else None
 
     def get_etapas_info(self, obj):
         return obtener_informacion_etapas(obj)
@@ -130,6 +152,9 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
     tiempo_transcurrido = serializers.SerializerMethodField()
     sectores = SectorSerializer(many=True, read_only=True)
     resumen_competencia = serializers.SerializerMethodField()
+    estado = serializers.SerializerMethodField()
+    ambito_definitivo_competencia = serializers.SerializerMethodField()
+    ambito_competencia_origen = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -156,6 +181,13 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'usuarios_sectoriales',
             'usuarios_gore',
 
+            #campos de finalizada
+            'fecha_fin',
+            'estado',
+            'ambito_competencia_origen',
+            'ambito_definitivo_competencia',
+            'recomendacion_transferencia'
+
         ]
 
     def get_tiempo_transcurrido(self, obj):
@@ -169,6 +201,15 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'etapas_info': etapas_info,
             'tiempo_transcurrido': obj.tiempo_transcurrido()
         }
+
+    def get_estado(self, obj):
+        return obj.get_estado_display()
+
+    def get_ambito_definitivo_competencia(self, obj):
+        return obj.ambito_definitivo_competencia.nombre if obj.ambito_definitivo_competencia else None
+
+    def get_ambito_competencia_origen(self, obj):
+        return obj.ambito_competencia.nombre if obj.ambito_competencia else None
 
 
 class AmbitoSerializer(serializers.ModelSerializer):
