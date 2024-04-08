@@ -33,16 +33,20 @@ def manejar_formularios_pasos(request, competencia, serializer_class, require_su
 
 def manejar_permiso_patch(request, competencia, serializer_class):
     """
-        Maneja los permisos para operaciones PATCH y la serialización.
-        """
+    Maneja los permisos para operaciones PATCH y la serialización.
+    """
+    permiso = IsSUBDEREOrSuperuser()
     if request.method == 'PATCH':
-        if not IsSUBDEREOrSuperuser(request, competencia):
+        # Verificar permiso usando el objeto de permiso creado
+        if not permiso.has_permission(request, view=None):  # Pasar `None` o la vista actual si es necesario
             return Response({"detail": "No autorizado para editar esta Competencia."},
                             status=status.HTTP_403_FORBIDDEN)
 
-        return manejar_formularios_pasos(request, competencia, serializer_class)
+        # Si el permiso es concedido, procesar el PATCH
+        return manejar_formularios_pasos(request, competencia, serializer_class, True)
 
-    return manejar_formularios_pasos(request, competencia, serializer_class)
+    # Si el método no es PATCH, manejar como una solicitud normal
+    return manejar_formularios_pasos(request, competencia, serializer_class, False)
 
 
 class RevisionFinalCompetenciaViewSet(viewsets.ModelViewSet):

@@ -39,6 +39,12 @@ class Competencia(BaseModel):
         ('Exclusiva', 'Exclusiva'),
         ('Compartida', 'Compartida')
     )
+    RECOMENDACION = (
+        ('Pendiente', 'Pendiente'),
+        ('Favorable', 'Favorable'),
+        ('Desfavorable', 'Desfavorable'),
+        ('Favorable parcial', 'Favorable parcial')
+    )
 
     nombre = models.CharField(max_length=200, unique=True)
     creado_por = models.ForeignKey(
@@ -127,6 +133,7 @@ class Competencia(BaseModel):
     condiciones_ejercicio = models.TextField(blank=True, null=True)
     formulario_final_enviado = models.BooleanField(default=False)
     fecha_envio_formulario_final = models.DateTimeField(null=True, blank=True)
+    recomendacion_transferencia = models.CharField(max_length=25, choices=RECOMENDACION, blank=True, null=True, default='Pendiente')
 
     class Meta:
         verbose_name = 'Competencia'

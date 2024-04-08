@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from applications.competencias.models import (
     Competencia,
@@ -56,3 +57,40 @@ def manejar_cambios_en_regiones_recomendadas(sender, instance, action, **kwargs)
         # Si se eliminan todas las regiones de regiones_recomendadas, eliminar las instancias de Temporalidad
         if instance.regiones_recomendadas.count() == 0:
             instance.temporalidad_gradualidad.all().delete()
+
+
+@receiver(post_save, sender=Competencia)
+def update_competencia_status(sender, instance, **kwargs):
+    # Evitar recursión verificando un atributo personalizado
+    if hasattr(instance, '_updating_status'):
+        return
+
+    # Marcar que estamos actualizando para prevenir re-entrada
+    setattr(instance, '_updating_status', True)
+
+    try:
+        if instance.formulario_final_enviado:
+            # Registrar fecha_envio_formulario_final si aún no está establecida
+            if not instance.fecha_envio_formulario_final:
+                instance.fecha_envio_formulario_final = timezone.now()
+                instance.save(update_fields=['fecha_envio_formulario_final'])
+
+            # Comparar conjuntos de regiones
+            regiones = set(instance.regiones.all())
+            regiones_recomendadas = set(instance.regiones_recomendadas.all())
+
+            # Establecer recomendacion_transferencia según la lógica proporcionada
+            if regiones == regiones_recomendadas:
+                recomendacion = 'Favorable'
+            elif regiones & regiones_recomendadas:
+                recomendacion = 'Favorable Parcial'
+            else:
+                recomendacion = 'Desfavorable'
+
+            # Solo actualizar si hay un cambio para evitar re-entrada
+            if instance.recomendacion_transferencia != recomendacion:
+                instance.recomendacion_transferencia = recomendacion
+                instance.save(update_fields=['recomendacion_transferencia'])
+    finally:
+        # Quitar marca para permitir futuras actualizaciones
+        delattr(instance, '_updating_status')
