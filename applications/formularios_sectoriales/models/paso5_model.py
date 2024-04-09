@@ -125,7 +125,7 @@ class Paso5(PasoBase):
     descripcion_costos_totales = models.TextField(max_length=300, blank=True)
 
     """5.2 Costos asociados al ejercicio de la competencia"""
-    glosas_especificas = models.TextField(max_length=500, blank=True)
+    glosas_especificas = models.TextField(max_length=1100, blank=True)
 
     """5.3 Costos asociados al ejercicio de la competencia"""
     descripcion_funciones_personal_directo = models.TextField(max_length=1100, blank=True)
