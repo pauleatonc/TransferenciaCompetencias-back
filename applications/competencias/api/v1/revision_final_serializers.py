@@ -399,10 +399,10 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
         return obj.nombre if obj else None
 
     def get_formulario_completo(self, obj):
-        # Revisa si todos los pasos están completados
-        pasos_completados = [
-            obj.paso1.completado if hasattr(obj, 'paso1') else False,
-            obj.paso2.completado if hasattr(obj, 'paso2') else False,
-        ]
-        # Retorna True si todos los pasos están completados, False en caso contrario
-        return all(pasos_completados)
+        # Asume que ya existen las instancias de paso1 y paso2 para el objeto Competencia actual.
+        paso1_completado = obj.paso1_revision_final_subdere.completado if hasattr(obj,
+                                                                                  'paso1_revision_final_subdere') else False
+        paso2_completado = obj.paso2_revision_final_subdere.completado if hasattr(obj,
+                                                                                  'paso2_revision_final_subdere') else False
+        # Retorna True si ambos pasos están completados, False en caso contrario.
+        return paso1_completado and paso2_completado
