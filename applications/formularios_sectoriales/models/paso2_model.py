@@ -60,7 +60,7 @@ class Paso2(PasoBase):
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
     """2.5 Descripcion cualitativa del ejercicio de la competencia en la region"""
-    descripcion_cualitativa = models.TextField(max_length=500, blank=True)
+    descripcion_cualitativa = models.TextField(max_length=2200, blank=True)
 
 
 class OrganismosIntervinientes(BaseModel):

@@ -62,7 +62,7 @@ class IndicadorDesempeno(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='indicador_desempeno')
     formula_calculo = models.TextField(max_length=500, blank=True)
     descripcion_indicador = models.TextField(max_length=500, blank=True)
-    medios_calculo = models.TextField(max_length=500, blank=True)
+    medios_calculo = models.TextField(max_length=1000, blank=True)
     verificador_asociado = models.TextField(max_length=500, blank=True)
 
     def __str__(self):
