@@ -24,7 +24,7 @@ class EtapaBase(BaseModel):
     plazo_dias = models.IntegerField(null=True, blank=True)
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
-    omitida = models.BooleanField(default=False)
+    omitida = models.BooleanField(default=None, null=True, blank=True)
     tiempo_transcurrido_registrado = models.IntegerField(default=0)
     ultima_finalizacion = models.DateTimeField(null=True, blank=True)
     oficio_origen = models.FileField(upload_to='oficios_competencias',

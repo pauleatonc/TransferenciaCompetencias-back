@@ -17,6 +17,7 @@ class Etapa2(EtapaBase):
     """ Campos subetapa 2"""
     usuarios_notificados = models.BooleanField(default=False)
     formulario_completo = models.BooleanField(default=False)
+    observaciones_completas = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Etapa 2'
