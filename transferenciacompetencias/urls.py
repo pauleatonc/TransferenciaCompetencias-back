@@ -27,18 +27,19 @@ schema_view = get_schema_view(
    permission_classes=(permissions.AllowAny,),
 )
 
+api_path_prefix = settings.API_PATH_PREFIX
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    re_path('', include('applications.users.urls')),
-    re_path('', include('applications.regioncomuna.urls')),
-    re_path('', include('applications.sectores_gubernamentales.urls')),
-    re_path('', include('applications.competencias.urls')),
-    re_path('', include('applications.formularios_sectoriales.urls')),
-    re_path('', include('applications.formularios_gores.urls')),
-    re_path('', include('applications.etapas.urls')),
+    re_path(api_path_prefix, include('applications.users.urls')),
+    re_path(api_path_prefix, include('applications.regioncomuna.urls')),
+    re_path(api_path_prefix, include('applications.sectores_gubernamentales.urls')),
+    re_path(api_path_prefix, include('applications.competencias.urls')),
+    re_path(api_path_prefix, include('applications.formularios_sectoriales.urls')),
+    re_path(api_path_prefix, include('applications.formularios_gores.urls')),
+    re_path(api_path_prefix, include('applications.etapas.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
