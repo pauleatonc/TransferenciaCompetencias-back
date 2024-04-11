@@ -180,6 +180,7 @@ class CostosDirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_a_costos_directos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_directos', blank=True)
+    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='costos_directos', blank=True, null=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_directos', blank=True, null=True)
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(blank=True, null=True, default=None)
@@ -215,6 +216,7 @@ class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_b_costos_indirectos')
     etapa = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='costos_indirectos')
+    subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='costos_indirectos', blank=True, null=True)
     item_subtitulo = models.ForeignKey(ItemSubtitulo, on_delete=models.CASCADE, related_name='costos_indirectos', blank=True, null=True)
     total_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     es_transversal = models.BooleanField(blank=True, null=True, default=None)

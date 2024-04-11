@@ -5,7 +5,7 @@ from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1, Etapa2
+from applications.etapas.models import Etapa1, Etapa2, Etapa3
 from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
 from applications.regioncomuna.models import Region
 from applications.formularios_sectoriales.models import ObservacionesSubdereFormularioSectorial
@@ -51,22 +51,34 @@ def actualizar_estado_formulario_completo_sectorial(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=ObservacionesSubdereFormularioSectorial)
-def comprobar_y_finalizar_etapa2(sender, instance, **kwargs):
+def comprobar_y_finalizar_observaciones_etapa2(sender, instance, **kwargs):
     # Comprobar si todas las observaciones han sido enviadas
     todas_enviadas = all(
         observacion.observacion_enviada for observacion in
-        ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
+        ObservacionesSubdereFormularioSectorial.objects.filter(
+            formulario_sectorial__competencia=instance.formulario_sectorial.competencia)
     )
 
-    if todas_enviadas:
-        # Obtener Etapa2 y Etapa3 relacionadas con la competencia
-        etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
+    # Obtener Etapa2 relacionada con la competencia
+    etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
 
-        # Actualizar Etapa2
-        if etapa2:
-            etapa2.enviada = False
-            etapa2.aprobada = True
-            etapa2.save()
+    if todas_enviadas and etapa2:
+        etapa2.enviada = False
+        etapa2.observaciones_completas = True
+        etapa2.save()
+
+
+
+@receiver(post_save, sender=Etapa3)
+def verificar_y_aprobar_etapa2(sender, instance, **kwargs):
+    # Obtener Etapa2 relacionada con la competencia
+    etapa2 = Etapa2.objects.filter(competencia=instance.competencia).first()
+
+    # Verificar si la instancia de Etapa3 ha especificado el campo omitida y si las observaciones están completas
+    if etapa2 and instance.omitida is not None and etapa2.observaciones_completas:
+        etapa2.aprobada = True
+        etapa2.save()
+
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
 @transaction.atomic

@@ -43,7 +43,8 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'formulario_sectorial',
             'observaciones_sectorial',
             'oficio_origen',
-            'tipo_usuario'
+            'tipo_usuario',
+            'observaciones_completas'
         ]
 
     def get_tipo_usuario(self, obj):

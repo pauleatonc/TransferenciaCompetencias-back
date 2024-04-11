@@ -63,6 +63,7 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'DELETE',
+            'subtitulo',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -76,10 +77,10 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
 
     def get_subtitulo_label_value(self, obj):
         # obj es una instancia de CostosDirectos
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+        if obj.subtitulo and obj.subtitulo.subtitulo:
             return {
-                'label': obj.item_subtitulo.subtitulo.subtitulo,
-                'value': str(obj.item_subtitulo.subtitulo.id)
+                'label': obj.subtitulo.subtitulo,
+                'value': str(obj.subtitulo.id)
             }
         return {'label': '', 'value': ''}
 
@@ -143,6 +144,7 @@ class CostosIndirectosSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'DELETE',
+            'subtitulo',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -155,10 +157,10 @@ class CostosIndirectosSerializer(serializers.ModelSerializer):
 
     def get_subtitulo_label_value(self, obj):
         # obj es una instancia de CostosDirectos
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
+        if obj.subtitulo and obj.subtitulo.subtitulo:
             return {
-                'label': obj.item_subtitulo.subtitulo.subtitulo,
-                'value': str(obj.item_subtitulo.subtitulo.id)
+                'label': obj.subtitulo.subtitulo,
+                'value': str(obj.subtitulo.id)
             }
         return {'label': '', 'value': ''}
 
