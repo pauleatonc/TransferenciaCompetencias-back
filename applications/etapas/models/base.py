@@ -42,10 +42,10 @@ class EtapaBase(BaseModel):
         raise NotImplementedError("Subclases deben implementar este método.")
 
     def actualizar_estado(self):
-        if not self.fecha_inicio:
-            return 'no_iniciada'
-        elif self.omitida:
+        if self.omitida:
             return 'omitida'
+        elif not self.fecha_inicio:
+            return 'no_iniciada'
         elif self.aprobada:
             return 'finalizada'
         elif self.enviada:
