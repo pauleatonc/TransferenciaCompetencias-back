@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Competencia</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { width: 80%; margin: auto; }
+        .header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .field { margin-bottom: 15px; }
+        .field label { font-weight: bold; }
+        .field p { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="field">
+                <label>Competencia:</label>
+                <h1>{{ nombre }}</h1>
+            </div>
+            <div class="field">
+                <label>Región:</label>
+                <p>{% for region in regiones.all %}{{ region.region }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+            </div>
+            <div class="field">
+                <label>Sector:</label>
+                <p>{% for sector in sectores.all %}{{ sector.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+            </div>
+            <div class="field">
+                <label>Origen de la Competencia:</label>
+                <p>{{ origen }}</p>
+            </div>
+            <div class="field">
+                <label>Ámbito de la Competencia:</label>
+                <p>{{ ambito_definitivo_competencia }}</p>
+            </div>
+            <div class="field">
+                <label>Fecha inicio:</label>
+                <p>{{ fecha_inicio }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

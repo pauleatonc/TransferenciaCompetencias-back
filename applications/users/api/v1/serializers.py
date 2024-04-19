@@ -197,16 +197,24 @@ class PasswordSerializer(serializers.Serializer):
 
 class UserListSerializer(serializers.ModelSerializer):
     sector_nombre = serializers.SerializerMethodField()
+    region_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'rut', 'nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'sector_nombre', 'region']
+        fields = ['id', 'rut', 'nombre_completo', 'email', 'is_active', 'perfil', 'sector', 'sector_nombre', 'region', 'region_nombre']
 
     def get_sector_nombre(self, obj):
         # Verifica si el usuario tiene un sector asociado
         if obj.sector:
             return obj.sector.nombre
         # Retorna None o un valor predeterminado si el usuario no tiene un sector asociado
+        return None
+
+    def get_region_nombre(self, obj):
+        # Verifica si el usuario tiene una región asociada
+        if obj.region:
+            return obj.region.region
+        # Retorna None o un valor predeterminado si el usuario no tiene una región asociada
         return None
 
 

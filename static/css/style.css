@@ -1,0 +1,13 @@
+@page {
+    size: A4;
+    margin: 1cm;
+    @top-center {
+        content: "Encabezado";
+    }
+    @bottom-center {
+        content: "Página " counter(page);
+    }
+}
+body {
+    font-family: Arial, sans-serif;
+}

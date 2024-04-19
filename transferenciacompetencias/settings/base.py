@@ -1,9 +1,12 @@
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+import os
+
 from unipath import Path
 from datetime import timedelta
 
 
 BASE_DIR = Path(__file__).ancestor(3)
+
 
 # Application definition
 
@@ -26,6 +29,7 @@ LOCAL_APPS = [
     'applications.etapas',
     'applications.formularios_sectoriales',
     'applications.formularios_gores',
+    'applications.printer'
 ]
 
 THIRD_PARTY_APPS = [
@@ -43,7 +47,7 @@ THIRD_PARTY_APPS = [
     'drf_yasg',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework_simplejwt.token_blacklist'
 
 ]
 
