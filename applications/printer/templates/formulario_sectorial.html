@@ -6,7 +6,7 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .container { width: 80%; margin: auto; }
-        .header { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .header { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
         .field { margin-bottom: 15px; }
         .field label { font-weight: bold; }
         .field p { margin: 5px 0; }
@@ -20,6 +20,109 @@
                 <label>Nombre:</label>
                 <p>{{ nombre }}</p>
             </div>
+
+            {# Paso 1.1 #}
+            <div class="field">
+                <h2>{{ nombre_paso }}</h2>
+                <h3>1.1 Ficha de descripción organizacional</h3>
+            </div>
+            <div class="field">
+                <label>Denominación del organismo:</label>
+                <p>{{ sector }}</p>
+            </div>
+            <div class="field">
+                <label>Forma jurídica del organismo:</label>
+                <p>{{ forma_juridica_organismo }}</p>
+            </div>
+
+            <div class="field">
+                {% if marco_juridico_count > 1 %}
+                    <label>Marcos jurídicos:</label>
+                {% else %}
+                    <label>Marco jurídico:</label>
+                {% endif %}
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Link para descarga</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for documento in marco_juridico %}
+                        <tr>
+                            <td>{{ documento.documento }}</td>
+                            <td><a href="{{ documento.documento.url }}">Descargar</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="field">
+            {% if marco_juridico_count > 1 %}
+                <label>Descripción archivos de marco jurídico:</label>
+            {% else %}
+                <label>Descripción archivo de marco jurídico:</label>
+            {% endif %}
+                <p>{{ descripcion_archivo_marco_juridico }}</p>
+            </div>
+            <div class="field">
+                <label>Misión Institucional:</label>
+                <p>{{ mision_institucional }}</p>
+            </div>
+
+            <div class="field">
+            {% if informacion_adicional_marco_juridico %}
+                <label>Información adicional:</label>
+                <p>{{ informacion_adicional_marco_juridico }}</p>
+            {% endif %}
+            </div>
+
+            {# Paso 1.2 #}
+            <div class="field">
+                <h3>1.2 Organización Institucional</h3>
+            </div>
+            <div class="field">
+                <label>Organigrama Nacional:</label>
+                <p>{{ organigrama_nacional }}</p>
+            </div>
+            <div class="field">
+            {% if descripcion_archivo_organigrama_nacional %}
+                <label>Descripción del archivo:</label>
+                <p>{{ descripcion_archivo_organigrama_nacional }}</p>
+            {% endif %}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Región</th>
+                        <th>Documento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for organigrama in organigrama_regional %}
+                    <tr>
+                        <td>{{ organigrama.region.region }}</td>
+                        <td><a href="{{ organigrama.documento.url }}">Descargar</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="field">
+                {% if descripcion_archivo_organigrama_regional %}
+                    {% if organigrame_regional_count > 1 %}
+                        <label>Descripción de los archivos:</label>
+                    {% else %}
+                        <label>Descripción del archivo:</label>
+                    {% endif %}
+                    <p>{{ descripcion_archivo_organigrama_regional }}</p>
+                {% endif %}
+            </div>
+
         </div>
     </div>
 </body>
