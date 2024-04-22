@@ -42,6 +42,15 @@ def formulario_sectorial(request, formulario_sectorial_id, return_pdf=False):
         'organigrame_regional_count': organigrame_regional_count,
         'descripcion_archivo_organigrama_regional': paso1.descripcion_archivo_organigrama_regional,
 
+        # Paso 1.3
+        'identificacion_competencia': paso1.identificacion_competencia,
+        'fuentes_normativas': paso1.fuentes_normativas,
+        'territorio_competencia': paso1.territorio_competencia,
+        'enfoque_territorial_competencia': paso1.enfoque_territorial_competencia,
+        'ambito_paso1': paso1.ambito_paso1,
+        'posibilidad_ejercicio_por_gobierno_regional': paso1.posibilidad_ejercicio_por_gobierno_regional,
+        'organo_actual_competencia': paso1.organo_actual_competencia,
+
 
         'filename': 'formulario_sectorial'
     }
