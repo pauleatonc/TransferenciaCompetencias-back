@@ -180,6 +180,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'usuarios_dipres',
             'usuarios_sectoriales',
             'usuarios_gore',
+            'imprimir_formulario_final',
 
             #campos de finalizada
             'fecha_fin',

@@ -134,6 +134,7 @@ class Competencia(BaseModel):
     formulario_final_enviado = models.BooleanField(default=False)
     fecha_envio_formulario_final = models.DateTimeField(null=True, blank=True)
     recomendacion_transferencia = models.CharField(max_length=25, choices=RECOMENDACION, blank=True, null=True, default='Pendiente')
+    imprimir_formulario_final = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Competencia'
