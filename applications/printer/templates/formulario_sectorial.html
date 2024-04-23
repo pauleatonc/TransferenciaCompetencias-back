@@ -86,10 +86,10 @@
             </div>
 
             <div class="field">
-                {% if marco_juridico_count > 1 %}
-                    <label>Marcos jurídicos:</label>
+                {% if organigrama_regional_count > 1 %}
+                    <label>Organigramas Regionales:</label>
                 {% else %}
-                    <label>Marco jurídico:</label>
+                    <label>Organigrama Regional:</label>
                 {% endif %}
             <table>
                 <thead>
@@ -102,7 +102,11 @@
                     {% for organigrama in organigrama_regional %}
                     <tr>
                         <td>{{ organigrama.region.region }}</td>
-                        <td><a href="{{ organigrama.documento.url }}">Descargar</a></td>
+                        {% if organigrama.documento and organigrama.documento.url %}
+                            <td><a href="{{ organigrama.documento.url }}">Descargar</a></td>
+                        {% else %}
+                            No existe archivo
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

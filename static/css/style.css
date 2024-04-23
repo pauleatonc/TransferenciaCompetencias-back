@@ -4,8 +4,11 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: Calibri, sans-serif;
     margin: 20px;
+}
+p {
+    font-size: 14px;
 }
 .container {
     width: 80%;
