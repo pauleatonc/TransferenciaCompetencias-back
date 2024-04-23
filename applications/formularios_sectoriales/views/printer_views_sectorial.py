@@ -8,19 +8,16 @@ from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.printer.functions import pdf_response, get_pdf_from_html
 
-ORIGEN_DICT = dict(Competencia.ORIGEN)
-
-
 
 @pdf_response
 def formulario_sectorial(request, formulario_sectorial_id, return_pdf=False):
     formulario_sectorial = get_object_or_404(FormularioSectorial, id=formulario_sectorial_id)
     paso1 = formulario_sectorial.paso1
     marco_juridico = formulario_sectorial.marcojuridico.all()
-    organigrame_regional = formulario_sectorial.organigramaregional.all()
+    organigrama_regional = formulario_sectorial.organigramaregional.all()
 
     marco_juridico_count = marco_juridico.count()
-    organigrame_regional_count = organigrame_regional.count()
+    organigrama_regional_count = organigrama_regional.count()
 
     context = {
         'sector': formulario_sectorial.sector,
@@ -37,9 +34,10 @@ def formulario_sectorial(request, formulario_sectorial_id, return_pdf=False):
 
         # Paso 1.2
         'organigrama_nacional': paso1.organigrama_nacional,
+        'organigrama_nacional_url': paso1.organigrama_nacional.url if paso1.organigrama_nacional else '',
         'descripcion_archivo_organigrama_nacional': paso1.descripcion_archivo_organigrama_nacional,
-        'organigrame_regional': organigrame_regional,
-        'organigrame_regional_count': organigrame_regional_count,
+        'organigrama_regional': organigrama_regional,
+        'organigrama_regional_count': organigrama_regional_count,
         'descripcion_archivo_organigrama_regional': paso1.descripcion_archivo_organigrama_regional,
 
         # Paso 1.3
@@ -50,7 +48,6 @@ def formulario_sectorial(request, formulario_sectorial_id, return_pdf=False):
         'ambito_paso1': paso1.ambito_paso1,
         'posibilidad_ejercicio_por_gobierno_regional': paso1.posibilidad_ejercicio_por_gobierno_regional,
         'organo_actual_competencia': paso1.organo_actual_competencia,
-
 
         'filename': 'formulario_sectorial'
     }

@@ -1,13 +1,38 @@
 @page {
     size: A4;
     margin: 1cm;
-    @top-center {
-        content: "Encabezado";
-    }
-    @bottom-center {
-        content: "Página " counter(page);
-    }
 }
+
 body {
     font-family: Arial, sans-serif;
+    margin: 20px;
+}
+.container {
+    width: 80%;
+    margin: auto;
+}
+.header {
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.field {
+    margin-bottom: 15px;
+}
+.field label {
+    font-weight: bold;
+}
+.field p {
+    margin: 5px 0;
+}
+.field table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.field table thead {
+    background-color: #f0f0f0;
+}
+.field table th, .field table td {
+    border: 1px solid #ddd;
+    padding: 5px;
 }

@@ -51,6 +51,10 @@ def save_complete_document_pdf(competencia_id):
     # Inicializa PdfWriter
     pdf_writer = PdfWriter()
 
+    # Diccionario para rastrear el índice
+    index = {}
+    current_page = 0
+
     # Obtener el PDF del resumen de la competencia
     pdf_bytes = resumen_competencia(None, competencia_id, return_pdf=True)
     pdf_reader = PdfReader(BytesIO(pdf_bytes))
@@ -65,6 +69,21 @@ def save_complete_document_pdf(competencia_id):
         pdf_reader = PdfReader(BytesIO(pdf_bytes))
         for page in range(len(pdf_reader.pages)):
             pdf_writer.add_page(pdf_reader.pages[page])
+
+    # Lista de documentos que se espera incluir, modificable según tus modelos
+    document_urls = [
+        doc.documento.url for doc in competencia.documentos.all()
+    ]
+
+    # Añadir cada documento a PDF
+    for doc_url in document_urls:
+        # Simulando la lectura de un archivo local, ajustar para uso real
+        file_path = os.path.join(settings.MEDIA_ROOT, doc_url.lstrip('/'))  # ajustar según necesidad real
+        pdf_reader = PdfReader(file_path)
+        index[doc_url] = current_page + 1
+        for page in pdf_reader.pages:
+            pdf_writer.add_page(page)
+            current_page += 1
 
     # Guardar el PDF en el archivo especificado
     with open(pdf_path, "wb") as out:

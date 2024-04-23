@@ -1,16 +1,10 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Competencia</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { width: 80%; margin: auto; }
-        .header { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-        .field { margin-bottom: 15px; }
-        .field label { font-weight: bold; }
-        .field p { margin: 5px 0; }
-    </style>
+    <title>Resumen Competencia</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <div class="container">
@@ -20,11 +14,11 @@
                 <h1>{{ nombre }}</h1>
             </div>
             <div class="field">
-                <label>Región:</label>
+                <label>{% if regiones_count > 1 %}Regiones:{% else %}Región:{% endif %}</label>
                 <p>{% for region in regiones.all %}{{ region.region }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
             </div>
             <div class="field">
-                <label>Sector:</label>
+                <label>{% if sectores_count > 1 %}Sectores:{% else %}Sector:{% endif %}</label>
                 <p>{% for sector in sectores.all %}{{ sector.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
             </div>
             <div class="field">
@@ -39,6 +33,103 @@
                 <label>Fecha inicio:</label>
                 <p>{{ fecha_inicio }}</p>
             </div>
+            <div class="field">
+                <label>Fecha Fin:</label>
+                <p>{{ fecha_fin }}</p>
+            </div>
+            <div class="field">
+                <label>Tiempo transcurrido:</label>
+                <p>{{ tiempo_transcurrido }}</p>
+            </div>
+
+            <div class="field">
+                <h3>Personas asignadas</h3>
+            </div>
+
+            <div class="field">
+                <label>SUBDERE:</label>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for persona in usuarios_subdere %}
+                        <tr>
+                            <td>{{ persona.nombre_completo }}</td>
+                            <td>{{ persona.email }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="field">
+                <label>DIPRES:</label>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for persona in usuarios_dipres %}
+                        <tr>
+                            <td>{{ persona.nombre_completo }}</td>
+                            <td>{{ persona.email }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="field">
+                <label>Usuarios Sectoriales:</label>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Sector</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for persona in usuarios_sectoriales %}
+                        <tr>
+                            <td>{{ persona.nombre_completo }}</td>
+                            <td>{{ persona.email }}</td>
+                            <td>{{ persona.sector }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="field">
+                <label>Usuarios GORE:</label>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Región</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for persona in usuarios_gore %}
+                        <tr>
+                            <td>{{ persona.nombre_completo }}</td>
+                            <td>{{ persona.email }}</td>
+                            <td>{{ persona.region }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
         </div>
     </div>
 </body>

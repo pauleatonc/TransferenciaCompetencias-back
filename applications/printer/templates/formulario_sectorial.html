@@ -1,25 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Detalle del Paso 1</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { width: 80%; margin: auto; }
-        .header { padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-        .field { margin-bottom: 15px; }
-        .field label { font-weight: bold; }
-        .field p { margin: 5px 0; }
-    </style>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>{{ sector }}</h1>
-            <div class="field">
-                <label>Nombre:</label>
-                <p>{{ nombre }}</p>
-            </div>
+            <h1>{{ nombre }}</h1>
 
             {# Paso 1.1 #}
             <div class="field">
@@ -95,6 +85,12 @@
             {% endif %}
             </div>
 
+            <div class="field">
+                {% if marco_juridico_count > 1 %}
+                    <label>Marcos jurídicos:</label>
+                {% else %}
+                    <label>Marco jurídico:</label>
+                {% endif %}
             <table>
                 <thead>
                     <tr>
@@ -111,6 +107,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
 
             <div class="field">
                 {% if descripcion_archivo_organigrama_regional %}
@@ -123,6 +120,38 @@
                 {% endif %}
             </div>
 
+            {# Paso 1.3 #}
+            <div class="field">
+                <h3>1.3 Marco Regulatorio y funcional de la competencia</h3>
+            </div>
+            <div class="field">
+                <label>Identificación de la competencia:</label>
+                <p>{{ identificacion_competencia }}</p>
+            </div>
+            <div class="field">
+                <label>Fuentes Normativas:</label>
+                <p>{{ fuentes_normativas }}</p>
+            </div>
+            <div class="field">
+                <label>Territorio sobre el cual se ejerce la competencia:</label>
+                <p>{{ territorio_competencia }}</p>
+            </div>
+            <div class="field">
+                <label>Existencia de enfoque territorial sobre la competencia:</label>
+                <p>{{ enfoque_territorial_competencia }}</p>
+            </div>
+            <div class="field">
+                <label>Ámbito de la Competencia:</label>
+                <p>{{ ambito_paso1 }}</p>
+            </div>
+            <div class="field">
+                <label>Posibilidad de ejercicio de la competencia por parte del Gobierno Regional:</label>
+                <p>{{ posibilidad_ejercicio_por_gobierno_regional }}</p>
+            </div>
+            <div class="field">
+                <label>Órgano que ejerce actualmente la competencia:</label>
+                <p>{{ organo_actual_competencia }}</p>
+            </div>
         </div>
     </div>
 </body>
