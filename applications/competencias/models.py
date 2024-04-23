@@ -1,21 +1,16 @@
-from django.db import models
-
-from django.db.models import Q
-from django.db.models.signals import pre_save, m2m_changed
-from django.dispatch import receiver
-from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
-from django.contrib.auth import get_user_model
 from django.conf import settings
-from datetime import datetime, timedelta
-
+from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
+from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from applications.base.functions import validate_file_size_twenty, validate_file_size_five
-#
-
 from applications.base.models import BaseModel
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
+
+
+#
 
 
 class Ambito(models.Model):
