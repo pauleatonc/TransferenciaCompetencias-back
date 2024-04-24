@@ -72,7 +72,7 @@ def download_complete_document(request, competencia_id):
     return response
 
 
-def save_complete_document_pdf(competencia_id):
+'''def save_complete_document_pdf(competencia_id):
     # Ruta donde se guardará el PDF
     media_root = settings.MEDIA_ROOT
     pdf_path = os.path.join(media_root, 'documento_final', f'competencia_{competencia_id}_document.pdf')
@@ -121,4 +121,4 @@ def save_complete_document_pdf(competencia_id):
     with open(pdf_path, "wb") as out:
         pdf_writer.write(out)
 
-    return pdf_path
+    return pdf_path'''
