@@ -111,3 +111,6 @@ class OrganigramaRegional(BaseModel):
         blank=True,
         null=True
     )
+
+    class Meta:
+        ordering = ['region']

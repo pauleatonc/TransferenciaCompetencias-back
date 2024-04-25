@@ -1,3 +1,7 @@
+import os
+from django.conf import settings
+
+from django.http import FileResponse
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import viewsets, status
@@ -122,3 +126,19 @@ class RevisionFinalCompetenciaViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except ImagenesRevisionSubdere.DoesNotExist:
             return Response({"detail": "Imagen no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['get'], url_path='descargar-documento')
+    def descargar_documento(self, request, pk=None):
+        """
+        API endpoint to download the complete document PDF for a specific 'Competencia'.
+        """
+        competencia = self.get_object()
+
+        document_path = os.path.join(settings.MEDIA_ROOT, 'documento_final',
+                                     f'competencia_{competencia.id}_document.pdf')
+
+        if os.path.exists(document_path):
+            return FileResponse(open(document_path, 'rb'), content_type='application/pdf',
+                                filename=f'competencia_{competencia.id}_document.pdf')
+        else:
+            return Response({"detail": "Document not found."}, status=status.HTTP_404_NOT_FOUND)

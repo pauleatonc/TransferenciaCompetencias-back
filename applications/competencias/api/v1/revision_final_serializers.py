@@ -393,6 +393,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso1_revision_final_subdere',
             'paso2_revision_final_subdere',
             'formulario_completo',
+            'imprimir_formulario_final'
         ]
 
     def get_competencia_nombre(self, obj):
