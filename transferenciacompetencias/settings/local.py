@@ -7,7 +7,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-d!nd%p#gxqzw2qs1&9&!fd(v4hr@^^0ls*uh!4-kiv^a)&5c^%'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -22,20 +22,20 @@ DATABASES = {
     # Base de datos de aplicación
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'Transferenciadb',
-        'USER': 'postgres',
-        'PASSWORD':'Subdere.2022',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': env('DATABASE_DEFAULT_NAME'),
+        'USER': env('DATABASE_DEFAULT_USER'),
+        'PASSWORD':env('DATABASE_DEFAULT_PASSWORD'),
+        'HOST': env('DATABASE_DEFAULT_HOST'),
+        'PORT': env('DATABASE_DEFAULT_PORT'),
     },
     # Base de datos externa
     'externaldb': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'externaldb',
-        'USER': 'postgres',
-        'PASSWORD': 'Subdere.2022',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': env('DATABASE_EXTERNAL_NAME'),
+        'USER': env('DATABASE_EXTERNAL_USER'),
+        'PASSWORD': env('DATABASE_EXTERNAL_PASSWORD'),
+        'HOST': env('DATABASE_EXTERNAL_HOST'),
+        'PORT': env('DATABASE_EXTERNAL_PORT'),
             }
                 }
 
@@ -52,16 +52,16 @@ MEDIA_ROOT = BASE_DIR.child('media')
 # EMAIL SETTINGS
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'modernizacion@subdere.gov.cl'
-EMAIL_HOST_PASSWORD = 'Subde*moder23'
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = 587
 
 # RECAPTCHA SETTINGS
-RECAPTCHA_PUBLIC_KEY = '6LemsJgmAAAAAJj8noe-1FWZgl0ltkX5SeGgBa0h'
-RECAPTCHA_PRIVATE_KEY = '6LemsJgmAAAAAG8rwzcmMJVPx1t8VLpT86vWju-i'
+RECAPTCHA_PUBLIC_KEY = env('RECAPTCHA_PUBLIC_KEY')
+RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
 
 # SENDGRID SETTINGS
-SENDGRID_API_KEY = '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'
-ADMIN_EMAIL = ['modernizacion@subdere.gov.cl']
-NOREPLY_EMAIL = ['noreply@bancoproyectos.subdere.gob.cl']
+SENDGRID_API_KEY = env('SENDGRID_API_KEY')
+ADMIN_EMAIL = env("ADMIN_EMAIL")
+NOREPLY_EMAIL = env("NOREPLY_EMAIL")
 
