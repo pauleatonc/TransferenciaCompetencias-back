@@ -75,7 +75,7 @@ tablib==3.4.0
 tinycss2==1.2.1
 tomli==2.0.1
 typing_extensions==4.6.1
-tzdata==2022.6
+tzdata==2022.7
 Unipath==1.1
 uritemplate==4.1.1
 urllib3==1.26.13
