@@ -1,0 +1,104 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle del Paso 2</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{ nombre }}</h1>
+
+            {# Paso 2.1 #}
+            <div class="field">
+                <h2>2. {{ nombre_paso }}</h2>
+                <h3>2.1 {{ organismos_intervinientes_count|pluralize:"Organismo interviniente, Organismos intervinientes" }} en el ejercicio de la competencia</h3>
+            </div>
+            <div class="field">
+                <table border="1">
+                    <thead>
+                        <tr>
+                            <th>Organismo</th>
+                            <th>Nombre del Ministerio/Servicio</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for organismo, lista in organismos_intervinientes.items %}
+                            {% for item in lista %}
+                                {% if forloop.first %}
+                                    <tr>
+                                        <td rowspan="{{ lista|length }}">{{ item.get_organismo_display }}</td>
+                                        <td>{{ item.nombre_ministerio_servicio }}</td>
+                                        <td>{{ item.descripcion }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td>{{ item.nombre_ministerio_servicio }}</td>
+                                        <td>{{ item.descripcion }}</td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# Paso 2.2 #}
+            <div class="field">
+                <h3>2.2 {{ unidades_intervinientes_count|pluralize:"Unidad Interviniente, Unidades Intervinientes" }} en el ejercicio de la competencia</h3>
+            </div>
+            <div class="field">
+                <table border="1">
+    <thead>
+        <tr>
+            <th>Organismo Tipo</th>
+            <th>Organismo</th>
+            <th>Nombre Unidad</th>
+            <th>Descripción Unidad</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for organismo_display, ministerios in unidades_intervinientes.items %}
+        {% with total_unidades=ministerios|sum_unidades_per_type %}
+            {% for nombre_ministerio, unidades in ministerios.items %}
+                {% for unidad in unidades %}
+                    <tr>
+                        {% if forloop.parentloop.first and forloop.first %}
+                            <td rowspan="{{ total_unidades }}">{{ organismo_display }}</td>
+                        {% endif %}
+                        {% if forloop.first %}
+                            <td rowspan="{{ unidades|length }}">{{ nombre_ministerio }}</td>
+                        {% endif %}
+                        <td>{{ unidad.nombre_unidad }}</td>
+                        <td>{{ unidad.descripcion_unidad }}</td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        {% endwith %}
+    {% endfor %}
+</tbody>
+
+</table>
+
+
+
+
+
+
+
+
+            </div>
+
+            {# Paso 2.3 #}
+
+
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

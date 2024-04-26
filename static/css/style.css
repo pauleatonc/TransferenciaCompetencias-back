@@ -1,18 +1,28 @@
 @page {
     size: A4;
-    margin: 1cm;
+    margin-top: 15mm;
+    margin-bottom: 20mm;
+    margin-left: 1cm;
+    margin-right: 1cm;
 }
 
 body {
-    font-family: Calibri, sans-serif;
-    font-size: 14px;
+    font-family: Helvetica, sans-serif;
+    font-size: 12px;
     margin: 20px;
 }
-p {
-    font-size: 14px;
+
+h1 {
+    font-size: 24px;
+}
+h2 {
+    font-size: 20px;
+}
+h3 {
+    font-size: 18px;
 }
 .container {
-    width: 80%;
+    width: 85%;
     margin: auto;
 }
 .header {
@@ -25,6 +35,9 @@ p {
 }
 .field label {
     font-weight: bold;
+    display: block;  /* Asegura que el label sea tratado como un bloque */
+    page-break-after: avoid;  /* Evita que se rompa la página justo después del label */
+    widows: 2;  /* Asegura al menos 2 líneas en la parte inferior de la página */
 }
 .field p {
     margin: 5px 0;
