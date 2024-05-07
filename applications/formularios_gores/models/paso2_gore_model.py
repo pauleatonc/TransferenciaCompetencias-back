@@ -88,6 +88,7 @@ class CostosDirectosGore(BaseModel):
     es_transitorio = models.BooleanField(blank=True, null=True, default=None)
     diferencia_monto = models.IntegerField(null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
+    id_sectorial = models.IntegerField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.total_anual_sector is not None and self.total_anual_gore is not None:
@@ -113,6 +114,7 @@ class CostosIndirectosGore(BaseModel):
     es_transitorio = models.BooleanField(blank=True, null=True, default=None)
     diferencia_monto = models.IntegerField(null=True, blank=True)
     descripcion = models.TextField(max_length=500, blank=True)
+    id_sectorial = models.IntegerField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.total_anual_sector is not None and self.total_anual_gore is not None:

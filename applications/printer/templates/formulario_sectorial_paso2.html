@@ -53,44 +53,35 @@
             </div>
             <div class="field">
                 <table border="1">
-    <thead>
-        <tr>
-            <th>Organismo Tipo</th>
-            <th>Organismo</th>
-            <th>Nombre Unidad</th>
-            <th>Descripción Unidad</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for organismo_display, ministerios in unidades_intervinientes.items %}
-        {% with total_unidades=ministerios|sum_unidades_per_type %}
-            {% for nombre_ministerio, unidades in ministerios.items %}
-                {% for unidad in unidades %}
-                    <tr>
-                        {% if forloop.parentloop.first and forloop.first %}
-                            <td rowspan="{{ total_unidades }}">{{ organismo_display }}</td>
-                        {% endif %}
-                        {% if forloop.first %}
-                            <td rowspan="{{ unidades|length }}">{{ nombre_ministerio }}</td>
-                        {% endif %}
-                        <td>{{ unidad.nombre_unidad }}</td>
-                        <td>{{ unidad.descripcion_unidad }}</td>
-                    </tr>
-                {% endfor %}
-            {% endfor %}
-        {% endwith %}
-    {% endfor %}
-</tbody>
-
-</table>
-
-
-
-
-
-
-
-
+                    <thead>
+                        <tr>
+                            <th>Organismo Tipo</th>
+                            <th>Organismo</th>
+                            <th>Nombre Unidad</th>
+                            <th>Descripción Unidad</th>
+                        </tr>
+                    </thead>
+                        <tbody>
+                        {% for organismo_display, ministerios in unidades_intervinientes.items %}
+                            {% with total_unidades=ministerios|sum_unidades_per_type %}
+                                {% for nombre_ministerio, unidades in ministerios.items %}
+                                    {% for unidad in unidades %}
+                                        <tr>
+                                            {% if forloop.parentloop.first and forloop.first %}
+                                                <td rowspan="{{ total_unidades }}">{{ organismo_display }}</td>
+                                            {% endif %}
+                                            {% if forloop.first %}
+                                                <td rowspan="{{ unidades|length }}">{{ nombre_ministerio }}</td>
+                                            {% endif %}
+                                            <td>{{ unidad.nombre_unidad }}</td>
+                                            <td>{{ unidad.descripcion_unidad }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
 
             {# Paso 2.3 #}

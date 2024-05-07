@@ -15,7 +15,8 @@ from applications.formularios_gores.models import (
 
 from applications.formularios_sectoriales.models import (
     CostosDirectos as CostosDirectosSectorial,
-    CostosIndirectos as CostosIndirectosSectorial, Subtitulos,
+    CostosIndirectos as CostosIndirectosSectorial,
+    Subtitulos,
 )
 
 
@@ -28,55 +29,59 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 
 def eliminar_instancias_gore_correspondientes(modelo_gore, instance):
     """
-    Elimina instancias de costos de formulario GORE específico que corresponden
-    a la instancia de costos de formulario sectorial eliminada. No elimina instancias
-    que han sido creadas directamente en GORE (identificadas por tener el campo 'sector' como null).
+    Elimina instancias GORE que corresponden a la instancia de costos sectoriales eliminada.
     """
-    sectorial_sector = instance.formulario_sectorial.sector
-    item_subtitulo = instance.item_subtitulo
-    competencia = instance.formulario_sectorial.competencia
-
-    formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
-    for formulario_gore in formularios_gore:
-        # Filtra las instancias para eliminar, excluyendo aquellas con el campo 'sector' como null.
-        modelo_gore.objects.filter(
-            formulario_gore=formulario_gore,
-            sector=sectorial_sector,
-            item_subtitulo=item_subtitulo
-        ).exclude(sector__isnull=True).delete()
+    modelo_gore.objects.filter(id_sectorial=instance.id).delete()
 
 
 def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
     item_subtitulo_subtitulos_texto = instance.item_subtitulo.subtitulo.subtitulo
-
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
     sector = formulario_sectorial.sector
 
     formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
     for formulario_gore in formularios_gore:
-        obj, created_gore = modelo_gore.objects.get_or_create(
-            formulario_gore=formulario_gore,
-            sector=sector,
-            item_subtitulo=instance.item_subtitulo,
-            defaults={
-                'total_anual_sector': instance.total_anual,
-                # Define 'descripcion' en los defaults solo si es Sub. 21
-                'descripcion': instance.descripcion if item_subtitulo_subtitulos_texto == 'Sub. 21' else ''
-            }
-        )
-
-        # Siempre actualiza 'total_anual_sector' independientemente del subtítulo.
-        obj.total_anual_sector = instance.total_anual
-
-        # Actualiza 'descripcion' solo si el subtítulo es 'Sub. 21' y la instancia no fue recién creada.
-        if item_subtitulo_subtitulos_texto == 'Sub. 21' and not created_gore:
-            obj.descripcion = instance.descripcion
-
-        # Guarda los cambios en la instancia del modelo gore si hubo alguna actualización.
-        if not created_gore or item_subtitulo_subtitulos_texto == 'Sub. 21':
+        try:
+            # Busca la instancia GORE basada en el campo `id_sectorial`
+            obj = modelo_gore.objects.get(
+                formulario_gore=formulario_gore,
+                id_sectorial=instance.id
+            )
+        except modelo_gore.DoesNotExist:
+            # Si no existe, crea una nueva instancia vinculada con el ID sectorial
+            obj = modelo_gore(
+                formulario_gore=formulario_gore,
+                sector=sector,
+                item_subtitulo=instance.item_subtitulo,
+                total_anual_sector=instance.total_anual,
+                descripcion=instance.descripcion if item_subtitulo_subtitulos_texto == 'Sub. 21' else '',
+                id_sectorial=instance.id  # Copia el ID de la instancia sectorial
+            )
             obj.save()
+            continue
 
+        # Actualiza los campos en el objeto GORE
+        changed = False
+
+        if obj.item_subtitulo != instance.item_subtitulo:
+            obj.item_subtitulo = instance.item_subtitulo
+            obj.total_anual_gore = None  # Blanquear cuando cambia el item_subtitulo
+            obj.es_transitorio = None    # Blanquear cuando cambia el item_subtitulo
+            obj.descripcion = ''         # Blanquear cuando cambia el item_subtitulo
+            changed = True
+
+        if obj.sector != sector:
+            obj.sector = sector
+            changed = True
+
+        if obj.total_anual_sector != instance.total_anual:
+            obj.total_anual_sector = instance.total_anual
+            changed = True
+
+        # Guarda los cambios en la instancia GORE solo si hubo modificaciones
+        if changed:
+            obj.save()
 
 
 @receiver(post_save, sender=CostosDirectosSectorial)

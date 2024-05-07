@@ -150,6 +150,15 @@
                 <label>Órgano que ejerce actualmente la competencia:</label>
                 <p>{{ organo_actual_competencia }}</p>
             </div>
+
+            {# Observación SUBDERE #}
+
+            {% if observacion_paso1 %}
+                <div class="field">
+                    <label>Observación SUBDERE:</label>
+                    <p>{{ observacion_paso1 }}</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </body>
