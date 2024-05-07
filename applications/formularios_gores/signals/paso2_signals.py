@@ -35,7 +35,7 @@ def eliminar_instancias_gore_correspondientes(modelo_gore, instance):
 
 
 def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
-    item_subtitulo_subtitulos_texto = instance.item_subtitulo.subtitulo.subtitulo
+    subtitulo_texto = instance.subtitulo.subtitulo
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
     sector = formulario_sectorial.sector
@@ -53,9 +53,10 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
             obj = modelo_gore(
                 formulario_gore=formulario_gore,
                 sector=sector,
+                subtitulo=instance.subtitulo,
                 item_subtitulo=instance.item_subtitulo,
                 total_anual_sector=instance.total_anual,
-                descripcion=instance.descripcion if item_subtitulo_subtitulos_texto == 'Sub. 21' else '',
+                descripcion=instance.descripcion if subtitulo_texto == 'Sub. 21' else '',
                 id_sectorial=instance.id  # Copia el ID de la instancia sectorial
             )
             obj.save()
@@ -68,7 +69,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
             obj.item_subtitulo = instance.item_subtitulo
             obj.total_anual_gore = None  # Blanquear cuando cambia el item_subtitulo
             obj.es_transitorio = None    # Blanquear cuando cambia el item_subtitulo
-            obj.descripcion = ''         # Blanquear cuando cambia el item_subtitulo
+            obj.descripcion = '' if subtitulo_texto != 'Sub. 21' else instance.descripcion  # Asegura que la descripción se blanquee o actualice según el subtítulo
             changed = True
 
         if obj.sector != sector:
@@ -79,9 +80,14 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
             obj.total_anual_sector = instance.total_anual
             changed = True
 
+        if subtitulo_texto == 'Sub. 21' and obj.descripcion != instance.descripcion:
+            obj.descripcion = instance.descripcion
+            changed = True
+
         # Guarda los cambios en la instancia GORE solo si hubo modificaciones
         if changed:
             obj.save()
+
 
 
 @receiver(post_save, sender=CostosDirectosSectorial)
