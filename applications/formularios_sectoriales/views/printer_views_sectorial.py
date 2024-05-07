@@ -13,6 +13,7 @@ from applications.printer.functions import pdf_response, get_pdf_from_html
 def formulario_sectorial_paso1(request, formulario_sectorial_id, return_pdf=False):
     formulario_sectorial = get_object_or_404(FormularioSectorial, id=formulario_sectorial_id)
     paso1 = formulario_sectorial.paso1
+    observacion_paso1 = formulario_sectorial.observaciones_sectoriales.observacion_paso1
     marco_juridico = formulario_sectorial.marcojuridico.all()
     organigrama_regional = formulario_sectorial.organigramaregional.all()
 
@@ -53,6 +54,9 @@ def formulario_sectorial_paso1(request, formulario_sectorial_id, return_pdf=Fals
         'posibilidad_ejercicio_por_gobierno_regional': paso1.posibilidad_ejercicio_por_gobierno_regional,
         'organo_actual_competencia': paso1.organo_actual_competencia,
 
+        # Observación Subdere
+        'observacion_paso1': observacion_paso1,
+
         'filename': 'formulario_sectorial_paso1'
     }
     html_content = render_to_string('formulario_sectorial_paso1.html', context, request)
@@ -67,6 +71,8 @@ def formulario_sectorial_paso2(request, formulario_sectorial_id, return_pdf=Fals
     paso2 = formulario_sectorial.paso2
     organismos_intervinientes = formulario_sectorial.p_2_1_organismos_intervinientes.all()
     unidades_intervinientes = formulario_sectorial.p_2_2_unidades_intervinientes.all()
+    etapas = formulario_sectorial.p_2_3_etapas_ejercicio_competencia.all()
+    observacion_paso2 = formulario_sectorial.observaciones_sectoriales.observacion_paso2
 
     # Agrupar los datos por 'organismo'
     organismos_agrupados = {}
@@ -93,6 +99,15 @@ def formulario_sectorial_paso2(request, formulario_sectorial_id, return_pdf=Fals
             'descripcion_unidad': unidad.descripcion_unidad
         })
 
+    # Agrupar los datos por 'etapa'
+    etapas_con_procedimientos = []
+    for etapa in etapas:
+        procedimientos = etapa.procedimientos.all()
+        etapas_con_procedimientos.append({
+            'etapa': etapa,
+            'procedimientos': procedimientos
+        })
+
     context = {
         'sector': formulario_sectorial.sector,
         'nombre': formulario_sectorial.nombre,
@@ -108,6 +123,10 @@ def formulario_sectorial_paso2(request, formulario_sectorial_id, return_pdf=Fals
         # Paso 2.2
         'unidades_intervinientes': unidades_agrupadas,
         'unidades_intervinientes_count': len(unidades_intervinientes),
+
+        # Paso 2.3
+        'etapas_con_procedimientos': etapas_con_procedimientos,
+        'etapas_count': len(etapas),
     }
 
     html_content = render_to_string('formulario_sectorial_paso2.html', context, request)
