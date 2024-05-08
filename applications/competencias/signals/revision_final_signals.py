@@ -26,18 +26,33 @@ def crear_pasos_revision_final_subdere(sender, instance, created, **kwargs):
 def actualizar_recomendaciones_desfavorables(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action in ["post_add", "post_remove", "post_clear"]:
         with transaction.atomic():
-
             regiones_actuales = set(instance.regiones.all())
             regiones_recomendadas = set(instance.regiones_recomendadas.all())
             regiones_no_recomendadas = regiones_actuales - regiones_recomendadas
 
-            # Actualiza las RecomendacionesDesfavorables
+            # Asegura que todas las RecomendacionesDesfavorables estén actualizadas
             for region in regiones_no_recomendadas:
-                RecomendacionesDesfavorables.objects.get_or_create(competencia=instance, region=region)
+                recomendacion, created = RecomendacionesDesfavorables.objects.get_or_create(
+                    competencia=instance,
+                    region=region,
+                    defaults={'justificacion': ''}  # Establece justificación como vacía si es nueva
+                )
+                if not created:
+                    recomendacion.justificacion = ''  # Limpia justificación si ya existía
+                    recomendacion.save()
 
             # Elimina las RecomendacionesDesfavorables que ya no aplican
             RecomendacionesDesfavorables.objects.filter(competencia=instance).exclude(
                 region__in=regiones_no_recomendadas).delete()
+
+            # Verifica si todas las regiones son desfavorables
+            if not regiones_recomendadas:
+                # Establece campos de Competencia como nulos o vacíos según corresponda
+                instance.recursos_requeridos = ''
+                instance.modalidad_ejercicio = None  # Establece a null
+                instance.implementacion_acompanamiento = ''
+                instance.condiciones_ejercicio = ''
+                instance.save()
 
 
 @receiver(m2m_changed, sender=Competencia.regiones_recomendadas.through)

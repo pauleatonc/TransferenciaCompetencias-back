@@ -305,7 +305,7 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
         for data in nested_data:
             item_id = data.pop('id', None)
             delete_flag = data.pop('DELETE', False)
-            region_data = data.pop('region', [])  # Extrae region data aquí y asegúrate de que sea una lista
+            region_id = data.pop('region', None)  # Asumiendo que recibes un ID de región
 
             if item_id is not None and not delete_flag:
                 obj, created = model.objects.update_or_create(
@@ -313,11 +313,15 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
                     competencia=instance,
                     defaults={**data}
                 )
-                obj.region.set(region_data)  # Usa set() para actualizar ManyToManyField
+                if region_id is not None:
+                    obj.region_id = region_id  # Asigna directamente el ID de la región
                 obj.save()
             elif not delete_flag:
-                obj = model.objects.create(competencia=instance, **data)
-                obj.region.set(region_data)  # Igual aquí, después de crear el objeto
+                obj = model.objects.create(
+                    competencia=instance,
+                    region_id=region_id,  # Asigna el ID al crear
+                    **data
+                )
                 obj.save()
             elif delete_flag:
                 model.objects.filter(id=item_id).delete()
