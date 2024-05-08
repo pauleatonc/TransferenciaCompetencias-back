@@ -175,7 +175,7 @@ class DocumentosComplementarios(BaseModel):
 # Modelos para revisión final SUBDERE
 class RecomendacionesDesfavorables(BaseModel):
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE, related_name='recomendaciones_desfavorables')
-    justificacion = models.TextField(max_length=500)
+    justificacion = models.TextField(max_length=500, blank=True, null=True)
     region = models.ForeignKey(Region, on_delete=models.CASCADE)
 
 
@@ -261,7 +261,7 @@ class Paso2RevisionFinalSubdere(PasoBase):
 
     def avance_numerico(self):
         completados = 0
-        total_campos = 4  # Inicia con 4 por los campos directos de Competencia
+        total_campos = 0
 
         # Comprobaciones para Recomendaciones Desfavorables
         recomendaciones = self.competencia.recomendaciones_desfavorables.all()
@@ -273,24 +273,23 @@ class Paso2RevisionFinalSubdere(PasoBase):
         # Comprobaciones para Temporalidad
         temporalidades = self.competencia.temporalidad_gradualidad.all()
         for temporalidad in temporalidades:
-            # Se comprueba que haya regiones asociadas, que temporalidad no esté vacío, y que justificacion_temporalidad no esté vacío
             if temporalidad.region.count() > 0 and temporalidad.temporalidad and temporalidad.justificacion_temporalidad:
-                # Si temporalidad es 'Temporal', entonces también se requiere que anios no sea None
                 if temporalidad.temporalidad == 'Temporal' and temporalidad.anios is not None:
                     completados += 1
-                # Si la temporalidad no es 'Temporal', se cuenta como completado sin necesidad de verificar el campo anios
                 elif temporalidad.temporalidad == 'Definitiva':
                     completados += 1
             total_campos += 1
 
-        # Comprobaciones para campos de Competencia
-        campos_competencia = [
-            self.competencia.recursos_requeridos,
-            self.competencia.modalidad_ejercicio,
-            self.competencia.implementacion_acompanamiento,
-            self.competencia.condiciones_ejercicio
-        ]
-        completados += sum([1 for campo in campos_competencia if campo])
+        # Comprobaciones para campos de Competencia si hay alguna región con recomendación favorable
+        if self.competencia.regiones_recomendadas.exists():
+            campos_competencia = [
+                self.competencia.recursos_requeridos,
+                self.competencia.modalidad_ejercicio,
+                self.competencia.implementacion_acompanamiento,
+                self.competencia.condiciones_ejercicio
+            ]
+            completados += sum(1 for campo in campos_competencia if campo)
+            total_campos += 4  # Solo se suma si hay regiones recomendadas
 
         return completados, total_campos
 
