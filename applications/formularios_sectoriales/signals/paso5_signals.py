@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, Max
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.db import transaction
@@ -143,6 +143,23 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
         subtitulo_id__in=subtitulos_unicos_ids).delete()
 
 
+def actualizar_costo_anio_con_resumen(subtitulo_id, formulario_sectorial_id):
+    # Obtener el año más reciente de CostoAnio
+    ultimo_año = CostoAnio.objects.filter(evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
+                                          evolucion_gasto__subtitulo_id=subtitulo_id).aggregate(Max('anio'))['anio__max']
+
+    if ultimo_año:
+        # Obtener el total anual del ResumenCostosPorSubtitulo para ese subtitulo
+        resumen = ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
+                                                           formulario_sectorial_id=formulario_sectorial_id).first()
+        if resumen:
+            # Actualizar el costo del año más reciente en CostoAnio
+            costo_anio = CostoAnio.objects.get(evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
+                                               evolucion_gasto__subtitulo_id=subtitulo_id, anio=ultimo_año)
+            costo_anio.costo = resumen.total_anual
+            costo_anio.save()
+
+
 @receiver(post_save, sender=CostosDirectos)
 @receiver(post_save, sender=CostosIndirectos)
 @receiver(post_delete, sender=CostosDirectos)
@@ -150,6 +167,10 @@ def actualizar_evolucion_y_variacion(formulario_sectorial_id):
 def actualizar_resumen_costos(sender, instance, **kwargs):
     regenerar_resumen_costos(instance.formulario_sectorial_id)
     actualizar_evolucion_y_variacion(instance.formulario_sectorial_id)
+
+    if hasattr(instance, 'item_subtitulo') and instance.item_subtitulo:
+        subtitulo_id = instance.item_subtitulo.subtitulo_id
+        actualizar_costo_anio_con_resumen(subtitulo_id, instance.formulario_sectorial_id)
 
 
 @receiver(post_save, sender=EvolucionGastoAsociado)
