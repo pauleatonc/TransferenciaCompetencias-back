@@ -66,6 +66,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
         changed = False
 
         if obj.item_subtitulo != instance.item_subtitulo:
+            obj.subtitulo = instance.subtitulo
             obj.item_subtitulo = instance.item_subtitulo
             obj.total_anual_gore = None  # Blanquear cuando cambia el item_subtitulo
             obj.es_transitorio = None    # Blanquear cuando cambia el item_subtitulo

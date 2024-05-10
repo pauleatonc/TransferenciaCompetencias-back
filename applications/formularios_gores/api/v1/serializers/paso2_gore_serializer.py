@@ -30,6 +30,7 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
             'id',
             'sector',
             'sector_nombre',
+            'subtitulo',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -41,8 +42,8 @@ class CostosDirectosGORESerializer(serializers.ModelSerializer):
         ]
 
     def get_subtitulo_label_value(self, obj):
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
-            return {'label': obj.item_subtitulo.subtitulo.subtitulo, 'value': str(obj.item_subtitulo.subtitulo.id)}
+        if obj.subtitulo and obj.subtitulo.subtitulo:
+            return {'label': obj.subtitulo.subtitulo, 'value': str(obj.subtitulo.id)}
         return {'label': '', 'value': ''}
 
     def get_item_subtitulo_label_value(self, obj):
@@ -67,6 +68,7 @@ class CostosIndirectosGORESerializer(serializers.ModelSerializer):
             'id',
             'sector',
             'sector_nombre',
+            'subtitulo',
             'subtitulo_label_value',
             'item_subtitulo',
             'item_subtitulo_label_value',
@@ -78,12 +80,8 @@ class CostosIndirectosGORESerializer(serializers.ModelSerializer):
         ]
 
     def get_subtitulo_label_value(self, obj):
-        # obj es una instancia de CostosDirectos
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
-            return {
-                'label': obj.item_subtitulo.subtitulo.subtitulo,
-                'value': str(obj.item_subtitulo.subtitulo.id)
-            }
+        if obj.subtitulo and obj.subtitulo.subtitulo:
+            return {'label': obj.subtitulo.subtitulo, 'value': str(obj.subtitulo.id)}
         return {'label': '', 'value': ''}
 
     def get_item_subtitulo_label_value(self, obj):
