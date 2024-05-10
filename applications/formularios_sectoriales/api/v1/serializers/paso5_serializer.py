@@ -56,7 +56,6 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
     subtitulo_label_value = serializers.SerializerMethodField()
     item_subtitulo_label_value = serializers.SerializerMethodField()
     etapa_label_value = serializers.SerializerMethodField()
-    opciones_items = serializers.SerializerMethodField()
 
     class Meta:
         model = CostosDirectos
@@ -72,7 +71,6 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
             'total_anual',
             'es_transversal',
             'descripcion',
-            'opciones_items',
         ]
 
     def get_subtitulo_label_value(self, obj):
@@ -99,37 +97,6 @@ class CostosDirectosSerializer(serializers.ModelSerializer):
             'label': etapa.nombre_etapa,  # Usamos nombre_etapa para el label
             'value': str(etapa.id)  # El ID de la etapa como value
         } for etapa in obj.etapa.all()]
-
-    def get_opciones_items(self, obj):
-        # Si el objeto actual tiene un subtitulo asociado, obtiene los items relacionados
-        if obj.item_subtitulo and obj.item_subtitulo.subtitulo:
-            # Obtiene el subtitulo del item_subtitulo actual
-            subtitulo_actual = obj.item_subtitulo.subtitulo
-
-            # Obtiene todos los IDs de ItemSubtitulo utilizados por CostosDirectos en el mismo formulario, excepto el actual
-            items_utilizados_ids = CostosDirectos.objects.filter(
-                formulario_sectorial=obj.formulario_sectorial
-            ).exclude(
-                id=obj.id
-            ).values_list('item_subtitulo__id', flat=True)
-
-            # Obtiene todos los ItemSubtitulo que comparten el mismo Subtitulo, excluyendo los ya utilizados
-            items_disponibles = ItemSubtitulo.objects.filter(
-                subtitulo=subtitulo_actual
-            ).exclude(
-                id__in=items_utilizados_ids
-            )
-
-            # Transforma los items disponibles en el formato deseado
-            opciones = [{
-                'label': item.nombre_item,
-                'value': str(item.id)
-            } for item in items_disponibles]
-
-            return opciones
-
-        # Retorna una lista vacía si no hay subtitulo actual o si no se cumplen las condiciones
-        return []
 
 
 class CostosIndirectosSerializer(serializers.ModelSerializer):
