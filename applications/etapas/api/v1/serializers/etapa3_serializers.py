@@ -86,7 +86,7 @@ class Etapa3Serializer(serializers.ModelSerializer):
             self,
             id=obj.competencia.etapa3.id,
             condicion=obj.oficio_origen,
-            condicion_anterior=obj.usuario_notificado,
+            condicion_anterior=obj.usuario_notificado and not obj.omitida,
             usuario_grupo='SUBDERE',
             conteo_condicion=1,
             nombre_singular='Subir oficio y su fecha para habilitar minuta DIPRES',
