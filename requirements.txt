@@ -1,6 +1,7 @@
 asgiref==3.7.2
 autopep8==2.0.2
 Brotli==1.1.0
+boto3==1.26.145
 certifi==2022.12.7
 cffi==1.16.0
 chardet==5.2.0
