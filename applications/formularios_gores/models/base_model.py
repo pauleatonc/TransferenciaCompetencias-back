@@ -1,4 +1,7 @@
+from django.core.validators import FileExtensionValidator
 from django.db import models
+
+from applications.base.functions import validate_file_size_twenty
 from applications.competencias.models import Competencia
 from applications.regioncomuna.models import Region
 from django.utils import timezone
@@ -12,6 +15,13 @@ class FormularioGORE(BaseModel):
     formulario_enviado = models.BooleanField(default=False)
     intento_envio = models.BooleanField(default=False)
     fecha_envio = models.DateTimeField(null=True, blank=True)
+    antecedente_adicional_gore = models.FileField(upload_to='formulario_gore',
+                                                       validators=[
+                                                           FileExtensionValidator(
+                                                               ['pdf'], message='Solo se permiten archivos PDF.'),
+                                                           validate_file_size_twenty],
+                                                       verbose_name='Antecedentes adicionales formulario GORE',
+                                                       blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if self.formulario_enviado and not self.fecha_envio:

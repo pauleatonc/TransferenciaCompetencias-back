@@ -386,6 +386,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso1_revision_final_subdere = Paso1ResumenSerializer(read_only=True)
     paso2_revision_final_subdere = Paso2ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
+    antecedente_adicional_revision_subdere = serializers.FileField()
 
     class Meta:
         model = Competencia
@@ -397,7 +398,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso1_revision_final_subdere',
             'paso2_revision_final_subdere',
             'formulario_completo',
-            'imprimir_formulario_final'
+            'imprimir_formulario_final',
+            'antecedente_adicional_revision_subdere',
         ]
 
     def get_competencia_nombre(self, obj):

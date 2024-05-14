@@ -49,6 +49,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso2_gore = Paso2ResumenSerializer(read_only=True)
     paso3_gore = Paso3ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
+    antecedente_adicional_gore = serializers.FileField()
 
     class Meta:
         model = FormularioGORE
@@ -63,6 +64,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso2_gore',
             'paso3_gore',
             'formulario_completo',
+            'antecedente_adicional_gore'
         ]
 
     def get_competencia_nombre(self, obj):
