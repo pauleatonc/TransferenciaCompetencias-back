@@ -138,6 +138,7 @@ class Competencia(BaseModel):
                                                                   validate_file_size_twenty],
                                                               verbose_name='Antecedentes adicionales revisión SUBDERE',
                                                               blank=True, null=True)
+    descripcion_antecedente = models.TextField(blank=True, null=True, max_length=500)
 
     class Meta:
         verbose_name = 'Competencia'
@@ -166,6 +167,12 @@ class Competencia(BaseModel):
         minutos = (diferencia.seconds % 3600) // 60
 
         return {"dias": dias, "horas": horas, "minutos": minutos}
+
+    def delete_file(self):
+        if self.antecedente_adicional_revision_subdere:
+            self.antecedente_adicional_revision_subdere.delete(save=False)
+            self.antecedente_adicional_revision_subdere = None
+            self.save()
 
 
 class DocumentosComplementarios(BaseModel):

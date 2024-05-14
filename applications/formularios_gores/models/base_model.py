@@ -22,11 +22,18 @@ class FormularioGORE(BaseModel):
                                                            validate_file_size_twenty],
                                                        verbose_name='Antecedentes adicionales formulario GORE',
                                                        blank=True, null=True)
+    descripcion_antecedente = models.TextField(blank=True, null=True, max_length=500)
 
     def save(self, *args, **kwargs):
         if self.formulario_enviado and not self.fecha_envio:
             self.fecha_envio = timezone.now()
         super(FormularioGORE, self).save(*args, **kwargs)
+
+    def delete_file(self):
+        if self.antecedente_adicional_gore:
+            self.antecedente_adicional_gore.delete(save=False)
+            self.antecedente_adicional_gore = None
+            self.save()
 
     def __str__(self):
         return f"{self.nombre} - {self.region.region}"
