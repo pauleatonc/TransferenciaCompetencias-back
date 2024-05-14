@@ -169,6 +169,13 @@ class DocumentosComplementarios(BaseModel):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_five],
                                  verbose_name='Documentos complementarios Competencia', blank=True, null=True)
+    antecedente_adicional_revision_subdere = models.FileField(upload_to='documentos_competencias',
+                                                       validators=[
+                                                           FileExtensionValidator(
+                                                               ['pdf'], message='Solo se permiten archivos PDF.'),
+                                                           validate_file_size_twenty],
+                                                       verbose_name='Antecedentes adicionales revisión SUBDERE',
+                                                       blank=True, null=True)
 
 
 
