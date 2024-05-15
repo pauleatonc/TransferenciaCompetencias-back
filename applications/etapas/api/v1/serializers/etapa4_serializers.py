@@ -131,7 +131,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
                 detalle_formulario = {
                     'id': formulario_gore.id,
                     "region_id": region.id,
-                    "nombre": f"Completar formulario GORE - {region.region}",  # Asegúrate de que este es el campo correcto para el nombre de la región
+                    "nombre": f"Completar formulario GORE - {region.region}",
                     "estado": estado,
                     "accion": accion
                 }
