@@ -123,28 +123,38 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
         for region in regiones:
             formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
-
             if formulario_gore:
-                # Removemos la verificación de 'en_revision' y asumimos que si hay formulario, se procede con la lógica siguiente.
-                estado = 'finalizada' if formulario_gore.formulario_enviado else 'pendiente'
-                accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if es_usuario_gore else 'Formulario pendiente'
+                # Verifica si el usuario es GORE y si la región del formulario coincide con la del usuario
+                usuario_region_correcta = es_usuario_gore and user.region == region
+                estado_revision = usuario_region_correcta and obj.oficio_origen
+                estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
+                accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if usuario_region_correcta else 'Formulario pendiente'
+
+                # Obtener antecedente_adicional_gore y descripcion_antecedente
+                antecedente_adicional_gore = formulario_gore.antecedente_adicional_gore.url if formulario_gore.antecedente_adicional_gore else 'No aplica'
+                descripcion_antecedente = formulario_gore.descripcion_antecedente if formulario_gore.descripcion_antecedente else 'No aplica'
+
                 detalle_formulario = {
-                    'id': formulario_gore.id,
+                    "id": formulario_gore.id,
                     "region_id": region.id,
                     "nombre": f"Completar formulario GORE - {region.region}",
                     "estado": estado,
-                    "accion": accion
+                    "accion": accion,
+                    "antecedente_adicional_gore": antecedente_adicional_gore,
+                    "descripcion_antecedente": descripcion_antecedente
                 }
+
                 if formulario_gore.formulario_enviado:
-                    detalle_formulario["registro_tiempo"] =calcular_tiempo_registro(self, obj.fecha_inicio,
-                                                                                          formulario_gore.fecha_envio)
+                    detalle_formulario["registro_tiempo"] = calcular_tiempo_registro(self, obj.fecha_inicio,
+                                                                                     formulario_gore.fecha_envio)
+
                 detalle.append(detalle_formulario)
 
         if len(regiones) <= 1:
             return detalle
 
         resumen_estado = 'finalizada' if obj.formulario_gore_completo else 'revision'
-        resumen_accion = 'Ver formularios' if obj.formulario_gore_completo else 'En Estudio'
+        resumen_accion = 'Ver formularios' if obj.formulario_gore_completo else 'Formularios pendientes'
         resumen = {
             "nombre": 'Ver formularios GORE' if obj.formulario_gore_completo else 'Completar formularios GORE',
             "estado": resumen_estado,
@@ -154,6 +164,6 @@ class Etapa4Serializer(serializers.ModelSerializer):
         detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
-            "formularios_gore_completos": [resumen],
+            "formularios_gore": [resumen],
             "detalle_formularios_gore": detalle
         }

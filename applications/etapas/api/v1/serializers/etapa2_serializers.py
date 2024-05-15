@@ -133,16 +133,25 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 estado_revision = usuario_sector_correcto and obj.oficio_origen
                 estado = 'finalizada' if formulario_sectorial.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if usuario_sector_correcto else 'Formulario pendiente'
+
+                # Obtener antecedente_adicional_sectorial y descripcion_antecedente
+                antecedente_adicional_sectorial = formulario_sectorial.antecedente_adicional_sectorial.url if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
+                descripcion_antecedente = formulario_sectorial.descripcion_antecedente if formulario_sectorial.descripcion_antecedente else 'No aplica'
+
                 detalle_formulario = {
                     "id": formulario_sectorial.id,
                     "sector_id": sector.id,
                     "nombre": f"Completar formulario Sectorial - {sector.nombre}",
                     "estado": estado,
-                    "accion": accion
+                    "accion": accion,
+                    "antecedente_adicional_sectorial": antecedente_adicional_sectorial,
+                    "descripcion_antecedente": descripcion_antecedente
                 }
+
                 if formulario_sectorial.formulario_enviado:
                     detalle_formulario["registro_tiempo"] = calcular_tiempo_registro(self, obj.fecha_inicio,
-                                                                                          formulario_sectorial.fecha_envio)
+                                                                                     formulario_sectorial.fecha_envio)
+
                 detalle.append(detalle_formulario)
 
         if len(sectores) <= 1:
