@@ -149,7 +149,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
             return detalle
 
         resumen_estado = 'finalizada' if obj.formulario_completo else 'revision'
-        resumen_accion = 'Ver formularios' if obj.formulario_completo else 'En Estudio'
+        resumen_accion = 'Ver formularios' if obj.formulario_completo else 'Formularios pendientes'
         resumen = {
             "nombre": 'Ver formularios Sectoriales' if obj.formulario_completo else 'Completar formularios Sectoriales',
             "estado": resumen_estado,
@@ -166,8 +166,10 @@ class Etapa2Serializer(serializers.ModelSerializer):
     def get_observaciones_sectorial(self, obj):
         user = self.context['request'].user
         es_subdere = user.groups.filter(name='SUBDERE').exists()
+        es_usuario_sectorial = user.groups.filter(name='Usuario Sectorial').exists()
         formularios_sectoriales = FormularioSectorial.objects.filter(competencia=obj.competencia)
-        observaciones = ObservacionesSubdereFormularioSectorial.objects.filter(formulario_sectorial__in=formularios_sectoriales)
+        observaciones = ObservacionesSubdereFormularioSectorial.objects.filter(
+            formulario_sectorial__in=formularios_sectoriales)
 
         detalle = []
         for formulario in formularios_sectoriales:
@@ -175,7 +177,16 @@ class Etapa2Serializer(serializers.ModelSerializer):
             if observacion:
                 estado_revision = es_subdere and obj.formulario_completo
                 estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
-                accion = 'Ver Observación' if observacion.observacion_enviada else 'Subir Observación' if es_subdere else 'Observación pendiente'
+
+                if observacion.observacion_enviada and (es_subdere or es_usuario_sectorial):
+                    accion = 'Ver Observación'
+                elif observacion.observacion_enviada and not es_subdere and not es_usuario_sectorial:
+                    accion = 'Finalizada'
+                elif es_subdere:
+                    accion = 'Subir Observación'
+                else:
+                    accion = 'Observación pendiente'
+
                 detalle.append({
                     "id": formulario.id,
                     "nombre": f"Observación del formulario sectorial ({formulario.sector.nombre})",
@@ -187,15 +198,23 @@ class Etapa2Serializer(serializers.ModelSerializer):
         if len(detalle) <= 1:
             return detalle
 
-        # Verificar si todas las observaciones han sido enviadas
-        todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
-        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
-        accion_resumen = 'Ver Observaciones' if todas_observaciones_enviadas else 'En Estudio'
-        resumen = {
-            "nombre": 'Observaciones de formularios sectoriales',
-            "estado": estado_resumen,
-            "accion": accion_resumen
-        }
+            # Verificar si todas las observaciones han sido enviadas
+            todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
+
+            if todas_observaciones_enviadas:
+                if es_subdere or es_usuario_sectorial:
+                    accion_resumen = 'Ver Observaciones'
+                else:
+                    accion_resumen = 'Observaciones Finalizadas'
+            else:
+                accion_resumen = 'Observaciones pendientes'
+
+            estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
+            resumen = {
+                "nombre": 'Observaciones de formularios sectoriales',
+                "estado": estado_resumen,
+                "accion": accion_resumen
+            }
 
         detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
@@ -203,5 +222,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "resumen_observaciones_sectoriales": [resumen],
             "detalle_observaciones_sectoriales": detalle
         }
+
 
 
