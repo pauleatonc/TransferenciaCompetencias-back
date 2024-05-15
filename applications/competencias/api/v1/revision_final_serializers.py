@@ -386,7 +386,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso1_revision_final_subdere = Paso1ResumenSerializer(read_only=True)
     paso2_revision_final_subdere = Paso2ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
-    antecedente_adicional_revision_subdere = serializers.FileField()
+    antecedente_adicional_revision_subdere = serializers.FileField(required=False, allow_null=True)
+    delete_antecedente_adicional_revision_subdere = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = Competencia
@@ -400,6 +401,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'formulario_completo',
             'imprimir_formulario_final',
             'antecedente_adicional_revision_subdere',
+            'delete_antecedente_adicional_revision_subdere',
+            'descripcion_antecedente'
         ]
 
     def get_competencia_nombre(self, obj):
@@ -413,3 +416,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
                                                                                   'paso2_revision_final_subdere') else False
         # Retorna True si ambos pasos están completados, False en caso contrario.
         return paso1_completado and paso2_completado
+
+    def update(self, instance, validated_data):
+        if 'delete_antecedente_adicional_revision_subdere' in validated_data:
+            instance.delete_file()
+        validated_data.pop('delete_antecedente_revision_subdere', None)
+        return super().update(instance, validated_data)

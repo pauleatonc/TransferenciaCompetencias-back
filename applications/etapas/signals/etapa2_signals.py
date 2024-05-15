@@ -20,7 +20,6 @@ def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
     if instance.estado == 'finalizada':
         # Si Etapa1 se ha finalizado, actualiza Etapa2
         etapa2.usuarios_notificados = True
-        etapa2.plazo_dias = instance.competencia.plazo_formulario_sectorial
     else:
         # Si Etapa1 no está finalizada, asegúrate de que usuarios_notificados en Etapa2 sea False
         etapa2.usuarios_notificados = False

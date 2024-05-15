@@ -4,6 +4,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from applications.formularios_sectoriales.models import (
     FormularioSectorial, MarcoJuridico, OrganigramaRegional, FlujogramaCompetencia
@@ -310,4 +311,15 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
 
         organigrama_regional.documento = documento_file
         organigrama_regional.save()
+
+
+class DeleteAntecedenteAdicionalSectorialView(APIView):
+
+    def delete(self, request, pk):
+        try:
+            formulario = FormularioSectorial.objects.get(pk=pk)
+            formulario.delete_file()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except FormularioSectorial.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
