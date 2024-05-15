@@ -198,23 +198,23 @@ class Etapa2Serializer(serializers.ModelSerializer):
         if len(detalle) <= 1:
             return detalle
 
-            # Verificar si todas las observaciones han sido enviadas
-            todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
+        # Verificar si todas las observaciones han sido enviadas
+        todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
 
-            if todas_observaciones_enviadas:
-                if es_subdere or es_usuario_sectorial:
-                    accion_resumen = 'Ver Observaciones'
-                else:
-                    accion_resumen = 'Observaciones Finalizadas'
+        if todas_observaciones_enviadas:
+            if es_subdere or es_usuario_sectorial:
+                accion_resumen = 'Ver Observaciones'
             else:
-                accion_resumen = 'Observaciones pendientes'
+                accion_resumen = 'Observaciones Finalizadas'
+        else:
+            accion_resumen = 'Observaciones pendientes'
 
-            estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
-            resumen = {
-                "nombre": 'Observaciones de formularios sectoriales',
-                "estado": estado_resumen,
-                "accion": accion_resumen
-            }
+        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
+        resumen = {
+            "nombre": 'Observaciones de formularios sectoriales',
+            "estado": estado_resumen,
+            "accion": accion_resumen
+        }
 
         detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
