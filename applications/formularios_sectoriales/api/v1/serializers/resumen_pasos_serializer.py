@@ -68,6 +68,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso4 = Paso4ResumenSerializer(read_only=True)
     paso5 = Paso5ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
+    antecedente_adicional_sectorial = serializers.FileField(required=False, allow_null=True)
+    delete_antecedente_adicional_sectorial = serializers.BooleanField(write_only=True, required=False)
 
     class Meta:
         model = FormularioSectorial
@@ -84,6 +86,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso4',
             'paso5',
             'formulario_completo',
+            'antecedente_adicional_sectorial',
+            'delete_antecedente_adicional_sectorial',
+            'descripcion_antecedente'
         ]
 
     def get_competencia_nombre(self, obj):
@@ -103,3 +108,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
         ]
         # Retorna True si todos los pasos están completados, False en caso contrario
         return all(pasos_completados)
+
+    def update(self, instance, validated_data):
+        if validated_data.get('delete_antecedente_adicional_sectorial'):
+            instance.delete_file()
+        validated_data.pop('delete_antecedente_adicional_sectorial', None)
+        return super().update(instance, validated_data)

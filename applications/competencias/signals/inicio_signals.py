@@ -15,10 +15,10 @@ def crear_etapas_para_competencia(sender, instance, created, **kwargs):
     if created:
         # Crear etapas
         Etapa1.objects.get_or_create(competencia=instance)
-        Etapa2.objects.get_or_create(competencia=instance)
-        Etapa3.objects.get_or_create(competencia=instance)
-        Etapa4.objects.get_or_create(competencia=instance)
-        Etapa5.objects.get_or_create(competencia=instance)
+        Etapa2.objects.get_or_create(competencia=instance, plazo_dias=instance.plazo_formulario_sectorial)
+        Etapa3.objects.get_or_create(competencia=instance, plazo_dias=15)
+        Etapa4.objects.get_or_create(competencia=instance, plazo_dias=instance.plazo_formulario_gore)
+        Etapa5.objects.get_or_create(competencia=instance, plazo_dias=15)
 
 
 @receiver(m2m_changed, sender=Competencia.usuarios_subdere.through)

@@ -33,6 +33,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'estado',
             'fecha_inicio',
             'calcular_tiempo_transcurrido',
+            'plazo_dias',
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuario_notificado',

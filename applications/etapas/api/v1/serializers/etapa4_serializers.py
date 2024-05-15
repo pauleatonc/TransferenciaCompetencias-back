@@ -35,6 +35,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
             'estado',
             'fecha_inicio',
             'calcular_tiempo_transcurrido',
+            'plazo_dias',
             'ultimo_editor',
             'fecha_ultima_modificacion',
             'usuarios_gore',
