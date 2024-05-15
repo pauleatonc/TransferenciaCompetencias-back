@@ -45,7 +45,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     ViewSet para manejar las operaciones CRUD para el modelo Competencia.
     Ofrece listado, creación, actualización, detalle y eliminación de competencias.
     """
-    queryset = Competencia.objects.all()
+    queryset = Competencia.objects.all().order_by('id')
     filter_backends = (SearchFilter, OrderingFilter)
     pagination_class = CustomPageNumberPagination
     search_fields = [
