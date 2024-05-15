@@ -176,9 +176,9 @@ class Competencia(BaseModel):
             self.save()
 
 
-class NombreCompetenciaAgrupada(BaseModel):
+class CompetenciaAgrupada(BaseModel):
     nombre = models.CharField(max_length=200, unique=True)
-    competencias = models.ForeignKey(Competencia, related_name='nombre_competencia_agrupada', on_delete=models.CASCADE)
+    competencias = models.ForeignKey(Competencia, related_name='competencias_agrupadas', on_delete=models.CASCADE)
     modalidad_ejercicio = models.CharField(max_length=20, choices=Competencia.MODALIDAD_EJERCICIO, blank=True, null=True)
 
     class Meta:

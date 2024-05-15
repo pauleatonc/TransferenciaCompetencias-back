@@ -14,8 +14,12 @@ from applications.sectores_gubernamentales.models import SectorGubernamental
 
 @receiver(post_save, sender=Etapa1)
 def actualizar_etapa2_con_estado_etapa1(sender, instance, **kwargs):
-    # Obtener o crear la instancia de Etapa2 asociada
-    etapa2, created = Etapa2.objects.get_or_create(competencia=instance.competencia)
+    try:
+        # Intentar obtener la instancia de Etapa2 asociada
+        etapa2 = Etapa2.objects.get(competencia=instance.competencia)
+    except Etapa2.DoesNotExist:
+        # Si Etapa2 no existe, simplemente salir de la función
+        return
 
     if instance.estado == 'finalizada':
         # Si Etapa1 se ha finalizado, actualiza Etapa2
