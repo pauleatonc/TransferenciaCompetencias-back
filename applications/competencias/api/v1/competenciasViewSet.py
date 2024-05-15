@@ -60,7 +60,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         'usuarios_sectoriales__nombre_completo',
         'usuarios_gore__nombre_completo'
     ]
-    ordering_fields = ['estado']
+    ordering_fields = ['id']
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
@@ -129,7 +129,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='lista-home')
     def lista_home(self, request):
         user = request.user
-        queryset = Competencia.objects.all().order_by('-modified_date')
+        queryset = Competencia.objects.all().order_by('id')
 
         # Filtrar según el tipo de usuario
         if user.groups.filter(name='SUBDERE').exists():
