@@ -42,6 +42,7 @@ class Competencia(BaseModel):
     )
 
     nombre = models.CharField(max_length=200, unique=True)
+    agrupada = models.BooleanField(default=False)
     creado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -175,6 +176,19 @@ class Competencia(BaseModel):
             self.save()
 
 
+class CompetenciaAgrupada(BaseModel):
+    nombre = models.CharField(max_length=200, unique=True)
+    competencias = models.ForeignKey(Competencia, related_name='competencias_agrupadas', on_delete=models.CASCADE)
+    modalidad_ejercicio = models.CharField(max_length=20, choices=Competencia.MODALIDAD_EJERCICIO, blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Nombre Competencia Agrupada'
+        verbose_name_plural = 'Nombres Competencias Agrupadas'
+
+    def __str__(self):
+        return self.nombre
+
+
 class DocumentosComplementarios(BaseModel):
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
     nombre_documento = models.CharField(max_length=100, unique=True)
@@ -184,8 +198,6 @@ class DocumentosComplementarios(BaseModel):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_five],
                                  verbose_name='Documentos complementarios Competencia', blank=True, null=True)
-
-
 
 
 # Modelos para revisión final SUBDERE
