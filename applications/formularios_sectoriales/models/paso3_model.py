@@ -17,14 +17,14 @@ class Paso3Encabezado(PasoBase):
     def numero_paso(self):
         return 3
 
-    def avance_completo(self):
+    def avance_numerico(self):
         pasos3 = Paso3.objects.filter(formulario_sectorial=self.formulario_sectorial)
         total_pasos = pasos3.count()
         pasos_completos = sum(1 for paso in pasos3 if paso.avance().split('/')[0] == paso.avance().split('/')[1])
         return pasos_completos, total_pasos
 
     def avance(self):
-        pasos_completos, total_pasos = self.avance_completo()
+        pasos_completos, total_pasos = self.avance_numerico()
         return f"{pasos_completos}/{total_pasos}"
 
 

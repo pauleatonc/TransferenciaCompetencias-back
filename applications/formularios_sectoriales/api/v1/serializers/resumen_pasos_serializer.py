@@ -64,8 +64,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     sector_nombre = serializers.SerializerMethodField()
     paso1 = Paso1ResumenSerializer(read_only=True)
     paso2 = Paso2ResumenSerializer(read_only=True)
-    paso3 = Paso3ResumenSerializer(read_only=True)
-    paso4 = Paso4ResumenSerializer(read_only=True)
+    paso3encabezado = Paso3ResumenSerializer(read_only=True)
+    paso4encabezado = Paso4ResumenSerializer(read_only=True)
     paso5 = Paso5ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
     antecedente_adicional_sectorial = serializers.FileField(required=False, allow_null=True)
@@ -82,8 +82,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'intento_envio',
             'paso1',
             'paso2',
-            'paso3',
-            'paso4',
+            'paso3encabezado',
+            'paso4encabezado',
             'paso5',
             'formulario_completo',
             'antecedente_adicional_sectorial',
@@ -102,8 +102,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
         pasos_completados = [
             obj.paso1.completado if hasattr(obj, 'paso1') else False,
             obj.paso2.completado if hasattr(obj, 'paso2') else False,
-            obj.paso3.completado if hasattr(obj, 'paso3') else False,
-            obj.paso4.completado if hasattr(obj, 'paso4') else False,
+            obj.paso3encabezado.completado if hasattr(obj, 'paso3encabezado') else False,
+            obj.paso4encabezado.completado if hasattr(obj, 'paso4encabezado') else False,
             obj.paso5.completado if hasattr(obj, 'paso5') else False,
         ]
         # Retorna True si todos los pasos están completados, False en caso contrario
