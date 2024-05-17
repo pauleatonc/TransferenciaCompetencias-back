@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
 from applications.base.functions import validate_file_size_twenty, validate_file_size_five
@@ -177,13 +177,16 @@ class Competencia(BaseModel):
 
 
 class CompetenciaAgrupada(BaseModel):
-    nombre = models.CharField(max_length=200, unique=True)
+    nombre = models.CharField(max_length=200)
     competencias = models.ForeignKey(Competencia, related_name='competencias_agrupadas', on_delete=models.CASCADE)
     modalidad_ejercicio = models.CharField(max_length=20, choices=Competencia.MODALIDAD_EJERCICIO, blank=True, null=True)
 
     class Meta:
         verbose_name = 'Nombre Competencia Agrupada'
         verbose_name_plural = 'Nombres Competencias Agrupadas'
+        constraints = [
+            UniqueConstraint(fields=['nombre', 'competencias'], name='unique_nombre_competencias')
+        ]
 
     def __str__(self):
         return self.nombre
