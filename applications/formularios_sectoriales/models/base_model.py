@@ -54,7 +54,7 @@ class FormularioSectorial(BaseModel):
             self.save()
 
     def todos_los_pasos_completados(self):
-        pasos = [self.paso1, self.paso2, self.paso3, self.paso4, self.paso5]
+        pasos = [self.paso1, self.paso2, self.paso3encabezado, self.paso4, self.paso5]
 
         pasos_completados = all(paso is not None and paso.completado for paso in pasos)
 

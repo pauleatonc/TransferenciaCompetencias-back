@@ -70,13 +70,6 @@ class Paso5(PasoBase):
         ).exists()
 
     def avance_numerico(self):
-        # Lista de todos los campos obligatorios del modelo Paso5
-        campos_obligatorios_paso5 = [
-            'descripcion_funciones_personal_directo', 'descripcion_funciones_personal_indirecto',
-        ]
-        total_campos_paso5 = len(campos_obligatorios_paso5)
-        completados_paso5 = sum([1 for campo in campos_obligatorios_paso5 if getattr(self, campo, None)])
-
         # Verifica instancias de CostosDirectos y CostosIndirectos
         costos_directos = CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id)
         total_costos_directos = costos_directos.count()
@@ -104,9 +97,9 @@ class Paso5(PasoBase):
         completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
 
         # Total de campos y completados se ajusta para incluir el número de instancias
-        total_campos = (total_campos_paso5 + total_costos_directos + total_costos_indirectos +
+        total_campos = (total_costos_directos + total_costos_indirectos +
                         total_evolucion_gasto + total_variacion_promedio + 2)  # +2 por PersonalDirecto e Indirecto como categorías
-        completados = (completados_paso5 + completados_costos_directos + completados_costos_indirectos +
+        completados = (completados_costos_directos + completados_costos_indirectos +
                        completados_evolucion_gasto + completados_variacion_promedio +
                        completado_personal_directo + completado_personal_indirecto)
 
