@@ -1,6 +1,5 @@
-from django.db import transaction
 from rest_framework import serializers
-from applications.competencias.models import Competencia, Ambito, CompetenciaAgrupada
+from applications.competencias.models import Competencia, Ambito
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
 from django.contrib.auth import get_user_model
 
@@ -18,18 +17,10 @@ class SectorSerializer(serializers.ModelSerializer):
         model = SectorGubernamental
         fields = ('id', 'nombre')
 
-
 class RegionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Region
         fields = ('id', 'region')
-
-
-class CompetenciaAgrupadaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CompetenciaAgrupada
-        fields = ('id', 'nombre', 'modalidad_ejercicio')
-
 
 class UsuarioSerializer(serializers.ModelSerializer):
     sector_nombre = serializers.SerializerMethodField()
@@ -37,7 +28,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'nombre_completo', 'email', 'sector_nombre', 'region_nombre')
+        fields = ('id', 'nombre_completo', 'email', 'sector_nombre', 'region_nombre')  # Añade los campos necesarios
 
     def get_sector_nombre(self, obj):
         if obj.sector:
@@ -57,7 +48,7 @@ class CompetenciaListSerializer(serializers.ModelSerializer):
     origen = serializers.SerializerMethodField()
     class Meta:
         model = Competencia
-        fields = ['id', 'nombre', 'ambito', 'estado', 'origen', 'agrupada']
+        fields = ['id', 'nombre', 'ambito', 'estado', 'origen']
 
     def get_ambito(self, obj):
         return obj.ambito_competencia.nombre if obj.ambito_competencia else None
@@ -99,8 +90,7 @@ class CompetenciaHomeListSerializer(serializers.ModelSerializer):
             'ambito_definitivo_competencia',
             'ambito_competencia_origen',
             'fecha_fin',
-            'recomendacion_transferencia',
-            'agrupada'
+            'recomendacion_transferencia'
         ]
 
     def get_estado(self, obj):
@@ -117,35 +107,9 @@ class CompetenciaHomeListSerializer(serializers.ModelSerializer):
 
 
 class CompetenciaCreateSerializer(serializers.ModelSerializer):
-    competencias_agrupadas = CompetenciaAgrupadaSerializer(many=True, required=False)
-    sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
-    regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
-
     class Meta:
         model = Competencia
         fields = '__all__'
-
-    def create(self, validated_data):
-        # Extraer los sectores, regiones y competencias agrupadas del validated_data
-        sectores_data = validated_data.pop('sectores', None)
-        regiones_data = validated_data.pop('regiones', None)
-        competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
-
-        # Crear la instancia de Competencia sin los campos de muchos a muchos
-        competencia = Competencia.objects.create(**validated_data)
-
-        # Asignar los sectores y regiones usando set()
-        if sectores_data:
-            competencia.sectores.set(sectores_data)
-        if regiones_data:
-            competencia.regiones.set(regiones_data)
-
-        # Crear y asignar las competencias agrupadas
-        if competencias_agrupadas_data:
-            for competencia_agrupada_data in competencias_agrupadas_data:
-                CompetenciaAgrupada.objects.create(competencias=competencia, **competencia_agrupada_data)
-
-        return competencia
 
 
 class CompetenciaUpdateSerializer(serializers.ModelSerializer):
@@ -188,7 +152,6 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
     tiempo_transcurrido = serializers.SerializerMethodField()
     sectores = SectorSerializer(many=True, read_only=True)
     resumen_competencia = serializers.SerializerMethodField()
-    competencias_agrupadas = serializers.SerializerMethodField()
     estado = serializers.SerializerMethodField()
     ambito_definitivo_competencia = serializers.SerializerMethodField()
     ambito_competencia_origen = serializers.SerializerMethodField()
@@ -198,9 +161,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'nombre',
-            'agrupada',
             'resumen_competencia',
-            'competencias_agrupadas',
             'sectores',
             'regiones',
             'origen',
@@ -250,12 +211,6 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
 
     def get_ambito_competencia_origen(self, obj):
         return obj.ambito_competencia.nombre if obj.ambito_competencia else None
-
-    def get_competencias_agrupadas(self, obj):
-        if obj.agrupada:
-            competencias_agrupadas = obj.competencias_agrupadas.all()
-            return CompetenciaAgrupadaSerializer(competencias_agrupadas, many=True).data
-        return []
 
 
 class AmbitoSerializer(serializers.ModelSerializer):
