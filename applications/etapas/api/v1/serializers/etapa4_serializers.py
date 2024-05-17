@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa4
@@ -123,9 +122,10 @@ class Etapa4Serializer(serializers.ModelSerializer):
 
         for region in regiones:
             formulario_gore = FormularioGORE.objects.filter(competencia=obj.competencia, region=region).first()
+
             if formulario_gore:
                 # Verifica si el usuario es GORE y si la región del formulario coincide con la del usuario
-                usuario_region_correcta = es_usuario_gore and user.region == region
+                usuario_region_correcta = es_usuario_gore and user.region == region if user.region else False
                 estado_revision = usuario_region_correcta and obj.oficio_origen
                 estado = 'finalizada' if formulario_gore.formulario_enviado else 'revision' if estado_revision else 'pendiente'
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if usuario_region_correcta else 'Formulario pendiente'
@@ -164,6 +164,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
         detalle = self.reordenar_detalle(detalle, self.context['request'].user)
 
         return {
-            "formularios_gore": [resumen],
+            "formularios_gore_completos": [resumen],
             "detalle_formularios_gore": detalle
         }
+
