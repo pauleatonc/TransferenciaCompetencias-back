@@ -120,16 +120,26 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
     competencias_agrupadas = CompetenciaAgrupadaSerializer(many=True, required=False)
     sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
     regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
+    regiones_recomendadas = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
+    usuarios_subdere = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='SUBDERE'), required=False)
+    usuarios_dipres = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='DIPRES'), required=False)
+    usuarios_sectoriales = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='Usuario Sectorial'), required=False)
+    usuarios_gore = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='GORE'), required=False)
 
     class Meta:
         model = Competencia
         fields = '__all__'
 
     def create(self, validated_data):
-        # Extraer los sectores, regiones y competencias agrupadas del validated_data
+        # Extraer los campos de ManyToMany del validated_data
         sectores_data = validated_data.pop('sectores', None)
         regiones_data = validated_data.pop('regiones', None)
+        regiones_recomendadas_data = validated_data.pop('regiones_recomendadas', None)
         competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
+        usuarios_subdere_data = validated_data.pop('usuarios_subdere', None)
+        usuarios_dipres_data = validated_data.pop('usuarios_dipres', None)
+        usuarios_sectoriales_data = validated_data.pop('usuarios_sectoriales', None)
+        usuarios_gore_data = validated_data.pop('usuarios_gore', None)
 
         # Crear la instancia de Competencia sin los campos de muchos a muchos
         competencia = Competencia.objects.create(**validated_data)
@@ -139,6 +149,18 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
             competencia.sectores.set(sectores_data)
         if regiones_data:
             competencia.regiones.set(regiones_data)
+        if regiones_recomendadas_data:
+            competencia.regiones_recomendadas.set(regiones_recomendadas_data)
+
+        # Asignar los usuarios usando set()
+        if usuarios_subdere_data:
+            competencia.usuarios_subdere.set(usuarios_subdere_data)
+        if usuarios_dipres_data:
+            competencia.usuarios_dipres.set(usuarios_dipres_data)
+        if usuarios_sectoriales_data:
+            competencia.usuarios_sectoriales.set(usuarios_sectoriales_data)
+        if usuarios_gore_data:
+            competencia.usuarios_gore.set(usuarios_gore_data)
 
         # Crear y asignar las competencias agrupadas
         if competencias_agrupadas_data:
@@ -146,6 +168,48 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
                 CompetenciaAgrupada.objects.create(competencias=competencia, **competencia_agrupada_data)
 
         return competencia
+
+    def update(self, instance, validated_data):
+        # Extraer los campos de ManyToMany del validated_data
+        sectores_data = validated_data.pop('sectores', None)
+        regiones_data = validated_data.pop('regiones', None)
+        regiones_recomendadas_data = validated_data.pop('regiones_recomendadas', None)
+        competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
+        usuarios_subdere_data = validated_data.pop('usuarios_subdere', None)
+        usuarios_dipres_data = validated_data.pop('usuarios_dipres', None)
+        usuarios_sectoriales_data = validated_data.pop('usuarios_sectoriales', None)
+        usuarios_gore_data = validated_data.pop('usuarios_gore', None)
+
+        # Actualizar la instancia de Competencia con los campos restantes
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Asignar los sectores y regiones usando set()
+        if sectores_data:
+            instance.sectores.set(sectores_data)
+        if regiones_data:
+            instance.regiones.set(regiones_data)
+        if regiones_recomendadas_data:
+            instance.regiones_recomendadas.set(regiones_recomendadas_data)
+
+        # Asignar los usuarios usando set()
+        if usuarios_subdere_data:
+            instance.usuarios_subdere.set(usuarios_subdere_data)
+        if usuarios_dipres_data:
+            instance.usuarios_dipres.set(usuarios_dipres_data)
+        if usuarios_sectoriales_data:
+            instance.usuarios_sectoriales.set(usuarios_sectoriales_data)
+        if usuarios_gore_data:
+            instance.usuarios_gore.set(usuarios_gore_data)
+
+        # Actualizar competencias agrupadas
+        instance.competencias_agrupadas.all().delete()
+        if competencias_agrupadas_data:
+            for competencia_agrupada_data in competencias_agrupadas_data:
+                CompetenciaAgrupada.objects.create(competencias=instance, **competencia_agrupada_data)
+
+        return instance
 
 
 class CompetenciaUpdateSerializer(serializers.ModelSerializer):
