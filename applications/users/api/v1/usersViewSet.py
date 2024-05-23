@@ -205,12 +205,12 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='get-users-by-sector-region', permission_classes=[IsAuthenticated])
     def get_users_by_sector_region(self, request):
         """
-        Obtener usuarios por sector y region
+        Obtener usuarios por sector y región
 
         Para utilizar este endpoint:
         Para filtrar por región: http://tuservidor.com/users/get-users-by-sector-region/?region_id=ID_DE_LA_REGION
         Para filtrar por sector: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2
-        Para mezclar filtros: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2&?region_id=ID_DE_LA_REGION
+        Para mezclar filtros: http://tuservidor.com/users/get-users-by-sector-region/?sector_id=ID_DEL_SECTOR1,ID_DEL_SECTOR2&region_id=ID_DE_LA_REGION
         Para obtener todas las competencias: http://tuservidor.com/users/get-users-by-sector-region/
         """
         sector_id = request.query_params.get('sector_id')
@@ -225,13 +225,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
             # Filtros adicionales para usuarios sectoriales y GORE
             if sector_id:
-                sector_ids = sector_id.split(',')
-                sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id__in=sector_ids)
-                base_query = base_query.union(sectorial_users)
+                sector_ids = [sid for sid in sector_id.split(',') if sid.isdigit()]
+                if sector_ids:
+                    sectorial_users = User.objects.filter(perfil='Usuario Sectorial', sector__id__in=sector_ids)
+                    base_query = base_query.union(sectorial_users)
             if region_id:
-                region_ids = region_id.split(',')
-                gore_users = User.objects.filter(perfil='GORE', region__id__in=region_ids)
-                base_query = base_query.union(gore_users)
+                region_ids = [rid for rid in region_id.split(',') if rid.isdigit()]
+                if region_ids:
+                    gore_users = User.objects.filter(perfil='GORE', region__id__in=region_ids)
+                    base_query = base_query.union(gore_users)
 
             queryset = base_query
 
