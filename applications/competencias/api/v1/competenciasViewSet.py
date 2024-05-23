@@ -157,6 +157,8 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         Permite la creación de una nueva competencia.
         Acceso restringido a usuarios SUBDERE o superusuarios.
         """
+        print("Datos recibidos para creación Competencia:", request.data)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         competencia = serializer.save(creado_por=request.user)
