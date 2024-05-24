@@ -4,6 +4,7 @@ from applications.competencias.models import Competencia
 import logging
 from applications.formularios_sectoriales.models import (
     FormularioSectorial,
+    Paso5Encabezado,
     Paso5,
     Subtitulos,
     ItemSubtitulo,
@@ -346,11 +347,8 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
 
-    años = serializers.SerializerMethodField(read_only=True)
-    años_variacion = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
-        model = Paso5
+        model = Paso5Encabezado
         fields = [
             'id',
             'nombre_paso',
@@ -358,6 +356,23 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
+        ]
+
+    def avance(self, obj):
+        return obj.avance()
+
+
+class Paso5Serializer(serializers.ModelSerializer):
+    avance = serializers.SerializerMethodField()
+
+    años = serializers.SerializerMethodField(read_only=True)
+    años_variacion = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Paso5
+        fields = [
+            'id',
+            'avance',
             'total_costos_directos',
             'total_costos_indirectos',
             'costos_totales',
@@ -429,27 +444,33 @@ def eliminar_instancia_costo(modelo, instancia_id):
         pass
 
 
-def get_subtitulos_disponibles(modelo_costos, formulario_obj):
-    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo_costos para este formulario
+def get_subtitulos_disponibles(modelo_costos, formulario_obj, region):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo_costos para este formulario y región
     items_utilizados = modelo_costos.objects.filter(
-        formulario_sectorial=formulario_obj, item_subtitulo__isnull=False).values_list('item_subtitulo__id', flat=True)
+        formulario_sectorial=formulario_obj,
+        region=region,
+        item_subtitulo__isnull=False
+    ).values_list('item_subtitulo__id', flat=True)
 
-    # Filtra ItemSubtitulo para excluir los utilizados
+    # Filtra ItemSubtitulo para excluir los utilizados en la región actual
     item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados)
 
     # Obtiene los Subtitulos asociados a los item_subtitulos disponibles
     subtitulos_ids = item_subtitulos_disponibles.values_list('subtitulo__id', flat=True).distinct()
     subtitulos_disponibles = Subtitulos.objects.filter(id__in=subtitulos_ids)
 
-    return subtitulos_disponibles
+    return SubtitulosSerializer(subtitulos_disponibles, many=True).data
 
 
-def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
-    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo de costos para este formulario
+def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj, region):
+    # Obtiene todos los ID de ItemSubtitulo utilizados por el modelo de costos para este formulario y región
     items_utilizados = modelo_costos.objects.filter(
-        formulario_sectorial=formulario_obj, item_subtitulo__isnull=False).values_list('item_subtitulo__id', flat=True)
+        formulario_sectorial=formulario_obj,
+        region=region,
+        item_subtitulo__isnull=False
+    ).values_list('item_subtitulo__id', flat=True)
 
-    # Filtra ItemSubtitulo para excluir los utilizados
+    # Filtra ItemSubtitulo para excluir los utilizados en la región actual
     item_subtitulos_disponibles = ItemSubtitulo.objects.exclude(id__in=items_utilizados).select_related('subtitulo')
 
     # Agrupa los ItemSubtitulo disponibles por Subtitulos
@@ -463,13 +484,9 @@ def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
     return items_agrupados
 
 
-class Paso5Serializer(WritableNestedModelSerializer):
-    paso5 = Paso5EncabezadoSerializer()
-    solo_lectura = serializers.SerializerMethodField()
-    listado_estamentos = serializers.SerializerMethodField()
-    listado_calidades_juridicas_directas = serializers.SerializerMethodField()
-    listado_calidades_juridicas_indirectas = serializers.SerializerMethodField()
-    listado_etapas = serializers.SerializerMethodField()
+class RegionPaso5Serializer(serializers.Serializer):
+    region = serializers.CharField()
+    paso5 = Paso5Serializer(many=True)
     p_5_1_a_costos_directos = CostosDirectosSerializer(many=True, read_only=False)
     p_5_1_b_costos_indirectos = CostosIndirectosSerializer(many=True, read_only=False)
     p_5_1_c_resumen_costos_por_subtitulo = ResumenCostosPorSubtituloSerializer(many=True, read_only=False)
@@ -477,30 +494,95 @@ class Paso5Serializer(WritableNestedModelSerializer):
     p_5_2_variacion_promedio = VariacionPromedioSerializer(many=True, read_only=False)
     p_5_3_a_personal_directo = PersonalDirectoSerializer(many=True, read_only=False)
     p_5_3_b_personal_indirecto = PersonalIndirectoSerializer(many=True, read_only=False)
+
     listado_subtitulos_directos = serializers.SerializerMethodField()
     listado_subtitulos_indirectos = serializers.SerializerMethodField()
     listado_item_subtitulos_directos = serializers.SerializerMethodField()
     listado_item_subtitulos_indirectos = serializers.SerializerMethodField()
+    listado_calidades_juridicas_directas = serializers.SerializerMethodField()
+    listado_calidades_juridicas_indirectas = serializers.SerializerMethodField()
+
+    def get_listado_subtitulos_directos(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return get_subtitulos_disponibles(CostosDirectos, formulario_sectorial, region)
+        return []
+
+    def get_listado_subtitulos_indirectos(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return get_subtitulos_disponibles(CostosIndirectos, formulario_sectorial, region)
+        return []
+
+    def get_listado_item_subtitulos_directos(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, formulario_sectorial, region)
+        return {}
+
+    def get_listado_item_subtitulos_indirectos(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, formulario_sectorial, region)
+        return {}
+
+    def get_filtered_calidades_juridicas(self, formulario_sectorial, region, modelo_costos):
+        mapeo_items_calidades = {
+            '01 - Personal de Planta': ['Planta'],
+            '02 - Personal de Contrata': ['Contrata'],
+            '03 - Otras Remuneraciones': ['Honorario a suma alzada'],
+            '04 - Otros Gastos en Personal': ['Honorario asimilado a grado', 'Comisión de servicio', 'Otro'],
+        }
+
+        items_usados = modelo_costos.objects.filter(
+            formulario_sectorial=formulario_sectorial,
+            region=region
+        ).values_list('item_subtitulo__item', flat=True).distinct()
+
+        calidades_incluidas = set()
+
+        for item_usado in items_usados:
+            for item, calidades in mapeo_items_calidades.items():
+                if item == item_usado:
+                    calidades_incluidas.update(calidades)
+
+        calidades_filtradas = list(CalidadJuridica.objects.filter(
+            calidad_juridica__in=calidades_incluidas
+        ).values('id', 'calidad_juridica'))
+
+        return calidades_filtradas
+
+    def get_listado_calidades_juridicas_directas(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return self.get_filtered_calidades_juridicas(formulario_sectorial, region, CostosDirectos)
+        return []
+
+    def get_listado_calidades_juridicas_indirectas(self, obj):
+        formulario_sectorial = obj['paso5'][0]['formulario_sectorial'] if obj['paso5'] else None
+        region = obj['region']
+        if formulario_sectorial:
+            return self.get_filtered_calidades_juridicas(formulario_sectorial, region, CostosIndirectos)
+        return []
+
+
+class Paso5GeneralSerializer(WritableNestedModelSerializer):
+    solo_lectura = serializers.SerializerMethodField()
+    listado_etapas = serializers.SerializerMethodField()
+    listado_estamentos = serializers.SerializerMethodField()
+    regiones = serializers.SerializerMethodField()
 
     class Meta:
         model = FormularioSectorial
         fields = [
-            'paso5',
             'solo_lectura',
-            'p_5_1_a_costos_directos',
-            'p_5_1_b_costos_indirectos',
-            'p_5_1_c_resumen_costos_por_subtitulo',
-            'p_5_2_evolucion_gasto_asociado',
-            'p_5_2_variacion_promedio',
-            'p_5_3_a_personal_directo',
-            'p_5_3_b_personal_indirecto',
-            'listado_subtitulos_directos',
-            'listado_subtitulos_indirectos',
-            'listado_item_subtitulos_directos',
-            'listado_item_subtitulos_indirectos',
+            'regiones',
             'listado_estamentos',
-            'listado_calidades_juridicas_directas',
-            'listado_calidades_juridicas_indirectas',
             'listado_etapas'
         ]
 
@@ -518,71 +600,48 @@ class Paso5Serializer(WritableNestedModelSerializer):
         estamentos = Estamento.objects.all()
         return EstamentoSerializer(estamentos, many=True).data
 
-    def get_filtered_calidades_juridicas(self, obj, modelo_costos):
-        # Mapeo de items a calidades jurídicas
-        mapeo_items_calidades = {
-            '01 - Personal de Planta': ['Planta'],
-            '02 - Personal de Contrata': ['Contrata'],
-            '03 - Otras Remuneraciones': ['Honorario a suma alzada'],
-            '04 - Otros Gastos en Personal': ['Honorario asimilado a grado', 'Comisión de servicio', 'Otro'],
-        }
-
-        # Obtener los items usados en el modelo de costos para el formulario sectorial actual
-        items_usados = modelo_costos.objects.filter(
-            formulario_sectorial=obj
-        ).values_list('item_subtitulo__item', flat=True).distinct()
-
-        # Inicializar el conjunto para recoger las calidades jurídicas basadas en los items usados
-        calidades_incluidas = set()
-
-        # Iterar sobre los items usados y agregar las calidades jurídicas correspondientes
-        for item_usado in items_usados:
-            for item, calidades in mapeo_items_calidades.items():
-                if item == item_usado:
-                    calidades_incluidas.update(calidades)
-
-        # Filtrar las calidades jurídicas basadas en el conjunto de calidades incluidas
-        calidades_filtradas = list(CalidadJuridica.objects.filter(
-            calidad_juridica__in=calidades_incluidas
-        ).values('id', 'calidad_juridica'))
-
-        return calidades_filtradas
-
-    def get_listado_calidades_juridicas_directas(self, obj):
-        return self.get_filtered_calidades_juridicas(obj, CostosDirectos)
-
-    def get_listado_calidades_juridicas_indirectas(self, obj):
-        return self.get_filtered_calidades_juridicas(obj, CostosIndirectos)
-
-    def get_listado_item_subtitulos_directos(self, obj):
-        items_agrupados_directos = get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj)
-        return items_agrupados_directos
-
-    def get_listado_item_subtitulos_indirectos(self, obj):
-        items_agrupados_indirectos = get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, obj)
-        return items_agrupados_indirectos
-
-    def get_listado_subtitulos_directos(self, obj):
-        subtitulos_disponibles = get_subtitulos_disponibles(CostosDirectos, obj)
-        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
-
-    def get_listado_subtitulos_indirectos(self, obj):
-        subtitulos_disponibles = get_subtitulos_disponibles(CostosIndirectos, obj)
-        return SubtitulosSerializer(subtitulos_disponibles, many=True).data
-
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
 
-    def update_paso5_instance(self, instance, paso5_data):
-        # Asume que 'paso5_data' contiene los datos del objeto relacionado
-        paso5_instance = getattr(instance, 'paso5', None)
-        if paso5_instance:
-            for attr, value in paso5_data.items():
-                setattr(paso5_instance, attr, value)
-            paso5_instance.save()
-        else:
-            Paso5.objects.create(formulario_sectorial=instance, **paso5_data)
+    def get_regiones(self, obj):
+        regiones_data = []
+        regiones = obj.competencia.regiones.all()
+
+        for region in regiones:
+            paso5_instances = Paso5.objects.filter(formulario_sectorial=obj, region=region)
+            costos_directos_instances = CostosDirectos.objects.filter(formulario_sectorial=obj, region=region)
+            costos_indirectos_instances = CostosIndirectos.objects.filter(formulario_sectorial=obj, region=region)
+            resumen_costos_por_subtitulo_instances = ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial=obj, region=region)
+            evolucion_gasto_asociado_instances = EvolucionGastoAsociado.objects.filter(formulario_sectorial=obj, region=region)
+            variacion_promedio_instances = VariacionPromedio.objects.filter(formulario_sectorial=obj, region=region)
+            personal_directo_instances = PersonalDirecto.objects.filter(formulario_sectorial=obj, region=region)
+            personal_indirecto_instances = PersonalIndirecto.objects.filter(formulario_sectorial=obj, region=region)
+
+            region_data = {
+                'region': region.region,
+                'paso5': Paso5Serializer(paso5_instances, many=True).data,
+                'p_5_1_a_costos_directos': CostosDirectosSerializer(costos_directos_instances, many=True).data,
+                'p_5_1_b_costos_indirectos': CostosIndirectosSerializer(costos_indirectos_instances, many=True).data,
+                'p_5_1_c_resumen_costos_por_subtitulo': ResumenCostosPorSubtituloSerializer(resumen_costos_por_subtitulo_instances, many=True).data,
+                'p_5_2_evolucion_gasto_asociado': EvolucionGastoAsociadoSerializer(evolucion_gasto_asociado_instances, many=True).data,
+                'p_5_2_variacion_promedio': VariacionPromedioSerializer(variacion_promedio_instances, many=True).data,
+                'p_5_3_a_personal_directo': PersonalDirectoSerializer(personal_directo_instances, many=True).data,
+                'p_5_3_b_personal_indirecto': PersonalIndirectoSerializer(personal_indirecto_instances, many=True).data,
+            }
+
+            region_data.update({
+                'listado_subtitulos_directos': get_subtitulos_disponibles(CostosDirectos, obj, region),
+                'listado_subtitulos_indirectos': get_subtitulos_disponibles(CostosIndirectos, obj, region),
+                'listado_item_subtitulos_directos': get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj, region),
+                'listado_item_subtitulos_indirectos': get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, obj, region),
+                'listado_calidades_juridicas_directas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj, region, CostosDirectos),
+                'listado_calidades_juridicas_indirectas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj, region, CostosIndirectos),
+            })
+
+            regiones_data.append(region_data)
+
+        return regiones_data
 
     def to_internal_value(self, data):
         # Maneja primero los campos no anidados
