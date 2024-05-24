@@ -588,15 +588,12 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
 
     def get_solo_lectura(self, obj):
         user = self.context['request'].user
-        # La lógica se actualiza para considerar el estado de formulario_enviado y el perfil del usuario
         if obj.formulario_enviado:
-            return True  # Si el formulario ya fue enviado, siempre es solo lectura
+            return True
         else:
-            # Si el formulario no ha sido enviado, solo los usuarios con perfil 'Usuario Sectorial' pueden editar
             return user.perfil != 'Usuario Sectorial'
 
     def get_listado_estamentos(self, obj):
-        # Obtener todos los registros de Estamento y serializarlos
         estamentos = Estamento.objects.all()
         return EstamentoSerializer(estamentos, many=True).data
 
@@ -646,6 +643,17 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     def to_internal_value(self, data):
         internal_value = super().to_internal_value(data)
 
+        def process_nested_data(nested_data, serializer_class):
+            internal_data = []
+            for item in nested_data:
+                if 'DELETE' in item and item['DELETE'] == True:
+                    internal_data.append({'id': item['id'], 'DELETE': True})
+                else:
+                    item_data = serializer_class().to_internal_value(item)
+                    item_data['id'] = item.get('id')
+                    internal_data.append(item_data)
+            return internal_data
+
         if 'regiones' in data:
             nested_data = data['regiones']
             internal_nested_data = []
@@ -660,55 +668,45 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 personal_directo_data = region_data.get('p_5_3_a_personal_directo', [])
                 personal_indirecto_data = region_data.get('p_5_3_b_personal_indirecto', [])
 
-                internal_paso_data = []
-                for item in paso_data:
-                    if 'DELETE' in item and item['DELETE'] == True:
-                        internal_paso_data.append({'id': item['id'], 'DELETE': True})
-                    else:
-                        item_data = Paso5Serializer().to_internal_value(item)
-                        item_data['id'] = item.get('id')
-                        internal_paso_data.append(item_data)
-
-                internal_data = []
-                for item in costos_directos_data:
-                    if 'DELETE' in item and item['DELETE'] == True:
-                        internal_data.append({'id': item['id'], 'DELETE': True})
-                    else:
-                        item_data = CostosDirectosSerializer().to_internal_value(item)
-                        item_data['id'] = item.get('id')
-                        internal_data.append(item_data)
+                internal_paso_data = process_nested_data(paso_data, Paso5Serializer)
+                internal_costos_directos_data = process_nested_data(costos_directos_data, CostosDirectosSerializer)
+                internal_costos_indirectos_data = process_nested_data(costos_indirectos_data, CostosIndirectosSerializer)
+                internal_resumen_costos_data = process_nested_data(resumen_costos_por_subtitulo_data, ResumenCostosPorSubtituloSerializer)
+                internal_evolucion_gasto_data = process_nested_data(evolucion_gasto_asociado_data, EvolucionGastoAsociadoSerializer)
+                internal_variacion_promedio_data = process_nested_data(variacion_promedio_data, VariacionPromedioSerializer)
+                internal_personal_directo_data = process_nested_data(personal_directo_data, PersonalDirectoSerializer)
+                internal_personal_indirecto_data = process_nested_data(personal_indirecto_data, PersonalIndirectoSerializer)
 
                 internal_nested_data.append({
                     'region': region,
                     'paso5': internal_paso_data,
-                    'p_5_1_a_costos_directos': internal_data
+                    'p_5_1_a_costos_directos': internal_costos_directos_data,
+                    'p_5_1_b_costos_indirectos': internal_costos_indirectos_data,
+                    'p_5_1_c_resumen_costos_por_subtitulo': internal_resumen_costos_data,
+                    'p_5_2_evolucion_gasto_asociado': internal_evolucion_gasto_data,
+                    'p_5_2_variacion_promedio': internal_variacion_promedio_data,
+                    'p_5_3_a_personal_directo': internal_personal_directo_data,
+                    'p_5_3_b_personal_indirecto': internal_personal_indirecto_data,
                 })
 
             internal_value['regiones'] = internal_nested_data
 
         return internal_value
 
-    def update_or_create_nested_instances(self, model, nested_data, instance):
+    def update_or_create_nested_instances(self, model, nested_data, instance, region):
         for data in nested_data:
-            print(f"Processing data: {data}")
             item_id = data.pop('id', None)
             delete_flag = data.pop('DELETE', False)
-            region_name = data.pop('region', None)
 
-            # Obtener la instancia de Region
-            if region_name:
-                region = Region.objects.get(region=region_name)
-                data['region'] = region
+            # Asigna la región a los datos
+            data['region'] = region
 
             if item_id is not None:
                 if delete_flag:
-                    print(f"Deleting {model.__name__} with id: {item_id}")
                     model.objects.filter(id=item_id).delete()
                 else:
-                    print(f"Updating {model.__name__} with id: {item_id}")
                     model.objects.filter(id=item_id).update(**data)
             elif not delete_flag:
-                print(f"Creating new {model.__name__} with data: {data}")
                 model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
@@ -721,20 +719,24 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
         if regiones_data is not None:
             for region_data in regiones_data:
                 region_name = region_data.get('region')
-                paso_data = region_data.pop('paso5', [])
-                costos_directos_data = region_data.pop('p_5_1_a_costos_directos', [])
-
-                # Obtener la región correspondiente
                 region = instance.competencia.regiones.get(region=region_name)
 
-                if paso_data:
-                    for paso_data in paso_data:
-                        paso_data['region'] = region.region
-                    self.update_or_create_nested_instances(Paso5, paso_data, instance)
+                paso_data = region_data.pop('paso5', [])
+                costos_directos_data = region_data.pop('p_5_1_a_costos_directos', [])
+                costos_indirectos_data = region_data.pop('p_5_1_b_costos_indirectos', [])
+                resumen_costos_por_subtitulo_data = region_data.pop('p_5_1_c_resumen_costos_por_subtitulo', [])
+                evolucion_gasto_asociado_data = region_data.pop('p_5_2_evolucion_gasto_asociado', [])
+                variacion_promedio_data = region_data.pop('p_5_2_variacion_promedio', [])
+                personal_directo_data = region_data.pop('p_5_3_a_personal_directo', [])
+                personal_indirecto_data = region_data.pop('p_5_3_b_personal_indirecto', [])
 
-                if costos_directos_data:
-                    for cobertura_data_item in costos_directos_data:
-                        cobertura_data_item['region'] = region.region
-                    self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance)
+                self.update_or_create_nested_instances(Paso5, paso_data, instance, region)
+                self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance, region)
+                self.update_or_create_nested_instances(CostosIndirectos, costos_indirectos_data, instance, region)
+                self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_por_subtitulo_data, instance, region)
+                self.update_or_create_nested_instances(EvolucionGastoAsociado, evolucion_gasto_asociado_data, instance, region)
+                self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance, region)
+                self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance, region)
+                self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance, region)
 
         return instance
