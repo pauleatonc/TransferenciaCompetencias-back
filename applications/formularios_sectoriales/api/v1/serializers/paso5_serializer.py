@@ -741,9 +741,27 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance, region)
                 self.update_or_create_nested_instances(CostosIndirectos, costos_indirectos_data, instance, region)
                 self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_por_subtitulo_data, instance, region)
-                self.update_or_create_nested_instances(EvolucionGastoAsociado, evolucion_gasto_asociado_data, instance, region)
                 self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance, region)
                 self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance, region)
                 self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance, region)
+
+                if evolucion_gasto_asociado_data is not None:
+                    for evolucion_gasto_asociado_data in evolucion_gasto_asociado_data:
+                        evolucion_gasto_id = evolucion_gasto_asociado_data.pop('id', None)
+                        costo_anio_data = evolucion_gasto_asociado_data.pop('costo_anio', [])
+
+                        evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
+                            id=evolucion_gasto_id,
+                            defaults=evolucion_gasto_asociado_data,
+                            formulario_sectorial=instance
+                        )
+
+                        for costo_data in costo_anio_data:
+                            costo_id = costo_data.pop('id', None)
+                            costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
+                            CostoAnio.objects.update_or_create(
+                                id=costo_id,
+                                defaults=costo_data
+                            )
 
         return instance
