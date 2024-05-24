@@ -242,7 +242,7 @@ def handle_costo_anio_save(sender, instance, **kwargs):
     transaction.on_commit(calcular_y_actualizar_wrapper)
 
 
-def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id, region):
+def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
     costos = list(CostoAnio.objects.filter(evolucion_gasto_id=evolucion_gasto_id).order_by('anio'))
     if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
         gasto_n_1 = costos[-1].costo if costos[-1].costo is not None else 0
@@ -257,7 +257,6 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id, region):
         evolucion_gasto = EvolucionGastoAsociado.objects.get(id=evolucion_gasto_id)
         VariacionPromedio.objects.update_or_create(
             formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
-            region=region,
             subtitulo_id=evolucion_gasto.subtitulo_id,
             defaults=variaciones
         )
