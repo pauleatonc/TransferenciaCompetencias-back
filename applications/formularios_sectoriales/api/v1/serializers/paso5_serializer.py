@@ -572,6 +572,7 @@ class RegionPaso5Serializer(serializers.Serializer):
 
 
 class Paso5GeneralSerializer(WritableNestedModelSerializer):
+    paso5encabezado = Paso5EncabezadoSerializer(read_only=True)
     solo_lectura = serializers.SerializerMethodField()
     listado_etapas = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
@@ -580,6 +581,8 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     class Meta:
         model = FormularioSectorial
         fields = [
+            'id',
+            'paso5encabezado',
             'solo_lectura',
             'regiones',
             'listado_estamentos',
@@ -705,7 +708,11 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 if delete_flag:
                     model.objects.filter(id=item_id).delete()
                 else:
-                    model.objects.filter(id=item_id).update(**data)
+                    # Obtener la instancia, actualizar los valores y guardarla
+                    obj = model.objects.get(id=item_id)
+                    for attr, value in data.items():
+                        setattr(obj, attr, value)
+                    obj.save()  # Esto debería disparar la señal post_save
             elif not delete_flag:
                 model.objects.create(formulario_sectorial=instance, **data)
 

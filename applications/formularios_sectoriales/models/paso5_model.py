@@ -118,7 +118,7 @@ class Paso5(PasoBase):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso5', null=True, blank=True)
 
     """5.1 Costos asociados al ejercicio de la competencia"""
@@ -190,30 +190,9 @@ class CostosDirectos(BaseModel):
     es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if self.item_subtitulo is not None:
-            self.actualizar_resumen_costos()
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-        if self.item_subtitulo is not None:
-            self.actualizar_resumen_costos()
-
-    def actualizar_resumen_costos(self):
-        try:
-            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id, region=self.region)
-            total = CostosDirectos.objects.filter(
-                formulario_sectorial_id=self.formulario_sectorial_id,
-                region=self.region
-            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-            paso.total_costos_directos = total
-            paso.save()
-        except Paso5.DoesNotExist:
-            pass
-
     class Meta:
         ordering = ['created_date']
+
 
 
 class CostosIndirectos(BaseModel):
@@ -227,26 +206,6 @@ class CostosIndirectos(BaseModel):
     es_transversal = models.BooleanField(blank=True, null=True, default=None)
     descripcion = models.TextField(max_length=500, blank=True)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self.actualizar_resumen_costos()
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-        self.actualizar_resumen_costos()
-
-    def actualizar_resumen_costos(self):
-        try:
-            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id, region=self.region)
-            total = CostosIndirectos.objects.filter(
-                formulario_sectorial_id=self.formulario_sectorial_id,
-                region=self.region
-            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-            paso.total_costos_indirectos = total
-            paso.save()
-        except Paso5.DoesNotExist:
-            pass
-
     class Meta:
         ordering = ['created_date']
 
@@ -259,25 +218,6 @@ class ResumenCostosPorSubtitulo(BaseModel):
     subtitulo = models.ForeignKey(Subtitulos, on_delete=models.CASCADE, related_name='resumen_costos')
     total_anual = models.DecimalField(max_digits=12, decimal_places=0, default=0)
     descripcion = models.TextField(max_length=300, blank=True)
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self.actualizar_resumen_costos()
-
-    def actualizar_resumen_costos(self):
-        try:
-            paso = Paso5.objects.get(formulario_sectorial_id=self.formulario_sectorial_id, region=self.region)
-            total = ResumenCostosPorSubtitulo.objects.filter(
-                formulario_sectorial_id=self.formulario_sectorial_id,
-                region=self.region
-            ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
-            paso.costos_totales = total
-            paso.save()
-        except Paso5.DoesNotExist:
-            pass
-
-    def __str__(self):
-        return f"{self.subtitulo.subtitulo} - Total Anual: {self.total_anual}"
 
     class Meta:
         ordering = ['subtitulo']
