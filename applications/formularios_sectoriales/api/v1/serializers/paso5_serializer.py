@@ -644,157 +644,97 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
         return regiones_data
 
     def to_internal_value(self, data):
-        # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
-        # Procesar campos anidados
-        for field_name in [
-            'p_5_1_a_costos_directos',
-            'p_5_1_b_costos_indirectos',
-            'p_5_1_c_resumen_costos_por_subtitulo',
-            'p_5_2_evolucion_gasto_asociado',
-            'p_5_2_variacion_promedio',
-            'p_5_3_a_personal_directo',
-            'p_5_3_b_personal_indirecto',
-        ]:
-            if field_name in data:
-                nested_data = data[field_name]
-                internal_nested_data = []
-                for item in nested_data:
-                    # Manejar la clave 'DELETE' si está presente
+        if 'regiones' in data:
+            nested_data = data['regiones']
+            internal_nested_data = []
+            for region_data in nested_data:
+                region = region_data.get('region')
+                paso_data = region_data.get('paso5', [])
+                costos_directos_data = region_data.get('p_5_1_a_costos_directos', [])
+                costos_indirectos_data = region_data.get('p_5_1_b_costos_indirectos', [])
+                resumen_costos_por_subtitulo_data = region_data.get('p_5_1_c_resumen_costos_por_subtitulo', [])
+                evolucion_gasto_asociado_data = region_data.get('p_5_2_evolucion_gasto_asociado', [])
+                variacion_promedio_data = region_data.get('p_5_2_variacion_promedio', [])
+                personal_directo_data = region_data.get('p_5_3_a_personal_directo', [])
+                personal_indirecto_data = region_data.get('p_5_3_b_personal_indirecto', [])
+
+                internal_paso_data = []
+                for item in paso_data:
                     if 'DELETE' in item and item['DELETE'] == True:
-                        if field_name == 'p_5_1_a_costos_directos':
-                            eliminar_instancia_costo(CostosDirectos, item['id'])
-                        elif field_name == 'p_5_1_b_costos_indirectos':
-                            eliminar_instancia_costo(CostosIndirectos, item['id'])
-                        elif field_name == 'p_5_2_evolucion_gasto_asociado':
-                            eliminar_instancia_costo(CostosIndirectos, item['id'])
-                        else:
-                            internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                        internal_paso_data.append({'id': item['id'], 'DELETE': True})
                     else:
-                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data = Paso5Serializer().to_internal_value(item)
                         item_data['id'] = item.get('id')
-                        internal_nested_data.append(item_data)
-                internal_value[field_name] = internal_nested_data
+                        internal_paso_data.append(item_data)
+
+                internal_data = []
+                for item in costos_directos_data:
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = CostosDirectosSerializer().to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_data.append(item_data)
+
+                internal_nested_data.append({
+                    'region': region,
+                    'paso5': internal_paso_data,
+                    'p_5_1_a_costos_directos': internal_data
+                })
+
+            internal_value['regiones'] = internal_nested_data
 
         return internal_value
 
     def update_or_create_nested_instances(self, model, nested_data, instance):
         for data in nested_data:
+            print(f"Processing data: {data}")
             item_id = data.pop('id', None)
             delete_flag = data.pop('DELETE', False)
+            region_name = data.pop('region', None)
+
+            # Obtener la instancia de Region
+            if region_name:
+                region = Region.objects.get(region=region_name)
+                data['region'] = region
 
             if item_id is not None:
                 if delete_flag:
+                    print(f"Deleting {model.__name__} with id: {item_id}")
                     model.objects.filter(id=item_id).delete()
                 else:
-                    obj, created = model.objects.update_or_create(
-                        id=item_id,
-                        formulario_sectorial=instance,
-                        defaults=data
-                    )
-                    # Llamar explícitamente a save() si es una instancia de PersonalIndirecto
-                    if model == PersonalIndirecto:
-                        obj.save()
+                    print(f"Updating {model.__name__} with id: {item_id}")
+                    model.objects.filter(id=item_id).update(**data)
             elif not delete_flag:
-                obj = model.objects.create(formulario_sectorial=instance, **data)
-                # Llamar explícitamente a save() si es una instancia de PersonalIndirecto
-                if model == PersonalIndirecto:
-                    obj.save()
+                print(f"Creating new {model.__name__} with data: {data}")
+                model.objects.create(formulario_sectorial=instance, **data)
 
     def update(self, instance, validated_data):
-        paso5 = validated_data.pop('paso5', None)
-        costos_directos_data = validated_data.pop('p_5_1_a_costos_directos', None)
-        costos_indirectos_data = validated_data.pop('p_5_1_b_costos_indirectos', None)
-        resumen_costos_data = validated_data.pop('p_5_1_c_resumen_costos_por_subtitulo', None)
-        evolucion_gasto_data = validated_data.pop('p_5_2_evolucion_gasto_asociado', None)
-        variacion_promedio_data = validated_data.pop('p_5_2_variacion_promedio', None)
-        personal_directo_data = validated_data.pop('p_5_3_a_personal_directo', None)
-        personal_indirecto_data = validated_data.pop('p_5_3_b_personal_indirecto', None)
+        regiones_data = validated_data.pop('regiones', None)
 
-        # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
-        # Actualizar o crear Paso5
-        if paso5 is not None:
-            self.update_paso5_instance(instance, paso5)
+        if regiones_data is not None:
+            for region_data in regiones_data:
+                region_name = region_data.get('region')
+                paso_data = region_data.pop('paso5', [])
+                costos_directos_data = region_data.pop('p_5_1_a_costos_directos', [])
 
-        # Actualizar o crear CostosDirectos
-        if costos_directos_data is not None:
-            for costo_data in costos_directos_data:
-                costo_id = costo_data.pop('id', None)
-                delete_flag = costo_data.pop('DELETE', False)
-                etapa_ids = costo_data.pop('etapa', None)  # Asume que etapa_ids es una lista de IDs
+                # Obtener la región correspondiente
+                region = instance.competencia.regiones.get(region=region_name)
 
-                if delete_flag and costo_id:
-                    CostosDirectos.objects.filter(id=costo_id).delete()
-                    continue
+                if paso_data:
+                    for paso_data in paso_data:
+                        paso_data['region'] = region.region
+                    self.update_or_create_nested_instances(Paso5, paso_data, instance)
 
-                # Excluyendo 'etapa' de defaults porque no se puede asignar directamente
-                costo_instance, _ = CostosDirectos.objects.update_or_create(
-                    id=costo_id,
-                    defaults={key: value for key, value in costo_data.items() if key != 'etapa'},
-                    formulario_sectorial=instance)
-
-                if etapa_ids is not None:
-                    # Asegurarse de que etapa_ids solo contenga números (IDs)
-                    costo_instance.etapa.set(etapa_ids)
-
-        # Actualizar o crear CostosIndirectos
-        if costos_indirectos_data is not None:
-            for costo_data in costos_indirectos_data:
-                costo_id = costo_data.pop('id', None)
-                delete_flag = costo_data.pop('DELETE', False)
-                etapa_ids = costo_data.pop('etapa', None)
-
-                if delete_flag and costo_id:
-                    CostosIndirectos.objects.filter(id=costo_id).delete()
-                    continue
-
-                costo_instance, _ = CostosIndirectos.objects.update_or_create(
-                    id=costo_id,
-                    defaults={key: value for key, value in costo_data.items() if key != 'etapa'},
-                    formulario_sectorial=instance)
-
-                if etapa_ids is not None:
-                    costo_instance.etapa.set(etapa_ids)  # Asume que etapa_ids es una lista de IDs
-
-        # Actualizar o crear ResumenCostosPorSubtitulo
-        if resumen_costos_data is not None:
-            self.update_or_create_nested_instances(ResumenCostosPorSubtitulo, resumen_costos_data, instance)
-
-        # Actualizar o crear EvolucionGastoAsociado
-        if evolucion_gasto_data is not None:
-            for evolucion_gasto_data in evolucion_gasto_data:
-                evolucion_gasto_id = evolucion_gasto_data.pop('id', None)
-                costo_anio_data = evolucion_gasto_data.pop('costo_anio', [])
-
-                evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
-                    id=evolucion_gasto_id,
-                    defaults=evolucion_gasto_data,
-                    formulario_sectorial=instance
-                )
-
-                for costo_data in costo_anio_data:
-                    costo_id = costo_data.pop('id', None)
-                    costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
-                    CostoAnio.objects.update_or_create(
-                        id=costo_id,
-                        defaults=costo_data
-                    )
-
-        # Actualizar o crear VariacionPromedio
-        if variacion_promedio_data is not None:
-            self.update_or_create_nested_instances(VariacionPromedio, variacion_promedio_data, instance)
-
-        # Actualizar o crear PersonalDirecto
-        if personal_directo_data is not None:
-            self.update_or_create_nested_instances(PersonalDirecto, personal_directo_data, instance)
-
-        # Actualizar o crear PersonalIndirecto
-        if personal_indirecto_data is not None:
-            self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance)
+                if costos_directos_data:
+                    for cobertura_data_item in costos_directos_data:
+                        cobertura_data_item['region'] = region.region
+                    self.update_or_create_nested_instances(CostosDirectos, costos_directos_data, instance)
 
         return instance
