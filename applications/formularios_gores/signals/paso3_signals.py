@@ -49,8 +49,9 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
     sector = formulario_sectorial.sector
+    region = instance.region  # Aseguramos que se utilice la región correspondiente
 
-    formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
+    formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region=region)
     for formulario_gore in formularios_gore:
         defaults = {
             'estamento': instance.estamento,
