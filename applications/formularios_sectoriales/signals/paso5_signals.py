@@ -26,34 +26,36 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         Paso5.objects.create(formulario_sectorial=instance)
 
 
-def regenerar_resumen_costos(formulario_sectorial_id):
-    # Obtener todos los subtitulos únicos para este formulario sectorial que tienen un item_subtitulo
+def regenerar_resumen_costos(formulario_sectorial_id, region):
     subtitulos_directos = set(
         CostosDirectos.objects.filter(
             formulario_sectorial_id=formulario_sectorial_id,
-            item_subtitulo__isnull=False  # Solo instancias con item_subtitulo
+            region=region,
+            item_subtitulo__isnull=False
         ).values_list('item_subtitulo__subtitulo_id', flat=True))
 
     subtitulos_indirectos = set(
         CostosIndirectos.objects.filter(
             formulario_sectorial_id=formulario_sectorial_id,
-            item_subtitulo__isnull=False  # Solo instancias con item_subtitulo
+            region=region,
+            item_subtitulo__isnull=False
         ).values_list('item_subtitulo__subtitulo_id', flat=True))
 
     subtitulos_unicos = subtitulos_directos.union(subtitulos_indirectos)
 
-    # Para cada subtitulo único, obtener o crear ResumenCostosPorSubtitulo y actualizar el total_anual
     for subtitulo_id in subtitulos_unicos:
         if subtitulo_id is None:
-            continue  # Saltar si subtitulo_id es None
+            continue
 
         total_directos = CostosDirectos.objects.filter(
             formulario_sectorial_id=formulario_sectorial_id,
+            region=region,
             item_subtitulo__subtitulo_id=subtitulo_id
         ).aggregate(total=Sum('total_anual'))['total'] or 0
 
         total_indirectos = CostosIndirectos.objects.filter(
             formulario_sectorial_id=formulario_sectorial_id,
+            region=region,
             item_subtitulo__subtitulo_id=subtitulo_id
         ).aggregate(total=Sum('total_anual'))['total'] or 0
 
@@ -61,116 +63,158 @@ def regenerar_resumen_costos(formulario_sectorial_id):
 
         resumen_costos, created = ResumenCostosPorSubtitulo.objects.get_or_create(
             formulario_sectorial_id=formulario_sectorial_id,
+            region=region,
             subtitulo_id=subtitulo_id,
             defaults={'total_anual': total_anual}
         )
         if not created:
-            resumen_costos.total_anual = total_anual  # Actualizar el total_anual
+            resumen_costos.total_anual = total_anual
             resumen_costos.save()
 
-    # Identificar y eliminar cualquier ResumenCostosPorSubtitulo obsoleto
     ResumenCostosPorSubtitulo.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
     ).exclude(
         subtitulo_id__in=subtitulos_unicos
     ).delete()
 
 
-def calcular_y_actualizar_variacion(formulario_sectorial_id):
+def actualizar_costo_anio_con_resumen(subtitulo_id, formulario_sectorial_id, region):
+    ultimo_año = CostoAnio.objects.filter(
+        evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
+        evolucion_gasto__region=region,
+        evolucion_gasto__subtitulo_id=subtitulo_id
+    ).aggregate(Max('anio'))['anio__max']
+
+    if ultimo_año:
+        resumen = ResumenCostosPorSubtitulo.objects.filter(
+            subtitulo_id=subtitulo_id,
+            formulario_sectorial_id=formulario_sectorial_id,
+            region=region
+        ).first()
+        if resumen:
+            costo_anio = CostoAnio.objects.get(
+                evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
+                evolucion_gasto__region=region,
+                evolucion_gasto__subtitulo_id=subtitulo_id,
+                anio=ultimo_año
+            )
+            costo_anio.costo = resumen.total_anual
+            costo_anio.save()
+
+
+def calcular_y_actualizar_variacion(formulario_sectorial_id, region):
     subtitulos_ids = EvolucionGastoAsociado.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
     ).values_list('subtitulo_id', flat=True).distinct()
 
     for subtitulo_id in subtitulos_ids:
         evolucion_gasto = EvolucionGastoAsociado.objects.filter(
             formulario_sectorial_id=formulario_sectorial_id,
+            region=region,
             subtitulo_id=subtitulo_id
         ).first()
 
         if evolucion_gasto:
             costos = list(CostoAnio.objects.filter(evolucion_gasto=evolucion_gasto).order_by('anio'))
-            if len(costos) > 1:  # Asegurarse de que hay al menos dos costos para calcular variaciones
-                gasto_n_1 = costos[-1].costo if costos[-1] and costos[-1].costo is not None else 0
+            if len(costos) > 1:
+                gasto_n_1 = costos[-1].costo if costos[-1].costo is not None else 0
                 variaciones = {}
 
-                # Calcular variaciones desde el primero hasta el penúltimo costo
                 for i in range(len(costos) - 1):
-                    costo_actual = costos[i].costo if costos[i] and costos[i].costo is not None else 0
+                    costo_actual = costos[i].costo if costos[i].costo is not None else 0
                     variacion = costo_actual - gasto_n_1
                     variaciones[f'variacion_gasto_n_{5 - i}'] = variacion
 
                 VariacionPromedio.objects.update_or_create(
-                    formulario_sectorial_id=formulario_sectorial_id,
+                    formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
+                    region=region,
                     subtitulo_id=subtitulo_id,
                     defaults=variaciones
                 )
 
 
-def actualizar_evolucion_y_variacion(formulario_sectorial_id):
-    # Obtiene IDs de subtitulos a partir de CostosDirectos y CostosIndirectos con item_subtitulo no nulo
+def actualizar_evolucion_y_variacion(formulario_sectorial_id, region):
     subtitulos_directos_ids = CostosDirectos.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id, item_subtitulo__isnull=False
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region,
+        item_subtitulo__isnull=False
     ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
 
     subtitulos_indirectos_ids = CostosIndirectos.objects.filter(
-        formulario_sectorial_id=formulario_sectorial_id, item_subtitulo__isnull=False
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region,
+        item_subtitulo__isnull=False
     ).values_list('item_subtitulo__subtitulo_id', flat=True).distinct()
 
-    # Combina y elimina duplicados para obtener todos los IDs de subtitulo únicos
     subtitulos_unicos_ids = set(subtitulos_directos_ids) | set(subtitulos_indirectos_ids)
 
     for subtitulo_id in subtitulos_unicos_ids:
-        if subtitulo_id is not None:  # Asegura que el subtitulo_id no sea nulo
-            # Asegura la existencia de EvolucionGastoAsociado solo para subtitulos válidos
+        if subtitulo_id is not None:
             EvolucionGastoAsociado.objects.get_or_create(
                 formulario_sectorial_id=formulario_sectorial_id,
+                region=region,
                 subtitulo_id=subtitulo_id,
             )
 
-            # Asegura la existencia de VariacionPromedio (sin calcular la variación aquí) solo para subtitulos válidos
             VariacionPromedio.objects.get_or_create(
                 formulario_sectorial_id=formulario_sectorial_id,
+                region=region,
                 subtitulo_id=subtitulo_id,
             )
 
-    # Ahora llama a la función para calcular y actualizar la variación promedio para los subtitulos válidos
-    calcular_y_actualizar_variacion(formulario_sectorial_id)
+    calcular_y_actualizar_variacion(formulario_sectorial_id, region)
 
-    # Eliminar instancias obsoletas de EvolucionGastoAsociado y VariacionPromedio que no corresponden a subtitulos válidos
-    EvolucionGastoAsociado.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
-        subtitulo_id__in=subtitulos_unicos_ids).delete()
-    VariacionPromedio.objects.filter(formulario_sectorial_id=formulario_sectorial_id).exclude(
-        subtitulo_id__in=subtitulos_unicos_ids).delete()
+    EvolucionGastoAsociado.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
+    ).exclude(
+        subtitulo_id__in=subtitulos_unicos_ids
+    ).delete()
+    VariacionPromedio.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
+    ).exclude(
+        subtitulo_id__in=subtitulos_unicos_ids
+    ).delete()
 
 
-def actualizar_costo_anio_con_resumen(subtitulo_id, formulario_sectorial_id):
-    # Obtener el año más reciente de CostoAnio
-    ultimo_año = CostoAnio.objects.filter(evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
-                                          evolucion_gasto__subtitulo_id=subtitulo_id).aggregate(Max('anio'))['anio__max']
+def actualizar_totales_paso5(formulario_sectorial_id, region):
+    paso5 = Paso5.objects.filter(formulario_sectorial_id=formulario_sectorial_id, region=region).first()
+    if not paso5:
+        return
 
-    if ultimo_año:
-        # Obtener el total anual del ResumenCostosPorSubtitulo para ese subtitulo
-        resumen = ResumenCostosPorSubtitulo.objects.filter(subtitulo_id=subtitulo_id,
-                                                           formulario_sectorial_id=formulario_sectorial_id).first()
-        if resumen:
-            # Actualizar el costo del año más reciente en CostoAnio
-            costo_anio = CostoAnio.objects.get(evolucion_gasto__formulario_sectorial_id=formulario_sectorial_id,
-                                               evolucion_gasto__subtitulo_id=subtitulo_id, anio=ultimo_año)
-            costo_anio.costo = resumen.total_anual
-            costo_anio.save()
+    total_costos_directos = CostosDirectos.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
+    ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+    total_costos_indirectos = CostosIndirectos.objects.filter(
+        formulario_sectorial_id=formulario_sectorial_id,
+        region=region
+    ).aggregate(Sum('total_anual'))['total_anual__sum'] or 0
+
+    costos_totales = total_costos_directos + total_costos_indirectos
+
+    paso5.total_costos_directos = total_costos_directos
+    paso5.total_costos_indirectos = total_costos_indirectos
+    paso5.costos_totales = costos_totales
+    paso5.save()
 
 
 @receiver(post_save, sender=CostosDirectos)
 @receiver(post_save, sender=CostosIndirectos)
 @receiver(post_delete, sender=CostosDirectos)
 @receiver(post_delete, sender=CostosIndirectos)
-def actualizar_resumen_costos(sender, instance, **kwargs):
-    regenerar_resumen_costos(instance.formulario_sectorial_id)
-    actualizar_evolucion_y_variacion(instance.formulario_sectorial_id)
+def manejar_costo(sender, instance, **kwargs):
+    regenerar_resumen_costos(instance.formulario_sectorial_id, instance.region)
+    actualizar_evolucion_y_variacion(instance.formulario_sectorial_id, instance.region)
+    actualizar_totales_paso5(instance.formulario_sectorial_id, instance.region)
 
     if hasattr(instance, 'item_subtitulo') and instance.item_subtitulo:
         subtitulo_id = instance.item_subtitulo.subtitulo_id
-        actualizar_costo_anio_con_resumen(subtitulo_id, instance.formulario_sectorial_id)
+        actualizar_costo_anio_con_resumen(subtitulo_id, instance.formulario_sectorial_id, instance.region)
 
 
 @receiver(post_save, sender=EvolucionGastoAsociado)
@@ -261,7 +305,6 @@ def calcular_total_por_calidad(modelo, paso5_instance, calidad_juridica):
     ))
 
 
-
 items_y_campos_directos = {
     "01 - Personal de Planta": "sub21_total_personal_planta",
     "02 - Personal de Contrata": "sub21_total_personal_contrata",
@@ -313,7 +356,7 @@ def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, it
         return
 
     try:
-        paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial)
+        paso5_instance = Paso5.objects.get(formulario_sectorial=instance.formulario_sectorial, region=instance.region)
         total_especifico = 0
 
         # Calcular totales por item
@@ -333,25 +376,24 @@ def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, it
         if tipo_modelo == 'indirecto':
             total_general = sum(
                 (personal.total_rentas or 0) for personal in PersonalIndirecto.objects.filter(
-                    formulario_sectorial=paso5_instance.formulario_sectorial
+                    formulario_sectorial=paso5_instance.formulario_sectorial,
+                    region=instance.region
                 )
             )
         elif tipo_modelo == 'directo':
             total_general = sum(
                 (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
-                    formulario_sectorial=paso5_instance.formulario_sectorial
+                    formulario_sectorial=paso5_instance.formulario_sectorial,
+                    region=instance.region
                 )
             )
 
-        # Calcular el total de "otras calidades"
         total_otras_calidades = total_general - total_especifico
         if tipo_modelo == 'indirecto':
             paso5_instance.sub21b_gastos_en_personal_justificado = total_otras_calidades
         elif tipo_modelo == 'directo':
             paso5_instance.sub21_gastos_en_personal_justificado = total_otras_calidades
-            pass
 
-        # Calcular costos por justificar usando el argumento `campos_costos_justificar`
         calcular_costos_por_justificar(paso5_instance, campos_costos_justificar)
 
         paso5_instance.save()
@@ -402,56 +444,56 @@ relacion_item_calidad = {
 
 
 def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, created=False):
-    """
-    Actualiza o elimina las instancias de Personal (Directo o Indirecto) basándose en el estado del item_subtitulo
-    seleccionado en el modelo de costos. Específicamente, maneja la creación de instancias excluyendo el caso
-    "04 - Otros Gastos en Personal".
-    """
-    # Manejar la creación o actualización de costos
     if instance.item_subtitulo:
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
 
         if item_subtitulo_texto == "04 - Otros Gastos en Personal" and not created:
-            # Si estamos actualizando y es el caso especial "04 - Otros Gastos en Personal",
-            # verifica si se deben eliminar instancias de personal asociadas
-            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo).exists():
-                # No hay más costos asociados a este ítem, eliminar todas las instancias de personal relacionadas
+            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo,
+                                                region=instance.region).exists():
                 personal_asociado = modelo_personal.objects.filter(
                     formulario_sectorial=instance.formulario_sectorial,
-                    calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in calidades]
+                    region=instance.region,
+                    calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in
+                                          calidades]
                 )
                 personal_asociado.delete()
-            return  # Finaliza la ejecución para este caso
+            return
 
         if not isinstance(calidades, list):
             calidades = [calidades]
 
         for calidad in calidades:
             calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
-            # Solo crea la instancia de personal si aún no existe y no es el caso especial "04 - Otros Gastos en Personal"
-            if not modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
-                                                  calidad_juridica=calidad_juridica_obj).exists():
+            if not modelo_personal.objects.filter(
+                    formulario_sectorial=instance.formulario_sectorial,
+                    region=instance.region,
+                    calidad_juridica=calidad_juridica_obj
+            ).exists():
                 modelo_personal.objects.create(
                     formulario_sectorial=instance.formulario_sectorial,
+                    region=instance.region,
                     calidad_juridica=calidad_juridica_obj
                 )
 
-def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
-    """
-    Elimina instancias asociadas a los ítems si ya no existen costos vinculados.
-    """
 
-    # Eliminación de instancias de personal que ya no tienen costos asociados.
+def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
     for calidad, _ in relacion_item_calidad.items():
-        calidades = relacion_item_calidad[calidad] if isinstance(relacion_item_calidad[calidad], list) else [relacion_item_calidad[calidad]]
+        calidades = relacion_item_calidad[calidad] if isinstance(relacion_item_calidad[calidad], list) else [
+            relacion_item_calidad[calidad]]
         for calidad in calidades:
             try:
                 calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
-                if not modelo_costos.objects.filter(formulario_sectorial=instance.formulario_sectorial,
-                                                    item_subtitulo__item=calidad).exists():
-                    modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
-                                                   calidad_juridica=calidad_juridica_obj).delete()
+                if not modelo_costos.objects.filter(
+                        formulario_sectorial=instance.formulario_sectorial,
+                        region=instance.region,
+                        item_subtitulo__item=calidad
+                ).exists():
+                    modelo_personal.objects.filter(
+                        formulario_sectorial=instance.formulario_sectorial,
+                        region=instance.region,
+                        calidad_juridica=calidad_juridica_obj
+                    ).delete()
             except CalidadJuridica.DoesNotExist:
                 continue
 

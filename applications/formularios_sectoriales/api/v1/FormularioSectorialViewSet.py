@@ -16,7 +16,7 @@ from .serializers import (
     Paso2Serializer,
     Paso3GeneralSerializer,
     Paso4GeneralSerializer,
-    Paso5Serializer,
+    Paso5GeneralSerializer,
     ResumenFormularioSerializer,
     ObservacionesSubdereSerializer,
     MarcoJuridicoSerializer
@@ -158,7 +158,7 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get', 'patch'], url_path='paso-5')
     def paso_5(self, request, pk=None):
         formulario_sectorial = self.get_object()
-        return manejar_permiso_patch(request, formulario_sectorial, Paso5Serializer)
+        return manejar_permiso_patch(request, formulario_sectorial, Paso5GeneralSerializer)
 
     @action(detail=True, methods=['get', 'patch'], url_path='resumen')
     def resumen(self, request, pk=None):
