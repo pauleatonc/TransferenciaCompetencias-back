@@ -39,8 +39,9 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
     formulario_sectorial = instance.formulario_sectorial
     competencia = formulario_sectorial.competencia
     sector = formulario_sectorial.sector
+    region = instance.region
 
-    formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
+    formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region=region)
     for formulario_gore in formularios_gore:
         try:
             # Busca la instancia GORE basada en el campo `id_sectorial`
@@ -48,6 +49,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
                 formulario_gore=formulario_gore,
                 id_sectorial=instance.id
             )
+            print(f"Actualizando instancia GORE {obj.id}")
         except modelo_gore.DoesNotExist:
             # Si no existe, crea una nueva instancia vinculada con el ID sectorial
             obj = modelo_gore(
@@ -60,6 +62,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
                 id_sectorial=instance.id  # Copia el ID de la instancia sectorial
             )
             obj.save()
+            print(f"Creada nueva instancia GORE {obj.id}")
             continue
 
         # Actualiza los campos en el objeto GORE
@@ -88,7 +91,7 @@ def crear_o_actualizar_instancias_gore(modelo_gore, instance, created):
         # Guarda los cambios en la instancia GORE solo si hubo modificaciones
         if changed:
             obj.save()
-
+            print(f"Instancia GORE {obj.id} actualizada")
 
 
 @receiver(post_save, sender=CostosDirectosSectorial)

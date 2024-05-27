@@ -3,10 +3,12 @@ from django.utils.translation import gettext as _
 
 from .base_model import PasoBase, FormularioSectorial
 from applications.base.models import BaseModel
+from applications.regioncomuna.models import Region
 
 
-class Paso3(PasoBase):
+class Paso3Encabezado(PasoBase):
 
+    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3encabezado', null=True, blank=True)
     @property
     def nombre_paso(self):
         return 'Cobertura de la Competencia'
@@ -15,6 +17,18 @@ class Paso3(PasoBase):
     def numero_paso(self):
         return 3
 
+    def avance_numerico(self):
+        pasos3 = Paso3.objects.filter(formulario_sectorial=self.formulario_sectorial)
+        total_pasos = pasos3.count()
+        pasos_completos = sum(1 for paso in pasos3 if paso.avance().split('/')[0] == paso.avance().split('/')[1])
+        return pasos_completos, total_pasos
+
+    def avance(self):
+        pasos_completos, total_pasos = self.avance_numerico()
+        return f"{pasos_completos}/{total_pasos}"
+
+
+class Paso3(PasoBase):
     def avance_numerico(self):
         # Lista de campos que no son estrictamente numéricos y son obligatorios
         campos_obligatorios_texto = [
@@ -43,7 +57,8 @@ class Paso3(PasoBase):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
-    formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso3', null=True, blank=True)
 
     """Campos descripción Cobertura de la Competencia"""
     universo_cobertura = models.TextField(max_length=800, blank=True)
@@ -52,6 +67,7 @@ class Paso3(PasoBase):
 
 class CoberturaAnual(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='cobertura_anual')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='cobertura_anual', null=True, blank=True)
     anio = models.IntegerField()
     universo_cobertura = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     cobertura_efectivamente_abordada = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)

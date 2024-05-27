@@ -60,7 +60,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         'usuarios_sectoriales__nombre_completo',
         'usuarios_gore__nombre_completo'
     ]
-    ordering_fields = ['id']
+    ordering_fields = ['-id']
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
@@ -129,7 +129,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='lista-home')
     def lista_home(self, request):
         user = request.user
-        queryset = Competencia.objects.all().order_by('id')
+        queryset = Competencia.objects.all().order_by('-id')
 
         # Filtrar según el tipo de usuario
         if user.groups.filter(name='SUBDERE').exists():
@@ -157,6 +157,8 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         Permite la creación de una nueva competencia.
         Acceso restringido a usuarios SUBDERE o superusuarios.
         """
+        print("Datos recibidos para creación Competencia:", request.data)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         competencia = serializer.save(creado_por=request.user)

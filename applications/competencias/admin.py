@@ -51,6 +51,10 @@ class CompetenciaResource(ModelResource):
     class Meta:
         model = Competencia
 
+class CompetenciaAgrupadaInline(admin.TabularInline):
+    model = CompetenciaAgrupada
+    extra = 0
+
 class Paso1InLine(admin.TabularInline):
     model = Paso1RevisionFinalSubdere
     extra = 0
@@ -70,14 +74,15 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
     fieldsets = (
         (None, {
             'fields': (
-            'nombre', 'creado_por', 'sectores', 'regiones', 'ambito_competencia', 'origen', 'fecha_inicio', 'fecha_fin',
-            'plazo_formulario_sectorial', 'plazo_formulario_gore', 'oficio_origen')
+            'nombre', 'agrupada', 'creado_por', 'sectores', 'regiones', 'ambito_competencia', 'origen', 'fecha_inicio', 'fecha_fin',
+            'formulario_final_enviado', 'plazo_formulario_sectorial', 'plazo_formulario_gore', 'oficio_origen')
         }),
         ('Usuarios', {
             'fields': ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')
         }),
     )
     inlines = [
+        CompetenciaAgrupadaInline,
         Etapa1Inline,
         Etapa2Inline,
         Etapa3Inline,
