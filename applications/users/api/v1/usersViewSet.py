@@ -108,6 +108,7 @@ class UserViewSet(viewsets.ModelViewSet):
             'tipo_usuario',
         """
         user_serializer = self.serializer_class(data=request.data)
+        print("Datos recibidos para POST:", request.data)
         if user_serializer.is_valid():
             user_serializer.save()
             return Response({
