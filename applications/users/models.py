@@ -1,18 +1,15 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, Group
-from django.db.models.signals import post_save, m2m_changed
-from django.dispatch import receiver
 from django.db import models
 from rest_framework.exceptions import ValidationError
-
-#
-from .functions import validar_rut
-from .managers import UserManager
 # apps de terceros
 from simple_history.models import HistoricalRecords
+
 #
 from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
-from applications.competencias.models import Competencia
+#
+from .functions import validar_rut
+from .managers import UserManager
 
 
 class User(AbstractBaseUser, PermissionsMixin):
