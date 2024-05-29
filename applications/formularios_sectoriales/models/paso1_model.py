@@ -47,6 +47,13 @@ class Paso1(PasoBase):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
 
+    @property
+    def multiplicador_caracteres_region(self):
+        # Accede a las regiones asociadas a la competencia a través del formulario sectorial
+        competencia = self.formulario_sectorial.competencia
+        numero_regiones = competencia.regiones.count()
+        return numero_regiones * 500
+
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
 
     """1.1  Ficha de descripción organizacional"""
