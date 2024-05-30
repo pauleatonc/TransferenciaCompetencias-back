@@ -28,6 +28,13 @@ class Paso5Encabezado(PasoBase):
         pasos_completos, total_pasos = self.avance_numerico()
         return f"{pasos_completos}/{total_pasos}"
 
+    @property
+    def multiplicador_caracteres_region(self):
+        # Accede a las regiones asociadas a la competencia a través del formulario sectorial
+        competencia = self.formulario_sectorial.competencia
+        numero_regiones = competencia.regiones.count()
+        return numero_regiones * 500
+
 
 class Paso5(PasoBase):
 

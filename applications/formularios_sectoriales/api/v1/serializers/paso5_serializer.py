@@ -343,6 +343,7 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
 class Paso5EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
+    multiplicador_caracteres_region = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
@@ -353,6 +354,7 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
             'id',
             'nombre_paso',
             'numero_paso',
+            'multiplicador_caracteres_region',
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
