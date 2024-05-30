@@ -14,10 +14,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     password = serializers.CharField(write_only=True, required=True)
     grupo_de_usuario = serializers.SerializerMethodField()
     competencias_asignadas = serializers.SerializerMethodField()
+    asignar_competencias = serializers.ListField(
+        child=serializers.DictField(),  # Asume que recibirás una lista de diccionarios
+        write_only=True,
+        required=False
+    )
     created = serializers.DateTimeField(format="%d/%m/%Y", read_only=True)
     last_login_display = serializers.SerializerMethodField()
 
@@ -35,6 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'grupo_de_usuario',
             'competencias_asignadas',
+            'asignar_competencias',  # Campo para asignar competencias
             'created',
             'last_login_display',
         )
@@ -46,36 +51,30 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        competencias_modificar = validated_data.pop('competencias_modificar', [])
+        competencias_asignadas = validated_data.pop('asignar_competencias', [])
+        password = validated_data.pop('password', None)
+
         user = User.objects.create(**validated_data)
-        if validated_data.get('password'):
-            user.set_password(validated_data['password'])
+        if password:
+            user.set_password(password)
         user.save()
 
-        # Procesar competencias para modificar
-        for competencia_data in competencias_modificar:
+        # Procesar competencias asignadas
+        for competencia_data in competencias_asignadas:
             competencia_id = competencia_data.get('id')
-            action = competencia_data.get('action')
-
             try:
                 competencia = Competencia.objects.get(id=competencia_id)
 
-                if action == 'add':
-                    # Usuarios SUBDERE o DIPRES pueden ser asignados a cualquier competencia
-                    if user.perfil in ['SUBDERE', 'DIPRES']:
-                        competencia.usuarios_subdere.add(user)
-                        competencia.usuarios_dipres.add(user)
-
-                    # Usuarios Sectoriales solo a competencias con sectores coincidentes
-                    elif user.perfil == 'Usuario Sectorial' and user.sector in competencia.sectores.all():
-                        competencia.usuarios_sectoriales.add(user)
-
-                    # Usuarios GORE solo a competencias con regiones coincidentes
-                    elif user.perfil == 'GORE' and user.region in competencia.regiones.all():
-                        competencia.usuarios_gore.add(user)
+                # Asignar competencias basándose en el perfil del usuario
+                if user.perfil in ['SUBDERE', 'DIPRES']:
+                    competencia.usuarios_subdere.add(user)
+                    competencia.usuarios_dipres.add(user)
+                elif user.perfil == 'Usuario Sectorial' and user.sector in competencia.sectores.all():
+                    competencia.usuarios_sectoriales.add(user)
+                elif user.perfil == 'GORE' and user.region in competencia.regiones.all():
+                    competencia.usuarios_gore.add(user)
 
             except Competencia.DoesNotExist:
-                # Manejar el caso en que la competencia no exista
                 pass
 
         return user
@@ -84,10 +83,7 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.is_superuser:
             return 'Superusuario'
 
-        # Obtener nombres de todos los grupos a los que pertenece el usuario
         group_names = [group.name for group in obj.groups.all()]
-
-        # Si pertenece a algún grupo, retornar esos nombres unidos por coma
         if group_names:
             return ', '.join(group_names)
 
@@ -109,12 +105,11 @@ class UserSerializer(serializers.ModelSerializer):
         return CompetenciaListAllSerializer(competencias, many=True).data
 
     def get_last_login_display(self, obj):
-        # Este método retorna el valor personalizado para el campo 'last_login_display'
         if obj.last_login is None:
             return "Aún no ha iniciado sesión"
         else:
-            # Formatea last_login como deseas, por ejemplo, en 'dd/mm/yyyy'
             return obj.last_login.strftime("%d/%m/%Y")
+
 
 
 class UpdateUserSerializer(serializers.ModelSerializer):
