@@ -57,10 +57,10 @@ class Paso1(PasoBase):
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso1')
 
     """1.1  Ficha de descripción organizacional"""
-    forma_juridica_organismo = models.TextField(max_length=500, blank=True)
-    descripcion_archivo_marco_juridico = models.TextField(max_length=500, blank=True)
-    mision_institucional = models.TextField(max_length=500, blank=True)
-    informacion_adicional_marco_juridico = models.TextField(max_length=500, blank=True)
+    forma_juridica_organismo = models.TextField(max_length=9000, blank=True)
+    descripcion_archivo_marco_juridico = models.TextField(max_length=9000, blank=True)
+    mision_institucional = models.TextField(max_length=9000, blank=True)
+    informacion_adicional_marco_juridico = models.TextField(max_length=9000, blank=True)
 
 
     """1.2 Organización Institucional"""
@@ -70,18 +70,18 @@ class Paso1(PasoBase):
                                          ['pdf'], message='Solo se permiten archivos PDF.'),
                                      validate_file_size_twenty],
                                  verbose_name='Organigrama Nacional', blank=True, null=True)
-    descripcion_archivo_organigrama_nacional = models.TextField(max_length=500, blank=True)
-    descripcion_archivo_organigrama_regional = models.TextField(max_length=500, blank=True)
+    descripcion_archivo_organigrama_nacional = models.TextField(max_length=9000, blank=True)
+    descripcion_archivo_organigrama_regional = models.TextField(max_length=9000, blank=True)
 
 
     """1.3 Marco Regulatorio y funcional de la competencia"""
-    identificacion_competencia = models.TextField(max_length=500, blank=True)
-    fuentes_normativas = models.TextField(max_length=500, blank=True)
-    territorio_competencia = models.TextField(max_length=500, blank=True)
-    enfoque_territorial_competencia = models.TextField(max_length=500, blank=True)
+    identificacion_competencia = models.TextField(max_length=9000, blank=True)
+    fuentes_normativas = models.TextField(max_length=9000, blank=True)
+    territorio_competencia = models.TextField(max_length=9000, blank=True)
+    enfoque_territorial_competencia = models.TextField(max_length=9000, blank=True)
     ambito_paso1 = models.ForeignKey(Ambito, on_delete=models.CASCADE, related_name='paso1', null=True, blank=True)
-    posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=500, blank=True)
-    organo_actual_competencia = models.TextField(max_length=500, blank=True)
+    posibilidad_ejercicio_por_gobierno_regional = models.TextField(max_length=9000, blank=True)
+    organo_actual_competencia = models.TextField(max_length=9000, blank=True)
 
 
 class MarcoJuridico(BaseModel):

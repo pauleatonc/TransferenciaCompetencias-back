@@ -151,6 +151,7 @@ class CostosIndirectosSerializer(serializers.ModelSerializer):
 
 class ResumenCostosPorSubtituloSerializer(serializers.ModelSerializer):
     nombre_subtitulo = serializers.SerializerMethodField()
+    subtitulo = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = ResumenCostosPorSubtitulo

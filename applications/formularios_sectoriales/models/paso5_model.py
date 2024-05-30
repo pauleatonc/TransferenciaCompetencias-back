@@ -201,7 +201,6 @@ class CostosDirectos(BaseModel):
         ordering = ['created_date']
 
 
-
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_1_b_costos_indirectos')
