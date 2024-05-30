@@ -258,6 +258,7 @@ def calcular_y_actualizar_variacion_para_costo_anio(evolucion_gasto_id):
         VariacionPromedio.objects.update_or_create(
             formulario_sectorial_id=evolucion_gasto.formulario_sectorial_id,
             subtitulo_id=evolucion_gasto.subtitulo_id,
+            region=evolucion_gasto.region,
             defaults=variaciones
         )
 

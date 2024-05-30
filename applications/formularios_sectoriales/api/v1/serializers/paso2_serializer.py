@@ -1,6 +1,6 @@
-from drf_writable_nested import WritableNestedModelSerializer
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from applications.competencias.models import Competencia
+
 from applications.formularios_sectoriales.models import (
     FormularioSectorial,
     OrganismosIntervinientes,
@@ -10,13 +10,7 @@ from applications.formularios_sectoriales.models import (
     PlataformasySoftwares,
     FlujogramaCompetencia
 )
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
 from applications.formularios_sectoriales.models import Paso2
-from .base_serializer import FormularioSectorialDetailSerializer
 
 User = get_user_model()
 
@@ -150,6 +144,7 @@ class FlujogramaCompetenciaSerializer(serializers.ModelSerializer):
 class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
+    multiplicador_caracteres_region = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
@@ -160,6 +155,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'id',
             'nombre_paso',
             'numero_paso',
+            'multiplicador_caracteres_region',
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',

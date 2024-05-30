@@ -1,13 +1,9 @@
-import os
 from django.core.validators import FileExtensionValidator
-
-from .base_model import PasoBase, FormularioSectorial
 from django.db import models
 
-from ..functions import organigrama_regional_path
-from ...base.models import BaseModel
 from applications.base.functions import validate_file_size_twenty
-from ...regioncomuna.models import Region
+from .base_model import PasoBase, FormularioSectorial
+from applications.base.models import BaseModel
 
 
 class Paso2(PasoBase):
@@ -56,6 +52,13 @@ class Paso2(PasoBase):
     def avance(self):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
+
+    @property
+    def multiplicador_caracteres_region(self):
+        # Accede a las regiones asociadas a la competencia a través del formulario sectorial
+        competencia = self.formulario_sectorial.competencia
+        numero_regiones = competencia.regiones.count()
+        return numero_regiones * 500
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
