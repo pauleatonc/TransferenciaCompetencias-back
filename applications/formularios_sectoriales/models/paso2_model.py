@@ -58,7 +58,7 @@ class Paso2(PasoBase):
         # Accede a las regiones asociadas a la competencia a través del formulario sectorial
         competencia = self.formulario_sectorial.competencia
         numero_regiones = competencia.regiones.count()
-        return numero_regiones * 500
+        return 500 + numero_regiones * 200
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 

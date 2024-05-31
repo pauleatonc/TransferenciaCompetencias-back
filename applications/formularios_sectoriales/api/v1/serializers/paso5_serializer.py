@@ -176,10 +176,16 @@ class CostoAnioSerializer(serializers.ModelSerializer):
             'costo',
         ]
 
+    def to_internal_value(self, data):
+        if 'id' in data and data['id'] is not None:
+            return data
+        return super().to_internal_value(data)
+
 
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
     nombre_subtitulo = serializers.SerializerMethodField()
-    costo_anio = CostoAnioSerializer(many=True)
+    costo_anio = CostoAnioSerializer(many=True, required=False)
+    subtitulo = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = EvolucionGastoAsociado
@@ -195,17 +201,17 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
         return obj.subtitulo.nombre_item if obj.subtitulo else None
 
     def to_internal_value(self, data):
-        # Maneja primero los campos no anidados
         internal_value = super().to_internal_value(data)
 
         if 'costo_anio' in data:
             costo_anio = data.get('costo_anio')
             internal_costo_anio = []
             for item in costo_anio:
-                costo_anio_id = item.get('id')  # Extraer el ID
-                costo_anio_data = self.fields['costo_anio'].child.to_internal_value(item)
-                costo_anio_data['id'] = costo_anio_id  # Asegurarse de que el ID se incluya
-                internal_costo_anio.append(costo_anio_data)
+                costo_anio_id = item.get('id')
+                if costo_anio_id is not None:
+                    internal_costo_anio.append({'id': costo_anio_id, 'costo': item.get('costo', None)})
+                else:
+                    internal_costo_anio.append(self.fields['costo_anio'].child.to_internal_value(item))
             internal_value['costo_anio'] = internal_costo_anio
 
         return internal_value
@@ -368,9 +374,6 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
 class Paso5Serializer(serializers.ModelSerializer):
     avance = serializers.SerializerMethodField()
 
-    años = serializers.SerializerMethodField(read_only=True)
-    años_variacion = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = Paso5
         fields = [
@@ -383,8 +386,6 @@ class Paso5Serializer(serializers.ModelSerializer):
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
-            'años',
-            'años_variacion',
             'sub21_total_personal_planta',
             'sub21_personal_planta_justificado',
             'sub21_personal_planta_justificar',
@@ -411,29 +412,6 @@ class Paso5Serializer(serializers.ModelSerializer):
             'sub21b_gastos_en_personal_justificar'
         ]
 
-    def get_años(self, obj):
-        competencia = obj.formulario_sectorial.competencia
-        if competencia and competencia.fecha_inicio:
-            año_actual = competencia.fecha_inicio.year
-            años = list(range(año_actual - 5, año_actual))
-            return años
-        return []
-
-    def get_años_variacion(self, obj):
-        competencia = obj.formulario_sectorial.competencia
-        if competencia and competencia.fecha_inicio:
-            año_actual = competencia.fecha_inicio.year
-            n_5 = año_actual - 5
-            n_4 = año_actual - 4
-            n_3 = año_actual - 3
-            n_2 = año_actual - 2
-            return {
-                'n_5': n_5,
-                'n_4': n_4,
-                'n_3': n_3,
-                'n_2': n_2,
-            }
-        return {}
 
     def avance(self, obj):
         return obj.avance()
@@ -580,6 +558,8 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     listado_etapas = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
     regiones = serializers.SerializerMethodField()
+    años = serializers.SerializerMethodField(read_only=True)
+    años_variacion = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = FormularioSectorial
@@ -589,7 +569,9 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
             'solo_lectura',
             'regiones',
             'listado_estamentos',
-            'listado_etapas'
+            'listado_etapas',
+            'años',
+            'años_variacion',
         ]
 
     def get_solo_lectura(self, obj):
@@ -606,6 +588,30 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
+
+    def get_años(self, obj):
+        competencia = obj.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            años = list(range(año_actual - 5, año_actual))
+            return años
+        return []
+
+    def get_años_variacion(self, obj):
+        competencia = obj.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            n_5 = año_actual - 5
+            n_4 = año_actual - 4
+            n_3 = año_actual - 3
+            n_2 = año_actual - 2
+            return {
+                'n_5': n_5,
+                'n_4': n_4,
+                'n_3': n_3,
+                'n_2': n_2,
+            }
+        return {}
 
     def get_regiones(self, obj):
         regiones_data = []
@@ -749,22 +755,22 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 self.update_or_create_nested_instances(PersonalIndirecto, personal_indirecto_data, instance, region)
 
                 if evolucion_gasto_asociado_data is not None:
-                    for evolucion_gasto_asociado_data in evolucion_gasto_asociado_data:
-                        evolucion_gasto_id = evolucion_gasto_asociado_data.pop('id', None)
-                        costo_anio_data = evolucion_gasto_asociado_data.pop('costo_anio', [])
+                    for evolucion_gasto_data in evolucion_gasto_asociado_data:
+                        evolucion_gasto_id = evolucion_gasto_data.pop('id', None)
+                        costo_anio_data = evolucion_gasto_data.pop('costo_anio', [])
 
                         evolucion_gasto_instance, _ = EvolucionGastoAsociado.objects.update_or_create(
                             id=evolucion_gasto_id,
-                            defaults=evolucion_gasto_asociado_data,
-                            formulario_sectorial=instance
+                            defaults=evolucion_gasto_data,
+                            formulario_sectorial=instance,
+                            region=region
                         )
 
                         for costo_data in costo_anio_data:
                             costo_id = costo_data.pop('id', None)
-                            costo_data['evolucion_gasto_asociado'] = evolucion_gasto_instance
-                            CostoAnio.objects.update_or_create(
-                                id=costo_id,
-                                defaults=costo_data
-                            )
+                            if costo_id:
+                                CostoAnio.objects.filter(id=costo_id).update(**costo_data)
+                            else:
+                                CostoAnio.objects.create(evolucion_gasto_asociado=evolucion_gasto_instance, **costo_data)
 
         return instance

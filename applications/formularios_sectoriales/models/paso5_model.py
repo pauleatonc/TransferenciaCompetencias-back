@@ -37,94 +37,6 @@ class Paso5Encabezado(PasoBase):
 
 
 class Paso5(PasoBase):
-
-    def es_instancia_costos_completa(self, instancia):
-        # Mantén la lista de campos requeridos, excepto 'es_transversal'
-        campos_requeridos = [
-            'item_subtitulo', 'total_anual'
-        ]
-
-        # Verifica primero que los campos distintos a 'es_transversal' y 'descripcion' no sean None
-        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
-
-        # Luego verifica específicamente 'es_transversal' para asegurar que no sea None
-        es_transversal_completo = getattr(instancia, 'es_transversal', None) is not None
-
-        # Verifica que 'descripcion' no sea None y no esté vacío
-        descripcion_completa = bool(getattr(instancia, 'descripcion', '').strip())
-
-        # Un ítem está completo si todos los campos requeridos están completos, 'es_transversal' no es None, y 'descripcion' no está vacío
-        completa = campos_completos and es_transversal_completo and descripcion_completa
-
-        return completa
-
-    def es_evolucion_gasto_completa(self, instancia):
-        return all([
-            instancia.subtitulo_id,
-            CostoAnio.objects.filter(evolucion_gasto=instancia).exists()
-        ]) and all(
-            getattr(anio, 'costo', None) is not None
-            for anio in CostoAnio.objects.filter(evolucion_gasto=instancia)
-        )
-
-    def es_variacion_promedio_completa(self, instancia):
-        return bool(instancia.descripcion)
-
-    def es_personal_directo_completo(self):
-        return PersonalDirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            estamento__isnull=False,
-            renta_bruta__isnull=False
-        ).exists()
-
-    def es_personal_indirecto_completo(self):
-        return PersonalIndirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            estamento__isnull=False,
-            numero_personas__isnull=False,
-            renta_bruta__isnull=False
-        ).exists()
-
-    def avance_numerico(self):
-        # Verifica instancias de CostosDirectos y CostosIndirectos
-        costos_directos = CostosDirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id)
-        total_costos_directos = costos_directos.count()
-        completados_costos_directos = sum([1 for costo in costos_directos if self.es_instancia_costos_completa(costo)])
-
-        costos_indirectos = CostosIndirectos.objects.filter(formulario_sectorial_id=self.formulario_sectorial_id)
-        total_costos_indirectos = costos_indirectos.count()
-        completados_costos_indirectos = sum(
-            [1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo)])
-
-        # Verificar EvolucionGastoAsociado y CostoAnio
-        evolucion_gasto = EvolucionGastoAsociado.objects.filter(formulario_sectorial=self.formulario_sectorial)
-        total_evolucion_gasto = evolucion_gasto.count()
-        completados_evolucion_gasto = sum(
-            1 for evolucion in evolucion_gasto if self.es_evolucion_gasto_completa(evolucion))
-
-        # Verificar VariacionPromedio
-        variacion_promedio = VariacionPromedio.objects.filter(formulario_sectorial=self.formulario_sectorial)
-        total_variacion_promedio = variacion_promedio.count()
-        completados_variacion_promedio = sum(
-            1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
-
-        # Verificar PersonalDirecto y PersonalIndirecto (estos cuentan como un campo cada uno, sin importar la cantidad de instancias)
-        completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
-        completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
-
-        # Total de campos y completados se ajusta para incluir el número de instancias
-        total_campos = (total_costos_directos + total_costos_indirectos +
-                        total_evolucion_gasto + total_variacion_promedio + 2)  # +2 por PersonalDirecto e Indirecto como categorías
-        completados = (completados_costos_directos + completados_costos_indirectos +
-                       completados_evolucion_gasto + completados_variacion_promedio +
-                       completado_personal_directo + completado_personal_indirecto)
-
-        return completados, total_campos
-
-    def avance(self):
-        completados, total_campos = self.avance_numerico()
-        return f"{completados}/{total_campos}"
-
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso5')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso5', null=True, blank=True)
 
@@ -166,6 +78,89 @@ class Paso5(PasoBase):
     sub21b_total_gastos_en_personal = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21b_gastos_en_personal_justificado = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
+
+    def es_instancia_costos_completa(self, instancia):
+        campos_requeridos = ['item_subtitulo', 'total_anual']
+        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
+        es_transversal_completo = getattr(instancia, 'es_transversal', None) is not None
+        descripcion_completa = bool(getattr(instancia, 'descripcion', '').strip())
+        return campos_completos, es_transversal_completo, descripcion_completa
+
+    def es_evolucion_gasto_completa(self, instancia):
+        return all([
+            instancia.subtitulo_id,
+            CostoAnio.objects.filter(evolucion_gasto=instancia).exists()
+        ]) and all(
+            getattr(anio, 'costo', None) is not None
+            for anio in CostoAnio.objects.filter(evolucion_gasto=instancia)
+        )
+
+    def es_variacion_promedio_completa(self, instancia):
+        return bool(instancia.descripcion)
+
+    def es_personal_directo_completo(self):
+        return PersonalDirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region,
+            estamento__isnull=False,
+            renta_bruta__isnull=False
+        ).exists()
+
+    def es_personal_indirecto_completo(self):
+        return PersonalIndirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region,
+            estamento__isnull=False,
+            numero_personas__isnull=False,
+            renta_bruta__isnull=False
+        ).exists()
+
+    def avance_numerico(self):
+        costos_directos = CostosDirectos.objects.filter(
+            formulario_sectorial_id=self.formulario_sectorial_id,
+            region=self.region
+        )
+        total_costos_directos = costos_directos.count()
+        completados_costos_directos = sum([1 for costo in costos_directos if self.es_instancia_costos_completa(costo)])
+
+        costos_indirectos = CostosIndirectos.objects.filter(
+            formulario_sectorial_id=self.formulario_sectorial_id,
+            region=self.region
+        )
+        total_costos_indirectos = costos_indirectos.count()
+        completados_costos_indirectos = sum(
+            [1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo)])
+
+        evolucion_gasto = EvolucionGastoAsociado.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_evolucion_gasto = evolucion_gasto.count()
+        completados_evolucion_gasto = sum(
+            1 for evolucion in evolucion_gasto if self.es_evolucion_gasto_completa(evolucion))
+
+        variacion_promedio = VariacionPromedio.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_variacion_promedio = variacion_promedio.count()
+        completados_variacion_promedio = sum(
+            1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
+
+        completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
+        completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
+
+        total_campos = (total_costos_directos + total_costos_indirectos +
+                        total_evolucion_gasto + total_variacion_promedio + 2)
+        completados = (completados_costos_directos + completados_costos_indirectos +
+                       completados_evolucion_gasto + completados_variacion_promedio +
+                       completado_personal_directo + completado_personal_indirecto)
+
+        return completados, total_campos
+
+    def avance(self):
+        completados, total_campos = self.avance_numerico()
+        return f"{completados}/{total_campos}"
 
 
 class Subtitulos(models.Model):

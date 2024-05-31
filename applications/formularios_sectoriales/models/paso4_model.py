@@ -35,6 +35,9 @@ class Paso4Encabezado(PasoBase):
 
 
 class Paso4(PasoBase):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso4', null=True, blank=True)
+
     def avance_numerico(self):
         # Campos obligatorios en IndicadorDesempeno
         campos_obligatorios_indicador = [
@@ -42,8 +45,8 @@ class Paso4(PasoBase):
             'medios_calculo', 'verificador_asociado'
         ]
 
-        # Obtiene todas las instancias de IndicadorDesempeno asociadas
-        indicadores = self.formulario_sectorial.indicador_desempeno.all()
+        # Obtiene todas las instancias de IndicadorDesempeno asociadas y filtra por región
+        indicadores = self.formulario_sectorial.indicador_desempeno.filter(region=self.region)
 
         # Comprueba que todos los indicadores tienen todos los campos obligatorios completos
         todos_indicadores_completos = all(
@@ -60,9 +63,6 @@ class Paso4(PasoBase):
     def avance(self):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
-
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso4')
-    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso4', null=True, blank=True)
 
 
 class IndicadorDesempeno(BaseModel):
