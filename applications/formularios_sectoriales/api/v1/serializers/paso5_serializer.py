@@ -368,9 +368,6 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
 class Paso5Serializer(serializers.ModelSerializer):
     avance = serializers.SerializerMethodField()
 
-    años = serializers.SerializerMethodField(read_only=True)
-    años_variacion = serializers.SerializerMethodField(read_only=True)
-
     class Meta:
         model = Paso5
         fields = [
@@ -383,8 +380,6 @@ class Paso5Serializer(serializers.ModelSerializer):
             'glosas_especificas',
             'descripcion_funciones_personal_directo',
             'descripcion_funciones_personal_indirecto',
-            'años',
-            'años_variacion',
             'sub21_total_personal_planta',
             'sub21_personal_planta_justificado',
             'sub21_personal_planta_justificar',
@@ -411,29 +406,6 @@ class Paso5Serializer(serializers.ModelSerializer):
             'sub21b_gastos_en_personal_justificar'
         ]
 
-    def get_años(self, obj):
-        competencia = obj.formulario_sectorial.competencia
-        if competencia and competencia.fecha_inicio:
-            año_actual = competencia.fecha_inicio.year
-            años = list(range(año_actual - 5, año_actual))
-            return años
-        return []
-
-    def get_años_variacion(self, obj):
-        competencia = obj.formulario_sectorial.competencia
-        if competencia and competencia.fecha_inicio:
-            año_actual = competencia.fecha_inicio.year
-            n_5 = año_actual - 5
-            n_4 = año_actual - 4
-            n_3 = año_actual - 3
-            n_2 = año_actual - 2
-            return {
-                'n_5': n_5,
-                'n_4': n_4,
-                'n_3': n_3,
-                'n_2': n_2,
-            }
-        return {}
 
     def avance(self, obj):
         return obj.avance()
@@ -580,6 +552,8 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     listado_etapas = serializers.SerializerMethodField()
     listado_estamentos = serializers.SerializerMethodField()
     regiones = serializers.SerializerMethodField()
+    años = serializers.SerializerMethodField(read_only=True)
+    años_variacion = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = FormularioSectorial
@@ -589,7 +563,9 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
             'solo_lectura',
             'regiones',
             'listado_estamentos',
-            'listado_etapas'
+            'listado_etapas',
+            'años',
+            'años_variacion',
         ]
 
     def get_solo_lectura(self, obj):
@@ -606,6 +582,30 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
     def get_listado_etapas(self, obj):
         etapas = EtapasEjercicioCompetencia.objects.filter(formulario_sectorial=obj)
         return [{'id': etapa.id, 'nombre_etapa': etapa.nombre_etapa} for etapa in etapas]
+
+    def get_años(self, obj):
+        competencia = obj.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            años = list(range(año_actual - 5, año_actual))
+            return años
+        return []
+
+    def get_años_variacion(self, obj):
+        competencia = obj.competencia
+        if competencia and competencia.fecha_inicio:
+            año_actual = competencia.fecha_inicio.year
+            n_5 = año_actual - 5
+            n_4 = año_actual - 4
+            n_3 = año_actual - 3
+            n_2 = año_actual - 2
+            return {
+                'n_5': n_5,
+                'n_4': n_4,
+                'n_3': n_3,
+                'n_2': n_2,
+            }
+        return {}
 
     def get_regiones(self, obj):
         regiones_data = []
