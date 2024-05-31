@@ -36,6 +36,13 @@ class Paso3Encabezado(PasoBase):
 
 
 class Paso3(PasoBase):
+    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
+    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso3', null=True, blank=True)
+
+    """Campos descripción Cobertura de la Competencia"""
+    universo_cobertura = models.TextField(max_length=800, blank=True)
+    descripcion_cobertura = models.TextField(max_length=800, blank=True)
+
     def avance_numerico(self):
         # Lista de campos que no son estrictamente numéricos y son obligatorios
         campos_obligatorios_texto = [
@@ -46,12 +53,12 @@ class Paso3(PasoBase):
         # Verifica si los campos de texto obligatorios están llenos
         completados = sum([1 for campo in campos_obligatorios_texto if getattr(self, campo, None)])
 
-        # Verifica si todas las instancias de CoberturaAnual tienen los campos numéricos definidos (no None)
+        # Verifica si todas las instancias de CoberturaAnual tienen los campos numéricos definidos (no None) y filtra por región
         todas_coberturas_anuales_completas = all(
             cobertura.universo_cobertura is not None and
             cobertura.cobertura_efectivamente_abordada is not None and
             cobertura.recursos_ejecutados is not None
-            for cobertura in self.formulario_sectorial.cobertura_anual.all()
+            for cobertura in CoberturaAnual.objects.filter(formulario_sectorial=self.formulario_sectorial, region=self.region)
         )
 
         # Si todas las instancias de CoberturaAnual están completas (considerando None como incompleto), añadir 1 a completados
@@ -63,13 +70,6 @@ class Paso3(PasoBase):
     def avance(self):
         completados, total_campos = self.avance_numerico()
         return f"{completados}/{total_campos}"
-
-    formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='paso3')
-    region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='paso3', null=True, blank=True)
-
-    """Campos descripción Cobertura de la Competencia"""
-    universo_cobertura = models.TextField(max_length=800, blank=True)
-    descripcion_cobertura = models.TextField(max_length=800, blank=True)
 
 
 class CoberturaAnual(BaseModel):
