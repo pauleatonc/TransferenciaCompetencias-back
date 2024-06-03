@@ -145,6 +145,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
     nombre_paso = serializers.ReadOnlyField()
     numero_paso = serializers.ReadOnlyField()
     multiplicador_caracteres_region = serializers.ReadOnlyField()
+    multiplicador_caracteres_competencia = serializers.ReadOnlyField()
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
@@ -156,6 +157,7 @@ class Paso2EncabezadoSerializer(serializers.ModelSerializer):
             'nombre_paso',
             'numero_paso',
             'multiplicador_caracteres_region',
+            'multiplicador_caracteres_competencia',
             'avance',
             'campos_obligatorios_completados',
             'estado_stepper',
