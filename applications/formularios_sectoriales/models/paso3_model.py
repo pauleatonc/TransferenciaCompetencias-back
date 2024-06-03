@@ -32,7 +32,7 @@ class Paso3Encabezado(PasoBase):
         # Accede a las regiones asociadas a la competencia a través del formulario sectorial
         competencia = self.formulario_sectorial.competencia
         numero_regiones = competencia.regiones.count()
-        return numero_regiones * 500
+        return 500 + numero_regiones * 200
 
 
 class Paso3(PasoBase):

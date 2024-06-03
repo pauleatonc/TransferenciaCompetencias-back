@@ -4,6 +4,7 @@ from django.db import models
 from applications.base.functions import validate_file_size_twenty
 from .base_model import PasoBase, FormularioSectorial
 from applications.base.models import BaseModel
+from ...competencias.models import CompetenciaAgrupada
 
 
 class Paso2(PasoBase):
@@ -59,6 +60,17 @@ class Paso2(PasoBase):
         competencia = self.formulario_sectorial.competencia
         numero_regiones = competencia.regiones.count()
         return 500 + numero_regiones * 200
+
+    @property
+    def multiplicador_caracteres_competencia(self):
+        competencia = self.formulario_sectorial.competencia
+
+        if competencia.agrupada:
+            # Contar la cantidad de competencias agrupadas
+            cantidad_agrupadas = CompetenciaAgrupada.objects.filter(competencias=competencia).count()
+            return 2200 + cantidad_agrupadas * 500
+        else:
+            return 2200
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
