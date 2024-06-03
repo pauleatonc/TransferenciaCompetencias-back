@@ -181,7 +181,6 @@ class CostoAnioSerializer(serializers.ModelSerializer):
             return data
         return super().to_internal_value(data)
 
-
 class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
     nombre_subtitulo = serializers.SerializerMethodField()
     costo_anio = CostoAnioSerializer(many=True, required=False)
@@ -216,9 +215,30 @@ class EvolucionGastoAsociadoSerializer(serializers.ModelSerializer):
 
         return internal_value
 
+    def update(self, instance, validated_data):
+        costo_anio_data = validated_data.pop('costo_anio', None)
+
+        # Actualizar la instancia de EvolucionGastoAsociado
+        instance = super().update(instance, validated_data)
+
+        if costo_anio_data:
+            for item in costo_anio_data:
+                if 'id' in item:
+                    # Actualizar instancias existentes de CostoAnio
+                    costo_anio_instance = CostoAnio.objects.get(id=item['id'])
+                    for attr, value in item.items():
+                        setattr(costo_anio_instance, attr, value)
+                    costo_anio_instance.save()  # Forzar el guardado para disparar la señal
+                else:
+                    # Crear nuevas instancias de CostoAnio
+                    CostoAnio.objects.create(evolucion_gasto=instance, **item)
+
+        return instance
+
 
 class VariacionPromedioSerializer(serializers.ModelSerializer):
     nombre_subtitulo = serializers.SerializerMethodField()
+    subtitulo = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = VariacionPromedio
@@ -717,7 +737,7 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 if delete_flag:
                     model.objects.filter(id=item_id).delete()
                 else:
-                    # Obtener la instancia, actualizar los valores y guardarla
+                    # Obtener la instancia, actualizar los valores y guardarla explícitamente
                     obj = model.objects.get(id=item_id)
                     for attr, value in data.items():
                         setattr(obj, attr, value)
@@ -769,8 +789,11 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                         for costo_data in costo_anio_data:
                             costo_id = costo_data.pop('id', None)
                             if costo_id:
-                                CostoAnio.objects.filter(id=costo_id).update(**costo_data)
+                                costo_anio_instance = CostoAnio.objects.get(id=costo_id)
+                                for attr, value in costo_data.items():
+                                    setattr(costo_anio_instance, attr, value)
+                                costo_anio_instance.save()  # Forzar el guardado para disparar la señal
                             else:
-                                CostoAnio.objects.create(evolucion_gasto_asociado=evolucion_gasto_instance, **costo_data)
+                                CostoAnio.objects.create(evolucion_gasto=evolucion_gasto_instance, **costo_data)
 
         return instance
