@@ -635,14 +635,16 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
 
     def get_regiones(self, obj):
         regiones_data = []
-        regiones = obj.competencia.regiones.all()
+        regiones = obj.competencia.regiones.all().order_by('id')  # Ordenar por ID
 
         for region in regiones:
             paso5_instances = Paso5.objects.filter(formulario_sectorial=obj, region=region)
             costos_directos_instances = CostosDirectos.objects.filter(formulario_sectorial=obj, region=region)
             costos_indirectos_instances = CostosIndirectos.objects.filter(formulario_sectorial=obj, region=region)
-            resumen_costos_por_subtitulo_instances = ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial=obj, region=region)
-            evolucion_gasto_asociado_instances = EvolucionGastoAsociado.objects.filter(formulario_sectorial=obj, region=region)
+            resumen_costos_por_subtitulo_instances = ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial=obj,
+                                                                                              region=region)
+            evolucion_gasto_asociado_instances = EvolucionGastoAsociado.objects.filter(formulario_sectorial=obj,
+                                                                                       region=region)
             variacion_promedio_instances = VariacionPromedio.objects.filter(formulario_sectorial=obj, region=region)
             personal_directo_instances = PersonalDirecto.objects.filter(formulario_sectorial=obj, region=region)
             personal_indirecto_instances = PersonalIndirecto.objects.filter(formulario_sectorial=obj, region=region)
@@ -652,8 +654,10 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                 'paso5': Paso5Serializer(paso5_instances, many=True).data,
                 'p_5_1_a_costos_directos': CostosDirectosSerializer(costos_directos_instances, many=True).data,
                 'p_5_1_b_costos_indirectos': CostosIndirectosSerializer(costos_indirectos_instances, many=True).data,
-                'p_5_1_c_resumen_costos_por_subtitulo': ResumenCostosPorSubtituloSerializer(resumen_costos_por_subtitulo_instances, many=True).data,
-                'p_5_2_evolucion_gasto_asociado': EvolucionGastoAsociadoSerializer(evolucion_gasto_asociado_instances, many=True).data,
+                'p_5_1_c_resumen_costos_por_subtitulo': ResumenCostosPorSubtituloSerializer(
+                    resumen_costos_por_subtitulo_instances, many=True).data,
+                'p_5_2_evolucion_gasto_asociado': EvolucionGastoAsociadoSerializer(evolucion_gasto_asociado_instances,
+                                                                                   many=True).data,
                 'p_5_2_variacion_promedio': VariacionPromedioSerializer(variacion_promedio_instances, many=True).data,
                 'p_5_3_a_personal_directo': PersonalDirectoSerializer(personal_directo_instances, many=True).data,
                 'p_5_3_b_personal_indirecto': PersonalIndirectoSerializer(personal_indirecto_instances, many=True).data,
@@ -662,10 +666,16 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
             region_data.update({
                 'listado_subtitulos_directos': get_subtitulos_disponibles(CostosDirectos, obj, region),
                 'listado_subtitulos_indirectos': get_subtitulos_disponibles(CostosIndirectos, obj, region),
-                'listado_item_subtitulos_directos': get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj, region),
-                'listado_item_subtitulos_indirectos': get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, obj, region),
-                'listado_calidades_juridicas_directas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj, region, CostosDirectos),
-                'listado_calidades_juridicas_indirectas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj, region, CostosIndirectos),
+                'listado_item_subtitulos_directos': get_item_subtitulos_disponibles_y_agrupados(CostosDirectos, obj,
+                                                                                                region),
+                'listado_item_subtitulos_indirectos': get_item_subtitulos_disponibles_y_agrupados(CostosIndirectos, obj,
+                                                                                                  region),
+                'listado_calidades_juridicas_directas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj,
+                                                                                                                 region,
+                                                                                                                 CostosDirectos),
+                'listado_calidades_juridicas_indirectas': RegionPaso5Serializer().get_filtered_calidades_juridicas(obj,
+                                                                                                                   region,
+                                                                                                                   CostosIndirectos),
             })
 
             regiones_data.append(region_data)
@@ -689,7 +699,11 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
         if 'regiones' in data:
             nested_data = data['regiones']
             internal_nested_data = []
-            for region_data in nested_data:
+
+            # Ordenar las regiones por ID
+            sorted_nested_data = sorted(nested_data, key=lambda x: x['region'])
+
+            for region_data in sorted_nested_data:
                 region = region_data.get('region')
                 paso_data = region_data.get('paso5', [])
                 costos_directos_data = region_data.get('p_5_1_a_costos_directos', [])
@@ -702,12 +716,17 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
 
                 internal_paso_data = process_nested_data(paso_data, Paso5Serializer)
                 internal_costos_directos_data = process_nested_data(costos_directos_data, CostosDirectosSerializer)
-                internal_costos_indirectos_data = process_nested_data(costos_indirectos_data, CostosIndirectosSerializer)
-                internal_resumen_costos_data = process_nested_data(resumen_costos_por_subtitulo_data, ResumenCostosPorSubtituloSerializer)
-                internal_evolucion_gasto_data = process_nested_data(evolucion_gasto_asociado_data, EvolucionGastoAsociadoSerializer)
-                internal_variacion_promedio_data = process_nested_data(variacion_promedio_data, VariacionPromedioSerializer)
+                internal_costos_indirectos_data = process_nested_data(costos_indirectos_data,
+                                                                      CostosIndirectosSerializer)
+                internal_resumen_costos_data = process_nested_data(resumen_costos_por_subtitulo_data,
+                                                                   ResumenCostosPorSubtituloSerializer)
+                internal_evolucion_gasto_data = process_nested_data(evolucion_gasto_asociado_data,
+                                                                    EvolucionGastoAsociadoSerializer)
+                internal_variacion_promedio_data = process_nested_data(variacion_promedio_data,
+                                                                       VariacionPromedioSerializer)
                 internal_personal_directo_data = process_nested_data(personal_directo_data, PersonalDirectoSerializer)
-                internal_personal_indirecto_data = process_nested_data(personal_indirecto_data, PersonalIndirectoSerializer)
+                internal_personal_indirecto_data = process_nested_data(personal_indirecto_data,
+                                                                       PersonalIndirectoSerializer)
 
                 internal_nested_data.append({
                     'region': region,
@@ -725,6 +744,7 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
 
         return internal_value
 
+
     def update_or_create_nested_instances(self, model, nested_data, instance, region):
         for data in nested_data:
             item_id = data.pop('id', None)
@@ -740,7 +760,11 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
                     # Obtener la instancia, actualizar los valores y guardarla explícitamente
                     obj = model.objects.get(id=item_id)
                     for attr, value in data.items():
-                        setattr(obj, attr, value)
+                        if isinstance(value, list):
+                            # Asume que es una relación many-to-many
+                            getattr(obj, attr).set(value)
+                        else:
+                            setattr(obj, attr, value)
                     obj.save()  # Esto debería disparar la señal post_save
             elif not delete_flag:
                 model.objects.create(formulario_sectorial=instance, **data)

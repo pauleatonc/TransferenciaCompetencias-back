@@ -49,6 +49,34 @@ def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
                     formulario_sectorial=formulario_sectorial,
                     region_id=region_pk
                 ).delete()
+                CostosDirectos.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                CostosIndirectos.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                ResumenCostosPorSubtitulo.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                EvolucionGastoAsociado.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                VariacionPromedio.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                PersonalDirecto.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                PersonalIndirecto.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
 
 
 def regenerar_resumen_costos(formulario_sectorial_id, region):
