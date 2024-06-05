@@ -59,7 +59,11 @@ class Paso2(PasoBase):
         # Accede a las regiones asociadas a la competencia a través del formulario sectorial
         competencia = self.formulario_sectorial.competencia
         numero_regiones = competencia.regiones.count()
-        return 500 + numero_regiones * 200
+
+        if numero_regiones == 1:
+            return 500
+        else:
+            return 300 + numero_regiones * 200
 
     @property
     def multiplicador_caracteres_competencia(self):
@@ -68,14 +72,14 @@ class Paso2(PasoBase):
         if competencia.agrupada:
             # Contar la cantidad de competencias agrupadas
             cantidad_agrupadas = CompetenciaAgrupada.objects.filter(competencias=competencia).count()
-            return 2200 + cantidad_agrupadas * 500
+            return 1700 + cantidad_agrupadas * 500
         else:
             return 2200
 
     formulario_sectorial = models.OneToOneField(FormularioSectorial, on_delete=models.CASCADE, related_name='paso2')
 
     """2.5 Descripcion cualitativa del ejercicio de la competencia en la region"""
-    descripcion_cualitativa = models.TextField(max_length=2200, blank=True)
+    descripcion_cualitativa = models.TextField(max_length=10000, blank=True)
 
 
 class OrganismosIntervinientes(BaseModel):
@@ -89,8 +93,8 @@ class OrganismosIntervinientes(BaseModel):
 
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE, related_name='p_2_1_organismos_intervinientes')
     organismo = models.CharField(max_length=5, choices=ORGANISMO, blank=True)
-    nombre_ministerio_servicio = models.CharField(max_length=500, blank=True)
-    descripcion = models.CharField(max_length=500, blank=True)
+    nombre_ministerio_servicio = models.CharField(max_length=5000, blank=True)
+    descripcion = models.CharField(max_length=5000, blank=True)
 
     class Meta:
         ordering = ['created_date']
@@ -100,8 +104,8 @@ class UnidadesIntervinientes(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_2_2_unidades_intervinientes')
     organismo = models.ForeignKey(OrganismosIntervinientes, on_delete=models.CASCADE, related_name='unidadesintervinientes')
-    nombre_unidad = models.TextField(max_length=500, blank=True)
-    descripcion_unidad = models.TextField(max_length=500, blank=True)
+    nombre_unidad = models.TextField(max_length=5000, blank=True)
+    descripcion_unidad = models.TextField(max_length=5000, blank=True)
 
     class Meta:
         ordering = ['created_date']
@@ -110,8 +114,8 @@ class UnidadesIntervinientes(BaseModel):
 class EtapasEjercicioCompetencia(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_2_3_etapas_ejercicio_competencia')
-    nombre_etapa = models.TextField(max_length=500, blank=True)
-    descripcion_etapa = models.TextField(max_length=500, blank=True)
+    nombre_etapa = models.TextField(max_length=5000, blank=True)
+    descripcion_etapa = models.TextField(max_length=5000, blank=True)
 
     class Meta:
         ordering = ['created_date']
@@ -122,7 +126,7 @@ class ProcedimientosEtapas(BaseModel):
                                              related_name='procedimientos')
     etapa = models.ForeignKey(EtapasEjercicioCompetencia, on_delete=models.CASCADE,
                                              related_name='procedimientos')
-    descripcion_procedimiento = models.TextField(max_length=500, blank=True)
+    descripcion_procedimiento = models.TextField(max_length=5000, blank=True)
     unidades_intervinientes = models.ManyToManyField(UnidadesIntervinientes, blank=True)
 
     class Meta:
@@ -132,13 +136,13 @@ class ProcedimientosEtapas(BaseModel):
 class PlataformasySoftwares(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_2_4_plataformas_y_softwares')
-    nombre_plataforma = models.TextField(max_length=500, blank=True)
-    descripcion_tecnica = models.TextField(max_length=500, blank=True)
+    nombre_plataforma = models.TextField(max_length=5000, blank=True)
+    descripcion_tecnica = models.TextField(max_length=5000, blank=True)
     costo_adquisicion = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     costo_mantencion_anual = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    descripcion_costos = models.TextField(max_length=500, blank=True)
-    descripcion_tecnica = models.TextField(max_length=500, blank=True)
-    funcion_plataforma = models.TextField(max_length=500, blank=True)
+    descripcion_costos = models.TextField(max_length=5000, blank=True)
+    descripcion_tecnica = models.TextField(max_length=5000, blank=True)
+    funcion_plataforma = models.TextField(max_length=5000, blank=True)
     etapas = models.ManyToManyField(EtapasEjercicioCompetencia, related_name='PlataformasySoftwares_set', blank=True)
     capacitacion_plataforma = models.BooleanField(blank=True, null=True, default=None)
 

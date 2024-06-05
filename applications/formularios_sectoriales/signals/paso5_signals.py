@@ -1,12 +1,13 @@
 import logging
 
 from django.db.models import Sum, Max
-from django.db.models.signals import post_save, post_delete, pre_save
+from django.db.models.signals import post_save, post_delete, pre_save, m2m_changed
 from django.dispatch import receiver
 from django.db import transaction
 import time
 from django.core.exceptions import ObjectDoesNotExist
 
+from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import (
     CostosDirectos,
     CostosIndirectos,
@@ -17,15 +18,65 @@ from applications.formularios_sectoriales.models import (
     CostoAnio,
     FormularioSectorial,
     PersonalDirecto,
-    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica
+    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica, Paso5Encabezado
 )
+from applications.regioncomuna.models import Region
 
 
 @receiver(post_save, sender=FormularioSectorial)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
         # Crear instancia de Paso5
-        Paso5.objects.create(formulario_sectorial=instance)
+        Paso5Encabezado.objects.create(formulario_sectorial=instance)
+
+
+@receiver(m2m_changed, sender=Competencia.regiones.through)
+def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add':
+        for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
+            for region_pk in pk_set:
+                region = Region.objects.get(pk=region_pk)
+                # Crear instancias de Paso5
+                Paso5.objects.get_or_create(
+                    formulario_sectorial=formulario_sectorial,
+                    region=region
+                )
+
+    elif action == 'post_remove':
+        for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
+            for region_pk in pk_set:
+                Paso5.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                CostosDirectos.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                CostosIndirectos.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                ResumenCostosPorSubtitulo.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                EvolucionGastoAsociado.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                VariacionPromedio.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                PersonalDirecto.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
+                PersonalIndirecto.objects.filter(
+                    formulario_sectorial=formulario_sectorial,
+                    region_id=region_pk
+                ).delete()
 
 
 def regenerar_resumen_costos(formulario_sectorial_id, region):
