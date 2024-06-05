@@ -744,7 +744,6 @@ class Paso5GeneralSerializer(WritableNestedModelSerializer):
 
         return internal_value
 
-
     def update_or_create_nested_instances(self, model, nested_data, instance, region):
         for data in nested_data:
             item_id = data.pop('id', None)

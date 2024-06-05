@@ -18,7 +18,7 @@ from applications.formularios_sectoriales.models import (
     CostoAnio,
     FormularioSectorial,
     PersonalDirecto,
-    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica
+    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica, Paso5Encabezado
 )
 from applications.regioncomuna.models import Region
 
@@ -27,7 +27,7 @@ from applications.regioncomuna.models import Region
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
         # Crear instancia de Paso5
-        Paso5.objects.create(formulario_sectorial=instance)
+        Paso5Encabezado.objects.create(formulario_sectorial=instance)
 
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
@@ -36,7 +36,7 @@ def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
         for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
             for region_pk in pk_set:
                 region = Region.objects.get(pk=region_pk)
-                # Crear instancias de Paso3
+                # Crear instancias de Paso5
                 Paso5.objects.get_or_create(
                     formulario_sectorial=formulario_sectorial,
                     region=region
