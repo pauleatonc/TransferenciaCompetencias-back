@@ -115,3 +115,7 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
     def save_related(self, request, form, formsets, change):
         # Lógica adicional después de guardar relaciones ManyToMany si es necesario
         super().save_related(request, form, formsets, change)
+
+@admin.register(CompetenciaAgrupada)
+class CompetenciaAgrupadaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre')

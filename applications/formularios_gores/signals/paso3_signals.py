@@ -1,8 +1,10 @@
+from django.db import transaction
 from django.db.models import Sum, Q
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 import time
 
+from applications.competencias.models import Competencia
 from applications.formularios_gores.models import (
     FormularioGORE,
     Paso3,
@@ -22,12 +24,45 @@ from applications.formularios_sectoriales.models import (
     ItemSubtitulo,
     CalidadJuridica
 )
+from applications.regioncomuna.models import Region
+
 
 @receiver(post_save, sender=FormularioGORE)
 def crear_instancias_relacionadas(sender, instance, created, **kwargs):
     if created:
         # Crear instancia de Paso3
         Paso3.objects.create(formulario_gore=instance)
+
+
+@transaction.atomic
+def eliminar_formularios_y_anidados(competencia, region_pk):
+    formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
+    for formulario in formularios_gore:
+        # Eliminar instancias anidadas antes de eliminar el formulario GORE
+        PersonalDirectoGORE.objects.filter(formulario_gore=formulario).delete()
+        PersonalIndirectoGORE.objects.filter(formulario_gore=formulario).delete()
+        RecursosComparados.objects.filter(formulario_gore=formulario).delete()
+        SistemasInformaticos.objects.filter(formulario_gore=formulario).delete()
+        RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario).delete()
+        formulario.delete()
+
+
+@receiver(m2m_changed, sender=Competencia.regiones.through)
+@transaction.atomic
+def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add' and instance.pk:
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for region_pk in pk_set:
+            region = Region.objects.get(pk=region_pk)
+            FormularioGORE.objects.get_or_create(
+                competencia=competencia,
+                region=region,
+                defaults={'nombre': f'Formulario GORE de {region.region} - {competencia.nombre}'}
+            )
+    elif action == 'post_remove':
+        competencia = Competencia.objects.get(pk=instance.pk)
+        for region_pk in pk_set:
+            eliminar_formularios_y_anidados(competencia, region_pk)
 
 
 @receiver(post_save, sender=PersonalDirecto)
@@ -510,9 +545,10 @@ def actualizar_subtitulo_21(sender, instance, **kwargs):
     paso3_instance.save()
 
 
-@receiver(post_save, sender=PersonalDirectoGORE)
+'''@receiver(post_save, sender=PersonalDirectoGORE)
 @receiver(post_save, sender=PersonalIndirectoGORE)
 @receiver(post_delete, sender=PersonalDirectoGORE)
 @receiver(post_delete, sender=PersonalIndirectoGORE)
 def actualizar_subtitulo_21_signal(sender, instance, **kwargs):
     actualizar_subtitulo_21(sender, instance)
+'''
