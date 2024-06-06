@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework import viewsets, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from applications.competencias.models import Competencia
+from applications.competencias.models import Competencia, CompetenciaAgrupada
 from applications.etapas.models import Etapa1
 from .serializers import (
     CompetenciaListSerializer,
@@ -14,7 +14,7 @@ from .serializers import (
     CompetenciaUpdateSerializer,
     CompetenciaDetailSerializer,
     CompetenciaHomeListSerializer,
-    CompetenciaListAllSerializer,
+    CompetenciaListAllSerializer, CompetenciaAgrupadaSerializer,
 
 )
 
@@ -186,6 +186,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         Permite actualizar los datos de una competencia existente.
         Acceso solo para usuarios con permisos adecuados.
         """
+        print("Datos recibidos para editar Competencia:", request.data)
         competencia = self.get_object()
         serializer = self.get_serializer(competencia, data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -228,3 +229,16 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
 
         serializer = CompetenciaListAllSerializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class CompetenciaAgrupadaViewSet(viewsets.ModelViewSet):
+    queryset = CompetenciaAgrupada.objects.all()
+    serializer_class = CompetenciaAgrupadaSerializer
+
+    def create(self, request, *args, **kwargs):
+        print("Datos recibidos para creación CompetenciaAgrupada:", request.data)
+        serializer = self.get_serializer(data=request.data, many=isinstance(request.data, list))
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
