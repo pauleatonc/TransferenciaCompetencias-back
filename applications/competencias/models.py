@@ -10,9 +10,6 @@ from applications.regioncomuna.models import Region
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
 
-#
-
-
 class Ambito(models.Model):
     nombre = models.CharField(max_length=50)
 
