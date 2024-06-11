@@ -203,7 +203,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
     usuarios_gore = UsuarioSerializer(many=True, read_only=True)
     tiempo_transcurrido = serializers.SerializerMethodField()
     sectores = SectorSerializer(many=True, read_only=True)
-    regiones = RegionSerializer(many=True, read_only=True)
+    nombres_regiones = RegionSerializer(many=True, read_only=True)
     resumen_competencia = serializers.SerializerMethodField()
     competencias_agrupadas = serializers.SerializerMethodField()
     estado = serializers.SerializerMethodField()
@@ -220,6 +220,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'competencias_agrupadas',
             'sectores',
             'regiones',
+            'nombres_regiones',
             'origen',
             'ambito_competencia',
             'oficio_origen',
