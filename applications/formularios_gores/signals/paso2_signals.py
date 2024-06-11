@@ -166,10 +166,14 @@ def actualizar_subtitulo_21_informados_gore(formulario_gore):
         subtitulo=sub_21
     ).aggregate(suma_total_anual_gore=Sum('total_anual_gore'))['suma_total_anual_gore'] or 0
 
-    # Actualiza el campo en Paso3
-    paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
-    paso3_instance.subtitulo_21_informados_gore = suma_costos_directos + suma_costos_indirectos
-    paso3_instance.save()
+    # Verifica primero si existe una instancia de Paso3 antes de intentar actualizarla
+    try:
+        paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+        paso3_instance.subtitulo_21_informados_gore = suma_costos_directos + suma_costos_indirectos
+        paso3_instance.save()
+    except Paso3.DoesNotExist:
+        # Handle the case where Paso3 does not exist.
+        pass
 
 
 def actualizar_resumen(formulario_gore_id):
