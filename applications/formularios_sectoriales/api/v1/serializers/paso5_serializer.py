@@ -276,8 +276,8 @@ class EstamentoSerializer(serializers.ModelSerializer):
 
 
 class PersonalDirectoSerializer(serializers.ModelSerializer):
-    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
-    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all(), required=False, allow_null=True)
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all(), required=False, allow_null=True)
     nombre_estamento = serializers.SerializerMethodField()
     calidad_juridica_label_value = serializers.SerializerMethodField()
     nombre_calidad_juridica = serializers.SerializerMethodField()
@@ -321,8 +321,8 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
 
 
 class PersonalIndirectoSerializer(serializers.ModelSerializer):
-    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all())
-    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all())
+    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all(), required=False, allow_null=True)
+    estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all(),  required=False, allow_null=True)
     nombre_estamento = serializers.SerializerMethodField()
     calidad_juridica_label_value = serializers.SerializerMethodField()
     nombre_calidad_juridica = serializers.SerializerMethodField()

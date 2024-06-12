@@ -36,47 +36,17 @@ def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
         for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
             for region_pk in pk_set:
                 region = Region.objects.get(pk=region_pk)
-                # Crear instancias de Paso5
+                # Cada FormularioSectorial necesita un Paso5 por región:
                 Paso5.objects.get_or_create(
                     formulario_sectorial=formulario_sectorial,
                     region=region
                 )
 
     elif action == 'post_remove':
-        for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
-            for region_pk in pk_set:
-                Paso5.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                CostosDirectos.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                CostosIndirectos.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                ResumenCostosPorSubtitulo.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                EvolucionGastoAsociado.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                VariacionPromedio.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                PersonalDirecto.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
-                PersonalIndirecto.objects.filter(
-                    formulario_sectorial=formulario_sectorial,
-                    region_id=region_pk
-                ).delete()
+        FormularioSectorial.objects.filter(
+            competencia=instance,
+            region_id__in=pk_set
+        ).delete()
 
 
 def regenerar_resumen_costos(formulario_sectorial_id, region):
@@ -329,8 +299,10 @@ def get_calidad_juridica(calidad):
 def calcular_total_por_item(modelo, paso5_instance, item_subtitulo):
     return sum((item.total_anual or 0) for item in modelo.objects.filter(
         formulario_sectorial=paso5_instance.formulario_sectorial,
+        region=paso5_instance.region,
         item_subtitulo=item_subtitulo
     ))
+
 
 
 def calcular_costos_por_justificar(paso5_instance, campos):
@@ -357,8 +329,10 @@ def calcular_total_por_calidad(modelo, paso5_instance, calidad_juridica):
 
     return sum((getattr(personal, campo_suma) or 0) for personal in modelo.objects.filter(
         formulario_sectorial=paso5_instance.formulario_sectorial,
+        region=paso5_instance.region,
         calidad_juridica=calidad_juridica
     ))
+
 
 
 items_y_campos_directos = {
@@ -433,14 +407,14 @@ def actualizar_campos_paso5(sender, instance, modelo_costos, modelo_personal, it
             total_general = sum(
                 (personal.total_rentas or 0) for personal in PersonalIndirecto.objects.filter(
                     formulario_sectorial=paso5_instance.formulario_sectorial,
-                    region=instance.region
+                    region=paso5_instance.region
                 )
             )
         elif tipo_modelo == 'directo':
             total_general = sum(
                 (personal.renta_bruta or 0) for personal in PersonalDirecto.objects.filter(
                     formulario_sectorial=paso5_instance.formulario_sectorial,
-                    region=instance.region
+                    region=paso5_instance.region
                 )
             )
 

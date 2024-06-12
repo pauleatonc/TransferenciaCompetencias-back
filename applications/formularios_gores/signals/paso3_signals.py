@@ -36,15 +36,20 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
 
 @transaction.atomic
 def eliminar_formularios_y_anidados(competencia, region_pk):
-    formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
-    for formulario in formularios_gore:
-        # Eliminar instancias anidadas antes de eliminar el formulario GORE
-        PersonalDirectoGORE.objects.filter(formulario_gore=formulario).delete()
-        PersonalIndirectoGORE.objects.filter(formulario_gore=formulario).delete()
-        RecursosComparados.objects.filter(formulario_gore=formulario).delete()
-        SistemasInformaticos.objects.filter(formulario_gore=formulario).delete()
-        RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario).delete()
-        formulario.delete()
+    try:
+        formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
+        for formulario in formularios_gore:
+            Paso3.objects.filter(formulario_gore=formulario).delete()
+            PersonalDirectoGORE.objects.filter(formulario_gore=formulario).delete()
+            PersonalIndirectoGORE.objects.filter(formulario_gore=formulario).delete()
+            RecursosComparados.objects.filter(formulario_gore=formulario).delete()
+            SistemasInformaticos.objects.filter(formulario_gore=formulario).delete()
+            RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario).delete()
+            formulario.delete()
+    except Exception as e:
+        # Log the error (consider using logging framework)
+        print(f"Error al eliminar formulario GORE y relacionados: {e}")
+        raise
 
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
@@ -62,7 +67,7 @@ def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwa
     elif action == 'post_remove':
         competencia = Competencia.objects.get(pk=instance.pk)
         for region_pk in pk_set:
-            eliminar_formularios_y_anidados(competencia, region_pk)
+            FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
 
 
 @receiver(post_save, sender=PersonalDirecto)
@@ -479,46 +484,48 @@ def manejar_cambios_recursos_comparados(sender, instance, **kwargs):
 
 @receiver([post_save, post_delete], sender=RecursosComparados)
 def actualizar_diferencias_recursos_comparados(sender, instance, **kwargs):
-    if not instance.formulario_gore.paso3_gore:
-        # Crea la instancia de Paso3 si no existe
-        Paso3.objects.create(formulario_gore=instance.formulario_gore)
+    try:
+        paso3 = instance.formulario_gore.paso3_gore
+        for subtitulo in ['22', '29']:
+            subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
+                                                                                                              flat=True)
+            diferencia_monto = RecursosComparados.objects.filter(
+                item_subtitulo__subtitulo_id__in=subtitulos_ids,
+                formulario_gore=instance.formulario_gore
+            ).aggregate(Sum('diferencia_monto'))['diferencia_monto__sum'] or 0
 
-    paso3 = instance.formulario_gore.paso3_gore
-    for subtitulo in ['22', '29']:
-        subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
-                                                                                                          flat=True)
-        diferencia_monto = RecursosComparados.objects.filter(
-            item_subtitulo__subtitulo_id__in=subtitulos_ids,
-            formulario_gore=instance.formulario_gore
-        ).aggregate(Sum('diferencia_monto'))['diferencia_monto__sum'] or 0
-
-        setattr(paso3, f'subtitulo_{subtitulo}_diferencia_sector', diferencia_monto)
-    paso3.save()
+            setattr(paso3, f'subtitulo_{subtitulo}_diferencia_sector', diferencia_monto)
+        paso3.save()
+    except Paso3.DoesNotExist:
+        pass
 
 
 def actualizar_justificados_gore(formulario_gore):
-    paso3 = formulario_gore.paso3_gore
-    if not paso3:
-        # Crea la instancia de Paso3 si no existe
-        Paso3.objects.create(formulario_gore=formulario_gore)
+    try:
+        paso3 = formulario_gore.paso3_gore
+        if not paso3:
+            # Crea la instancia de Paso3 si no existe
+            Paso3.objects.create(formulario_gore=formulario_gore)
 
-    for subtitulo in ['22', '29']:
-        subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
-                                                                                                          flat=True)
+        for subtitulo in ['22', '29']:
+            subtitulos_ids = Subtitulos.objects.filter(subtitulo__startswith=f'Sub. {subtitulo}').values_list('id',
+                                                                                                              flat=True)
 
-        costo_total_rf = RecursosFisicosInfraestructura.objects.filter(
-            item_subtitulo__subtitulo_id__in=subtitulos_ids,
-            formulario_gore=formulario_gore
-        ).aggregate(Sum('costo_total'))['costo_total__sum'] or 0
-
-        if subtitulo == '29':
-            costo_total_si = SistemasInformaticos.objects.filter(
+            costo_total_rf = RecursosFisicosInfraestructura.objects.filter(
+                item_subtitulo__subtitulo_id__in=subtitulos_ids,
                 formulario_gore=formulario_gore
-            ).aggregate(Sum('costo'))['costo__sum'] or 0
-            costo_total_rf += costo_total_si
+            ).aggregate(Sum('costo_total'))['costo_total__sum'] or 0
 
-        setattr(paso3, f'subtitulo_{subtitulo}_justificados_gore', costo_total_rf)
-    paso3.save()
+            if subtitulo == '29':
+                costo_total_si = SistemasInformaticos.objects.filter(
+                    formulario_gore=formulario_gore
+                ).aggregate(Sum('costo'))['costo__sum'] or 0
+                costo_total_rf += costo_total_si
+
+            setattr(paso3, f'subtitulo_{subtitulo}_justificados_gore', costo_total_rf)
+        paso3.save()
+    except Paso3.DoesNotExist:
+        pass
 
 
 @receiver([post_save, post_delete], sender=RecursosFisicosInfraestructura)
@@ -545,10 +552,9 @@ def actualizar_subtitulo_21(sender, instance, **kwargs):
     paso3_instance.save()
 
 
-'''@receiver(post_save, sender=PersonalDirectoGORE)
+@receiver(post_save, sender=PersonalDirectoGORE)
 @receiver(post_save, sender=PersonalIndirectoGORE)
 @receiver(post_delete, sender=PersonalDirectoGORE)
 @receiver(post_delete, sender=PersonalIndirectoGORE)
 def actualizar_subtitulo_21_signal(sender, instance, **kwargs):
     actualizar_subtitulo_21(sender, instance)
-'''

@@ -54,7 +54,7 @@ class Paso3(PasoBase):
     def avance_numerico(self):
         # Lista de todos los campos obligatorios del modelo Paso5
         campos_obligatorios_paso5 = [
-            'descripcion_perfiles_tecnicos_directo', 'ddescripcion_perfiles_tecnicos_indirecto',
+            'descripcion_perfiles_tecnicos_directo', 'descripcion_perfiles_tecnicos_indirecto',
         ]
         total_campos_paso5 = len(campos_obligatorios_paso5)
         completados_paso5 = sum([1 for campo in campos_obligatorios_paso5 if getattr(self, campo, None)])

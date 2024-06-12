@@ -203,7 +203,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
     usuarios_gore = UsuarioSerializer(many=True, read_only=True)
     tiempo_transcurrido = serializers.SerializerMethodField()
     sectores = SectorSerializer(many=True, read_only=True)
-    regiones = RegionSerializer(many=True, read_only=True)
+    nombres_regiones = serializers.SerializerMethodField()
     resumen_competencia = serializers.SerializerMethodField()
     competencias_agrupadas = serializers.SerializerMethodField()
     estado = serializers.SerializerMethodField()
@@ -220,6 +220,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             'competencias_agrupadas',
             'sectores',
             'regiones',
+            'nombres_regiones',
             'origen',
             'ambito_competencia',
             'oficio_origen',
@@ -273,6 +274,10 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
             competencias_agrupadas = obj.competencias_agrupadas.all()
             return CompetenciaAgrupadaSerializer(competencias_agrupadas, many=True).data
         return []
+
+    def get_nombres_regiones(self, obj):
+        # Suponiendo que obj tiene una relación con regiones
+        return [{'id': region.id, 'nombre': region.region} for region in obj.regiones.all()]
 
 
 class AmbitoSerializer(serializers.ModelSerializer):
