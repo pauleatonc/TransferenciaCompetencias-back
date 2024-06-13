@@ -31,6 +31,10 @@ class Paso4Inline(admin.TabularInline):
     model = Paso4
     extra = 0
 
+class EncabezadoPaso4InLine(admin.TabularInline):
+    model = Paso4Encabezado
+    extra = 0
+
 
 class Paso5Inline(admin.TabularInline):
     model = Paso5
@@ -101,6 +105,7 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
         FlujogramaCompetenciaInLine,
         Paso3Inline,
         Paso4Inline,
+        EncabezadoPaso4InLine,
         Paso5Inline,
         CostosDirectosInLine,
         ObservacionesSubdereInline,

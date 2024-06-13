@@ -1,10 +1,12 @@
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
-from ..models import *
+from applications.formularios_sectoriales.models import FormularioSectorial, Paso4, Paso4Encabezado, IndicadorDesempeno
+from applications.regioncomuna.models import Region
+from applications.competencias.models import Competencia
 
 
 @receiver(post_save, sender=FormularioSectorial)
-def crear_instancias_relacionadas(sender, instance, created, **kwargs):
+def crear_encabezado_paso4(sender, instance, created, **kwargs):
     if created:
         # Crear instancia de Paso4
         Paso4Encabezado.objects.create(formulario_sectorial=instance)

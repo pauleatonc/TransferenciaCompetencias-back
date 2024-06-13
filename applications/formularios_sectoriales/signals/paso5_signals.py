@@ -1,11 +1,7 @@
-import logging
-
-from django.db.models import Sum, Max
-from django.db.models.signals import post_save, post_delete, pre_save, m2m_changed
-from django.dispatch import receiver
 from django.db import transaction
-import time
-from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Sum, Max
+from django.db.models.signals import post_save, post_delete, m2m_changed
+from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import (
@@ -18,13 +14,16 @@ from applications.formularios_sectoriales.models import (
     CostoAnio,
     FormularioSectorial,
     PersonalDirecto,
-    PersonalIndirecto, Subtitulos, ItemSubtitulo, CalidadJuridica, Paso5Encabezado
-)
+    PersonalIndirecto,
+    ItemSubtitulo,
+    CalidadJuridica,
+    Paso5Encabezado
+    )
 from applications.regioncomuna.models import Region
 
 
 @receiver(post_save, sender=FormularioSectorial)
-def crear_instancias_relacionadas(sender, instance, created, **kwargs):
+def crear_encabezado_paso5(sender, instance, created, **kwargs):
     if created:
         # Crear instancia de Paso5
         Paso5Encabezado.objects.create(formulario_sectorial=instance)
