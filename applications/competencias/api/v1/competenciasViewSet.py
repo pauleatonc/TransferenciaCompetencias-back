@@ -114,7 +114,7 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
         GET /api/competencias/?search=nombre&ordering=-estado,-id
         GET /api/competencias/?search=nombre&ordering=estado,-id&page=2&page_size=5
         """
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.filter_queryset(self.get_queryset().order_by('-id'))
 
         # Usar el paginador para paginar el queryset
         page = self.paginate_queryset(queryset)
