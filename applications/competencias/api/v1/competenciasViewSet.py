@@ -234,6 +234,17 @@ class CompetenciaViewSet(viewsets.ModelViewSet):
 class CompetenciaAgrupadaViewSet(viewsets.ModelViewSet):
     queryset = CompetenciaAgrupada.objects.all()
     serializer_class = CompetenciaAgrupadaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """
+        Devuelve las clases de permisos de instancia para la acción solicitada.
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsSUBDEREOrSuperuser]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         print("Datos recibidos para creación CompetenciaAgrupada:", request.data)
@@ -242,3 +253,10 @@ class CompetenciaAgrupadaViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Método PATCH para actualizaciones parciales.
+        """
+        print("Datos recibidos para PATCH:", request.data)
+        return super().partial_update(request, *args, **kwargs)

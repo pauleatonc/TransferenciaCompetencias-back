@@ -1,4 +1,5 @@
 from django.db import transaction
+from drf_writable_nested import WritableNestedModelSerializer
 from rest_framework import serializers
 from applications.competencias.models import Competencia, Ambito, CompetenciaAgrupada
 from applications.etapas.models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
@@ -26,6 +27,9 @@ class RegionSerializer(serializers.ModelSerializer):
 
 
 class CompetenciaAgrupadaSerializer(serializers.ModelSerializer):
+    competencias = serializers.PrimaryKeyRelatedField(queryset=Competencia.objects.all(), required=False)
+    nombre = serializers.CharField(required=False)
+
     class Meta:
         model = CompetenciaAgrupada
         fields = ('id', 'nombre', 'competencias', 'modalidad_ejercicio')
@@ -164,17 +168,73 @@ class CompetenciaCreateSerializer(serializers.ModelSerializer):
         return competencia
 
 
-class CompetenciaUpdateSerializer(serializers.ModelSerializer):
+class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
     nombre = serializers.CharField(required=False)
     plazo_formulario_sectorial = serializers.IntegerField(required=False)
     plazo_formulario_gore = serializers.IntegerField(required=False)
     sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
     regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
+    competencias_agrupadas = CompetenciaAgrupadaSerializer(many=True, required=False)
 
     class Meta:
         model = Competencia
         fields = '__all__'
         extra_kwargs = {'creado_por': {'read_only': True}}
+
+    def to_internal_value(self, data):
+        # Maneja primero los campos no anidados
+        internal_value = super().to_internal_value(data)
+
+        # Procesar campos anidados
+        for field_name in [
+            'competencias_agrupadas',
+        ]:
+            if field_name in data:
+                nested_data = data[field_name]
+                internal_nested_data = []
+                for item in nested_data:
+                    # Manejar la clave 'DELETE' si está presente
+                    if 'DELETE' in item and item['DELETE'] == True:
+                        internal_nested_data.append({'id': item['id'], 'DELETE': True})
+                    else:
+                        item_data = self.fields[field_name].child.to_internal_value(item)
+                        item_data['id'] = item.get('id')
+                        internal_nested_data.append(item_data)
+                internal_value[field_name] = internal_nested_data
+
+        return internal_value
+
+    def update_or_create_nested_instances(self, model, nested_data, instance):
+        for data in nested_data:
+            item_id = data.pop('id', None)
+            delete_flag = data.pop('DELETE', False)
+
+            if item_id is not None and not delete_flag:
+                obj = model.objects.get(id=item_id)
+                for attr, value in data.items():
+                    setattr(obj, attr, value)
+                obj.formulario_sectorial = instance  # Asegurar que la instancia está correctamente asociada
+                obj.save()  # Invoca explícitamente el método save para aplicar la validación
+            elif item_id is None and not delete_flag:
+                # Crear una nueva instancia y guardarla explícitamente para invocar el método save
+                new_obj = model(**data)
+                new_obj.formulario_sectorial = instance  # Asegurar que la instancia está correctamente asociada
+                new_obj.save()
+            elif delete_flag:
+                model.objects.filter(id=item_id).delete()
+
+    def update(self, instance, validated_data):
+        competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
+
+        # Actualizar los atributos de FormularioSectorial
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if competencias_agrupadas_data is not None:
+            self.update_or_create_nested_instances(CompetenciaAgrupada, competencias_agrupadas_data, instance)
+
+        return instance
 
 
 def obtener_informacion_etapas(competencia):
