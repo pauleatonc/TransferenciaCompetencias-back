@@ -225,6 +225,8 @@ class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
 
     def update(self, instance, validated_data):
         competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
+        sectores_data = validated_data.pop('sectores', None)
+        regiones_data = validated_data.pop('regiones', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -233,6 +235,12 @@ class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
 
         if competencias_agrupadas_data is not None:
             self.update_or_create_nested_instances(CompetenciaAgrupada, competencias_agrupadas_data, instance)
+
+        if sectores_data is not None:
+            instance.sectores.set(sectores_data)
+
+        if regiones_data is not None:
+            instance.regiones.set(regiones_data)
 
         return instance
 
