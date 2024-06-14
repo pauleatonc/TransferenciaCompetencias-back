@@ -151,14 +151,34 @@ class Paso5(PasoBase):
         completados_variacion_promedio = sum(
             1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
 
-        completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
-        completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
+        personal_directo = PersonalDirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_personal_directo = personal_directo.count()
+        completado_personal_directo = sum(
+            1 for personal in personal_directo if self.es_personal_directo_completo()
+        )
+
+        personal_indirecto = PersonalIndirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_personal_indirecto = personal_indirecto.count()
+        completado_personal_indirecto = sum(
+            1 for personal in personal_indirecto if self.es_personal_indirecto_completo()
+        )
+
+        descripcion_completa_directo = 1 if self.descripcion_funciones_personal_directo.strip() else 0
+        descripcion_completa_indirecto = 1 if self.descripcion_funciones_personal_indirecto.strip() else 0
 
         total_campos = (total_costos_directos + total_costos_indirectos +
-                        total_evolucion_gasto + total_variacion_promedio + 2)
+                        total_evolucion_gasto + total_variacion_promedio +
+                        total_personal_directo + total_personal_indirecto + 2) # + 2 por los campos de descripción de personal
         completados = (completados_costos_directos + completados_costos_indirectos +
                        completados_evolucion_gasto + completados_variacion_promedio +
-                       completado_personal_directo + completado_personal_indirecto)
+                       completado_personal_directo + completado_personal_indirecto +
+                       descripcion_completa_directo + descripcion_completa_indirecto)
 
         return completados, total_campos
 
