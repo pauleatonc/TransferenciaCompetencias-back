@@ -442,7 +442,7 @@ def handler_directo(sender, instance, **kwargs):
         items_y_campos=items_y_campos_directos,
         calidades_y_campos=calidades_y_campos_directos,
         campos_costos_justificar=campos_directos,
-        tipo_modelo='directo',  # Especificar el tipo de modelo
+        tipo_modelo='directo',
         **kwargs
     )
 
@@ -458,7 +458,7 @@ def handler_indirecto(sender, instance, **kwargs):
         items_y_campos=items_y_campos_indirectos,
         calidades_y_campos=calidades_y_campos_indirectos,
         campos_costos_justificar=campos_indirectos,
-        tipo_modelo='indirecto',  # Especificar el tipo de modelo
+        tipo_modelo='indirecto',
         **kwargs
     )
 
