@@ -219,6 +219,10 @@ class CostosDirectos(BaseModel):
     class Meta:
         ordering = ['created_date']
 
+    @property
+    def personal_related_model(self):
+        return PersonalDirecto
+
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -233,6 +237,10 @@ class CostosIndirectos(BaseModel):
 
     class Meta:
         ordering = ['created_date']
+
+    @property
+    def personal_related_model(self):
+        return PersonalIndirecto
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
@@ -301,6 +309,7 @@ class PersonalDirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_a_personal_directo')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
+    costos = models.ForeignKey(CostosDirectos, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
@@ -314,6 +323,7 @@ class PersonalIndirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_b_personal_indirecto')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
+    costos = models.ForeignKey(CostosIndirectos, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     numero_personas = models.IntegerField(null=True, blank=True)
