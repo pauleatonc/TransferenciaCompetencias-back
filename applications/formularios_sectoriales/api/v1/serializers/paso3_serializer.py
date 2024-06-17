@@ -99,7 +99,7 @@ class Paso3GeneralSerializer(WritableNestedModelSerializer):
 
     def get_regiones(self, obj):
         regiones_data = []
-        regiones = obj.competencia.regiones.all()
+        regiones = obj.competencia.regiones.all().order_by('id')
 
         for region in regiones:
             paso3_instances = Paso3.objects.filter(formulario_sectorial=obj, region=region)

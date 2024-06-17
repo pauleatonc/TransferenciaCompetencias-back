@@ -84,11 +84,16 @@ class Paso5(PasoBase):
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     def es_instancia_costos_completa(self, instancia):
-        campos_requeridos = ['item_subtitulo', 'total_anual']
-        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
-        es_transversal_completo = getattr(instancia, 'es_transversal', None) is not None
+        # Revisar los campos básicos requeridos
+        campos_requeridos = ['item_subtitulo', 'total_anual', 'es_transversal', 'descripcion']
+        campos_completos = all(getattr(instancia, campo, None) is not None for campo in
+                               campos_requeridos[:3])  # Primero verificamos los campos que no son de tipo texto
+
+        # Verificar que el campo 'descripcion' no solo exista sino que tenga contenido relevante (no esté vacío ni solo espacios)
         descripcion_completa = bool(getattr(instancia, 'descripcion', '').strip())
-        return campos_completos, es_transversal_completo, descripcion_completa
+
+        # Todos los campos deben estar completos para considerar la instancia completa
+        return campos_completos and descripcion_completa
 
     def es_evolucion_gasto_completa(self, instancia):
         return all([
