@@ -31,6 +31,7 @@ class Paso4Inline(admin.TabularInline):
     model = Paso4
     extra = 0
 
+
 class EncabezadoPaso4InLine(admin.TabularInline):
     model = Paso4Encabezado
     extra = 0
