@@ -370,7 +370,7 @@ class CompetenciaDetailSerializer(serializers.ModelSerializer):
 
     def get_nombres_regiones(self, obj):
         # Suponiendo que obj tiene una relación con regiones
-        return [{'id': region.id, 'nombre': region.region} for region in obj.regiones.all()]
+        return [{'id': region.id, 'nombre': region.region} for region in obj.regiones.all().order_by('id')]
 
 
 class AmbitoSerializer(serializers.ModelSerializer):
