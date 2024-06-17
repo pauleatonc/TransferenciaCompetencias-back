@@ -175,6 +175,11 @@ class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
     sectores = serializers.PrimaryKeyRelatedField(many=True, queryset=SectorGubernamental.objects.all(), required=False)
     regiones = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
     competencias_agrupadas = CompetenciaAgrupadaSerializer(many=True, required=False)
+    usuarios_subdere = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='SUBDERE'), required=False)
+    usuarios_dipres = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='DIPRES'), required=False)
+    usuarios_sectoriales = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='Usuario Sectorial'), required=False)
+    usuarios_gore = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.filter(groups__name='GORE'), required=False)
+    regiones_recomendadas = serializers.PrimaryKeyRelatedField(many=True, queryset=Region.objects.all(), required=False)
 
     class Meta:
         model = Competencia
@@ -227,6 +232,11 @@ class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
         competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
         sectores_data = validated_data.pop('sectores', None)
         regiones_data = validated_data.pop('regiones', None)
+        usuarios_subdere_data = validated_data.pop('usuarios_subdere', None)
+        usuarios_dipres_data = validated_data.pop('usuarios_dipres', None)
+        usuarios_sectoriales_data = validated_data.pop('usuarios_sectoriales', None)
+        usuarios_gore_data = validated_data.pop('usuarios_gore', None)
+        regiones_recomendadas_data = validated_data.pop('regiones_recomendadas', None)
 
         # Actualizar los atributos de FormularioSectorial
         for attr, value in validated_data.items():
@@ -241,6 +251,21 @@ class CompetenciaUpdateSerializer(WritableNestedModelSerializer):
 
         if regiones_data is not None:
             instance.regiones.set(regiones_data)
+
+        if usuarios_subdere_data is not None:
+            instance.usuarios_subdere.set(usuarios_subdere_data)
+
+        if usuarios_dipres_data is not None:
+            instance.usuarios_dipres.set(usuarios_dipres_data)
+
+        if usuarios_sectoriales_data is not None:
+            instance.usuarios_sectoriales.set(usuarios_sectoriales_data)
+
+        if  usuarios_gore_data is not None:
+            instance.usuarios_gore.set(usuarios_gore_data)
+
+        if regiones_recomendadas_data is not None:
+            instance.regiones_recomendadas.set(regiones_recomendadas_data)
 
         return instance
 
