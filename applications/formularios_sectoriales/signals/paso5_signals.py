@@ -498,14 +498,12 @@ def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, cre
             if not modelo_personal.objects.filter(
                     formulario_sectorial=instance.formulario_sectorial,
                     region=instance.region,
-                    calidad_juridica=calidad_juridica_obj,
-                    costos=instance
+                    calidad_juridica=calidad_juridica_obj
             ).exists():
                 modelo_personal.objects.create(
                     formulario_sectorial=instance.formulario_sectorial,
                     region=instance.region,
-                    calidad_juridica=calidad_juridica_obj,
-                    costos=instance
+                    calidad_juridica=calidad_juridica_obj
                 )
 
         # Eliminar instancias de personal que ya no cumplen la relación de calidad debido a la actualización
@@ -524,3 +522,37 @@ def actualizar_personal_directo(sender, instance, **kwargs):
 @receiver(post_save, sender=CostosIndirectos)
 def actualizar_personal_indirecto(sender, instance, **kwargs):
     actualizar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+
+
+def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
+    if instance.item_subtitulo:
+        item_subtitulo_texto = instance.item_subtitulo.item
+        calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
+
+        # Convertir calidades en lista si no es una lista
+        if not isinstance(calidades, list):
+            calidades = [calidades]
+
+        # Eliminar instancias de personal que corresponden a la calidad jurídica relacionada con el item de subtítulo eliminado
+        for calidad in calidades:
+            try:
+                calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
+                personal_correspondiente = modelo_personal.objects.filter(
+                    formulario_sectorial=instance.formulario_sectorial,
+                    region=instance.region,
+                    calidad_juridica=calidad_juridica_obj
+                )
+                personal_correspondiente.delete()
+            except CalidadJuridica.DoesNotExist:
+                continue  # Si la calidad jurídica no existe, simplemente se ignora
+
+
+@receiver(post_delete, sender=CostosDirectos)
+def eliminar_personal_directo(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+
+
+@receiver(post_delete, sender=CostosIndirectos)
+def eliminar_personal_indirecto(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+
