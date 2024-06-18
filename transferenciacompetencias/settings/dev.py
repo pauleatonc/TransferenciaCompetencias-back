@@ -53,6 +53,20 @@ SENDGRID_API_KEY = env("SENDGRID_API_KEY")
 ADMIN_EMAIL = env("ADMIN_EMAIL")
 NOREPLY_EMAIL = env("NOREPLY_EMAIL")
 
+# KEYCLOAK SETTINGS
+KEYCLOAK_CONFIG = {
+    'realm': env('DEV_KEYCLOAK_REALM'),
+    'auth-server-url': env('DEV_KEYCLOAK_AUTH_SERVER_URL'),
+    'ssl-required': env('DEV_KEYCLOAK_SSL_REQUIRED'),
+    'resource': env('DEV_KEYCLOAK_RESOURCE'),
+    'credentials': {
+        'secret': env('DEV_KEYCLOAK_CREDENTIALS_SECRET')
+    },
+    'confidential-port': env.int('DEV_KEYCLOAK_CONFIDENTIAL_PORT'),
+    'redirect_uri': env('DEV_KEYCLOAK_REDIRECT_URI'),
+    'keycloak_token_url': env('DEV_KEYCLOAK_TOKEN_URL'),
+    'keycloak_logout_url': env('DEV_KEYCLOAK_LOGOUT_URL'),
+}
 
 # Trusted origins for the CSRF validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#csrf-trusted-origins
