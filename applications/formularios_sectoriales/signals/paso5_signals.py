@@ -14,11 +14,8 @@ from applications.formularios_sectoriales.models import (
     CostoAnio,
     FormularioSectorial,
     PersonalDirecto,
-    PersonalIndirecto,
-    ItemSubtitulo,
-    CalidadJuridica,
-    Paso5Encabezado
-    )
+    PersonalIndirecto, ItemSubtitulo, CalidadJuridica, Paso5Encabezado
+)
 from applications.regioncomuna.models import Region
 
 
@@ -477,21 +474,25 @@ def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, cre
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
 
+        # Manejar el caso especial donde los costos cambian pero no se crean nuevos
         if item_subtitulo_texto == "04 - Otros Gastos en Personal" and not created:
+            # Si no existe ningún otro costo en la región que cumpla con la calidad jurídica especificada, eliminar personal
             if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo,
                                                 region=instance.region).exists():
                 personal_asociado = modelo_personal.objects.filter(
                     formulario_sectorial=instance.formulario_sectorial,
                     region=instance.region,
                     calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in
-                                          calidades]
+                                          calidades],
                 )
                 personal_asociado.delete()
             return
 
+        # Convertir calidades en lista si no es una lista
         if not isinstance(calidades, list):
             calidades = [calidades]
 
+        # Crear o actualizar instancias de personal
         for calidad in calidades:
             calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
             if not modelo_personal.objects.filter(
@@ -505,26 +506,12 @@ def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, cre
                     calidad_juridica=calidad_juridica_obj
                 )
 
-
-def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
-    for calidad, _ in relacion_item_calidad.items():
-        calidades = relacion_item_calidad[calidad] if isinstance(relacion_item_calidad[calidad], list) else [
-            relacion_item_calidad[calidad]]
-        for calidad in calidades:
-            try:
-                calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
-                if not modelo_costos.objects.filter(
-                        formulario_sectorial=instance.formulario_sectorial,
-                        region=instance.region,
-                        item_subtitulo__item=calidad
-                ).exists():
-                    modelo_personal.objects.filter(
-                        formulario_sectorial=instance.formulario_sectorial,
-                        region=instance.region,
-                        calidad_juridica=calidad_juridica_obj
-                    ).delete()
-            except CalidadJuridica.DoesNotExist:
-                continue
+        # Eliminar instancias de personal que ya no cumplen la relación de calidad debido a la actualización
+        personal_existente = modelo_personal.objects.filter(formulario_sectorial=instance.formulario_sectorial,
+                                                            region=instance.region)
+        for personal in personal_existente:
+            if personal.calidad_juridica.calidad_juridica not in calidades:
+                personal.delete()
 
 
 @receiver(post_save, sender=CostosDirectos)
@@ -532,16 +519,40 @@ def actualizar_personal_directo(sender, instance, **kwargs):
     actualizar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
 
 
-@receiver(post_delete, sender=CostosDirectos)
-def eliminar_personal_directo(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
-
-
 @receiver(post_save, sender=CostosIndirectos)
 def actualizar_personal_indirecto(sender, instance, **kwargs):
     actualizar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
 
 
+def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
+    if instance.item_subtitulo:
+        item_subtitulo_texto = instance.item_subtitulo.item
+        calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
+
+        # Convertir calidades en lista si no es una lista
+        if not isinstance(calidades, list):
+            calidades = [calidades]
+
+        # Eliminar instancias de personal que corresponden a la calidad jurídica relacionada con el item de subtítulo eliminado
+        for calidad in calidades:
+            try:
+                calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
+                personal_correspondiente = modelo_personal.objects.filter(
+                    formulario_sectorial=instance.formulario_sectorial,
+                    region=instance.region,
+                    calidad_juridica=calidad_juridica_obj
+                )
+                personal_correspondiente.delete()
+            except CalidadJuridica.DoesNotExist:
+                continue  # Si la calidad jurídica no existe, simplemente se ignora
+
+
+@receiver(post_delete, sender=CostosDirectos)
+def eliminar_personal_directo(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosDirectos, PersonalDirecto, instance)
+
+
 @receiver(post_delete, sender=CostosIndirectos)
 def eliminar_personal_indirecto(sender, instance, **kwargs):
     eliminar_instancias_personal(CostosIndirectos, PersonalIndirecto, instance)
+

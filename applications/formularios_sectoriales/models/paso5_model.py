@@ -21,7 +21,12 @@ class Paso5Encabezado(PasoBase):
     def avance_numerico(self):
         pasos5 = Paso5.objects.filter(formulario_sectorial=self.formulario_sectorial)
         total_pasos = pasos5.count()
-        pasos_completos = sum(1 for paso in pasos5 if paso.avance().split('/')[0] == paso.avance().split('/')[1])
+        pasos_completos = 0
+        for paso in pasos5:
+            avance = paso.avance().split('/')
+            if avance[1] != '0':  # Asegura que no estamos tratando con un avance 0/0
+                if avance[0] == avance[1]:
+                    pasos_completos += 1
         return pasos_completos, total_pasos
 
     def avance(self):
@@ -84,11 +89,16 @@ class Paso5(PasoBase):
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     def es_instancia_costos_completa(self, instancia):
-        campos_requeridos = ['item_subtitulo', 'total_anual']
-        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
-        es_transversal_completo = getattr(instancia, 'es_transversal', None) is not None
+        # Revisar los campos básicos requeridos
+        campos_requeridos = ['item_subtitulo', 'total_anual', 'es_transversal', 'descripcion']
+        campos_completos = all(getattr(instancia, campo, None) is not None for campo in
+                               campos_requeridos[:3])  # Primero verificamos los campos que no son de tipo texto
+
+        # Verificar que el campo 'descripcion' no solo exista sino que tenga contenido relevante (no esté vacío ni solo espacios)
         descripcion_completa = bool(getattr(instancia, 'descripcion', '').strip())
-        return campos_completos, es_transversal_completo, descripcion_completa
+
+        # Todos los campos deben estar completos para considerar la instancia completa
+        return campos_completos and descripcion_completa
 
     def es_evolucion_gasto_completa(self, instancia):
         return all([
@@ -102,30 +112,39 @@ class Paso5(PasoBase):
     def es_variacion_promedio_completa(self, instancia):
         return bool(instancia.descripcion)
 
-    def es_personal_directo_completo(self):
-        return PersonalDirecto.objects.filter(
+    def contar_personal_directo_completo(self):
+        personal_directo = PersonalDirecto.objects.filter(
             formulario_sectorial=self.formulario_sectorial,
-            region=self.region,
-            estamento__isnull=False,
-            renta_bruta__isnull=False
-        ).exists()
+            region=self.region
+        )
+        completos = 0
+        for personal in personal_directo:
+            if personal.estamento is not None and personal.renta_bruta is not None:
+                completos += 1
+        return completos
 
-    def es_personal_indirecto_completo(self):
-        return PersonalIndirecto.objects.filter(
+    def contar_personal_indirecto_completo(self):
+        personal_indirecto = PersonalIndirecto.objects.filter(
             formulario_sectorial=self.formulario_sectorial,
-            region=self.region,
-            estamento__isnull=False,
-            numero_personas__isnull=False,
-            renta_bruta__isnull=False
-        ).exists()
+            region=self.region
+        )
+        completos = 0
+        for personal in personal_indirecto:
+            if personal.estamento is not None and personal.numero_personas is not None and personal.renta_bruta is not None:
+                completos += 1
+        return completos
 
     def avance_numerico(self):
+        # Inicialización de variables para el conteo de "04 - Otros Gastos en Personal"
+        campos_especiales_contados = 0
+
+        # Queries y conteos de instancias para costos directos e indirectos
         costos_directos = CostosDirectos.objects.filter(
             formulario_sectorial_id=self.formulario_sectorial_id,
             region=self.region
         )
         total_costos_directos = costos_directos.count()
-        completados_costos_directos = sum([1 for costo in costos_directos if self.es_instancia_costos_completa(costo)])
+        completados_costos_directos = sum(1 for costo in costos_directos if self.es_instancia_costos_completa(costo))
 
         costos_indirectos = CostosIndirectos.objects.filter(
             formulario_sectorial_id=self.formulario_sectorial_id,
@@ -133,8 +152,35 @@ class Paso5(PasoBase):
         )
         total_costos_indirectos = costos_indirectos.count()
         completados_costos_indirectos = sum(
-            [1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo)])
+            1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo))
 
+        # Verificar costos específicos '04 - Otros Gastos en Personal'
+        costos_especiales = costos_directos.filter(item_subtitulo__item="04 - Otros Gastos en Personal")
+        if costos_especiales.exists():
+            campos_especiales_contados += 1  # Añadir a total campos si existe al menos un costo especial
+
+        costos_especiales_indirectos = costos_indirectos.filter(item_subtitulo__item="04 - Otros Gastos en Personal")
+        if costos_especiales_indirectos.exists():
+            campos_especiales_contados += 1  # Añadir a total campos si existe al menos un costo especial indirecto
+
+        # Verificar si existen instancias de personal que deban ser consideradas
+        personal_relevante = PersonalDirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region,
+            calidad_juridica__calidad_juridica__in=["Honorario asimilado a grado", "Comisión de servicio", "Otro"]
+        )
+        if personal_relevante.exists():
+            campos_especiales_contados -= 1  # Restar de total campos si existe al menos un personal relevante
+
+        personal_relevante_indirecto = PersonalIndirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region,
+            calidad_juridica__calidad_juridica__in=["Honorario asimilado a grado", "Comisión de servicio", "Otro"]
+        )
+        if personal_relevante_indirecto.exists():
+            campos_especiales_contados -= 1  # Restar de total campos si existe al menos un personal relevante
+
+        # Queries y conteos para evolución de gasto y variación promedio
         evolucion_gasto = EvolucionGastoAsociado.objects.filter(
             formulario_sectorial=self.formulario_sectorial,
             region=self.region
@@ -151,14 +197,39 @@ class Paso5(PasoBase):
         completados_variacion_promedio = sum(
             1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
 
-        completado_personal_directo = 1 if self.es_personal_directo_completo() else 0
-        completado_personal_indirecto = 1 if self.es_personal_indirecto_completo() else 0
+        # Queries y conteos para personal directo e indirecto
+        personal_directo = PersonalDirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_personal_directo = personal_directo.count()
+        completado_personal_directo = self.contar_personal_directo_completo()
 
+        personal_indirecto = PersonalIndirecto.objects.filter(
+            formulario_sectorial=self.formulario_sectorial,
+            region=self.region
+        )
+        total_personal_indirecto = personal_indirecto.count()
+        completado_personal_indirecto = self.contar_personal_indirecto_completo()
+
+        # Descripciones de personal
         total_campos = (total_costos_directos + total_costos_indirectos +
-                        total_evolucion_gasto + total_variacion_promedio + 2)
+                        total_evolucion_gasto + total_variacion_promedio +
+                        total_personal_directo + total_personal_indirecto + campos_especiales_contados)
         completados = (completados_costos_directos + completados_costos_indirectos +
                        completados_evolucion_gasto + completados_variacion_promedio +
                        completado_personal_directo + completado_personal_indirecto)
+
+        # Incluir descripciones si hay personal directo o indirecto
+        if total_personal_directo > 0:
+            total_campos += 1
+            if self.descripcion_funciones_personal_directo.strip():
+                completados += 1
+
+        if total_personal_indirecto > 0:
+            total_campos += 1
+            if self.descripcion_funciones_personal_indirecto.strip():
+                completados += 1
 
         return completados, total_campos
 
@@ -199,6 +270,10 @@ class CostosDirectos(BaseModel):
     class Meta:
         ordering = ['created_date']
 
+    @property
+    def personal_related_model(self):
+        return PersonalDirecto
+
 
 class CostosIndirectos(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
@@ -213,6 +288,10 @@ class CostosIndirectos(BaseModel):
 
     class Meta:
         ordering = ['created_date']
+
+    @property
+    def personal_related_model(self):
+        return PersonalIndirecto
 
 
 class ResumenCostosPorSubtitulo(BaseModel):
@@ -281,6 +360,7 @@ class PersonalDirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_a_personal_directo')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
+    costos = models.ForeignKey(CostosDirectos, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
@@ -294,6 +374,7 @@ class PersonalIndirecto(BaseModel):
     formulario_sectorial = models.ForeignKey(FormularioSectorial, on_delete=models.CASCADE,
                                              related_name='p_5_3_b_personal_indirecto')
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
+    costos = models.ForeignKey(CostosIndirectos, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_indirecto', null=True, blank=True)
     numero_personas = models.IntegerField(null=True, blank=True)

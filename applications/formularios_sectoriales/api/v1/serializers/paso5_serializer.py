@@ -287,6 +287,7 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
         model = PersonalDirecto
         fields = [
             'id',
+            'costos',
             'estamento',
             'nombre_estamento',
             'estamento_label_value',
@@ -332,6 +333,7 @@ class PersonalIndirectoSerializer(serializers.ModelSerializer):
         model = PersonalIndirecto
         fields = [
             'id',
+            'costos',
             'estamento',
             'nombre_estamento',
             'estamento_label_value',
