@@ -21,7 +21,12 @@ class Paso5Encabezado(PasoBase):
     def avance_numerico(self):
         pasos5 = Paso5.objects.filter(formulario_sectorial=self.formulario_sectorial)
         total_pasos = pasos5.count()
-        pasos_completos = sum(1 for paso in pasos5 if paso.avance().split('/')[0] == paso.avance().split('/')[1])
+        pasos_completos = 0
+        for paso in pasos5:
+            avance = paso.avance().split('/')
+            if avance[1] != '0':  # Asegura que no estamos tratando con un avance 0/0
+                if avance[0] == avance[1]:
+                    pasos_completos += 1
         return pasos_completos, total_pasos
 
     def avance(self):
