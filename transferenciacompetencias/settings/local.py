@@ -28,15 +28,6 @@ DATABASES = {
         'HOST': env('DATABASE_DEFAULT_HOST'),
         'PORT': env('DATABASE_DEFAULT_PORT'),
     },
-    # Base de datos externa
-    'externaldb': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DATABASE_EXTERNAL_NAME'),
-        'USER': env('DATABASE_EXTERNAL_USER'),
-        'PASSWORD': env('DATABASE_EXTERNAL_PASSWORD'),
-        'HOST': env('DATABASE_EXTERNAL_HOST'),
-        'PORT': env('DATABASE_EXTERNAL_PORT'),
-            }
                 }
 
 # Static files (CSS, JavaScript, Images)
@@ -64,4 +55,19 @@ RECAPTCHA_PRIVATE_KEY = env('RECAPTCHA_PRIVATE_KEY')
 SENDGRID_API_KEY = env('SENDGRID_API_KEY')
 ADMIN_EMAIL = env("ADMIN_EMAIL")
 NOREPLY_EMAIL = env("NOREPLY_EMAIL")
+
+# KEYCLOAK SETTINGS
+KEYCLOAK_CONFIG = {
+    'realm': env('LOCAL_KEYCLOAK_REALM'),
+    'auth-server-url': env('LOCAL_KEYCLOAK_AUTH_SERVER_URL'),
+    'ssl-required': env('LOCAL_KEYCLOAK_SSL_REQUIRED'),
+    'resource': env('LOCAL_KEYCLOAK_RESOURCE'),
+    'credentials': {
+        'secret': env('LOCAL_KEYCLOAK_CREDENTIALS_SECRET')
+    },
+    'confidential-port': env.int('LOCAL_KEYCLOAK_CONFIDENTIAL_PORT'),
+    'redirect_uri': env('LOCAL_KEYCLOAK_REDIRECT_URI'),
+    'keycloak_token_url': env('LOCAL_KEYCLOAK_TOKEN_URL'),
+    'keycloak_logout_url': env('LOCAL_KEYCLOAK_LOGOUT_URL'),
+}
 
