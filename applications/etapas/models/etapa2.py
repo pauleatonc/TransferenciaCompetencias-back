@@ -1,12 +1,7 @@
-from django.core.validators import FileExtensionValidator
 from django.db import models
 
 #
-from applications.base.functions import validate_file_size_twenty
-from applications.base.models import BaseModel
 from applications.etapas.models import EtapaBase
-from applications.formularios_sectoriales.models import FormularioSectorial
-from django.utils import timezone
 
 
 class Etapa2(EtapaBase):

@@ -1,10 +1,8 @@
 from django.db import models
+from django.utils import timezone
 
 from applications.base.models import BaseModel
-from applications.competencias.models import Competencia
 from applications.formularios_sectoriales.models import FormularioSectorial
-from applications.sectores_gubernamentales.models import SectorGubernamental
-from django.utils import timezone
 
 
 class ObservacionesSubdereFormularioSectorial(BaseModel):

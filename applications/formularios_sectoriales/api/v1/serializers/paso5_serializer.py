@@ -275,7 +275,7 @@ class EstamentoSerializer(serializers.ModelSerializer):
         ]
 
 
-class AgruparPorCalidadJuridicaSerializer(serializers.ListSerializer):
+'''class AgruparPorCalidadJuridicaSerializer(serializers.ListSerializer):
     def to_representation(self, data):
         # Agrupar por calidad_juridica
         result = {}
@@ -288,7 +288,7 @@ class AgruparPorCalidadJuridicaSerializer(serializers.ListSerializer):
                 }
             result[calidad_juridica]["personal"].append(self.child.to_representation(item))
         # Convertimos el diccionario a una lista para mantener una estructura consistente de respuesta
-        return [value for key, value in result.items()]
+        return [value for key, value in result.items()]'''
 
 
 class PersonalDirectoSerializer(serializers.ModelSerializer):
@@ -312,7 +312,7 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
             'renta_bruta',
             'grado',
         ]
-        list_serializer_class = AgruparPorCalidadJuridicaSerializer
+        #list_serializer_class = AgruparPorCalidadJuridicaSerializer
 
     def get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
