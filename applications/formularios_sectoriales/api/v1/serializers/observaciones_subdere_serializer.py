@@ -15,6 +15,8 @@ User = get_user_model()
 
 
 class CamposObservacionesSerializer(serializers.ModelSerializer):
+    documento = serializers.FileField(required=False, allow_null=True)
+
     class Meta:
         model = ObservacionesSubdereFormularioSectorial
         fields = [
@@ -25,6 +27,8 @@ class CamposObservacionesSerializer(serializers.ModelSerializer):
             'observacion_paso4',
             'observacion_paso5',
             'observacion_enviada',
+            'documento',
+            'descripcion_documento',
             'fecha_envio',
         ]
 
