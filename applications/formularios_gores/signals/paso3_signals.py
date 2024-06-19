@@ -34,40 +34,19 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         Paso3.objects.create(formulario_gore=instance)
 
 
-@transaction.atomic
-def eliminar_formularios_y_anidados(competencia, region_pk):
-    try:
-        formularios_gore = FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
-        for formulario in formularios_gore:
-            Paso3.objects.filter(formulario_gore=formulario).delete()
-            PersonalDirectoGORE.objects.filter(formulario_gore=formulario).delete()
-            PersonalIndirectoGORE.objects.filter(formulario_gore=formulario).delete()
-            RecursosComparados.objects.filter(formulario_gore=formulario).delete()
-            SistemasInformaticos.objects.filter(formulario_gore=formulario).delete()
-            RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario).delete()
-            formulario.delete()
-    except Exception as e:
-        # Log the error (consider using logging framework)
-        print(f"Error al eliminar formulario GORE y relacionados: {e}")
-        raise
-
-
 @receiver(m2m_changed, sender=Competencia.regiones.through)
-@transaction.atomic
-def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add' and instance.pk:
-        competencia = Competencia.objects.get(pk=instance.pk)
-        for region_pk in pk_set:
-            region = Region.objects.get(pk=region_pk)
-            FormularioGORE.objects.get_or_create(
-                competencia=competencia,
-                region=region,
-                defaults={'nombre': f'Formulario GORE de {region.region} - {competencia.nombre}'}
-            )
+def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add':
+        for formulario_gore in FormularioGORE.objects.filter(competencia=instance):
+            for region_pk in pk_set:
+                # Asegurar que exista un Paso3 para cada FormularioGORE
+                Paso3.objects.get_or_create(formulario_gore=formulario_gore)
+
     elif action == 'post_remove':
-        competencia = Competencia.objects.get(pk=instance.pk)
-        for region_pk in pk_set:
-            FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk)
+        # Eliminación de los FormularioGORE y sus dependencias cuando se remueven regiones
+        formularios_gore_a_eliminar = FormularioGORE.objects.filter(competencia=instance, region_id__in=pk_set)
+        for formulario_gore in formularios_gore_a_eliminar:
+            formulario_gore.delete()  # Esto debería cascada eliminar Paso3 debido a on_delete=models.CASCADE
 
 
 @receiver(post_save, sender=PersonalDirecto)
@@ -536,7 +515,12 @@ def actualizar_justificados_por_subtitulos(sender, instance, **kwargs):
 
 def actualizar_subtitulo_21(sender, instance, **kwargs):
     formulario_gore = instance.formulario_gore
-    paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+
+    try:
+        paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+    except Paso3.DoesNotExist:
+        # Crear la instancia de Paso3 si no existe
+        paso3_instance = Paso3.objects.create(formulario_gore=formulario_gore)
 
     suma_directo = PersonalDirectoGORE.objects.filter(
         formulario_gore=formulario_gore,
@@ -550,7 +534,6 @@ def actualizar_subtitulo_21(sender, instance, **kwargs):
 
     paso3_instance.subtitulo_21_justificados_gore = suma_directo + suma_indirecto
     paso3_instance.save()
-
 
 @receiver(post_save, sender=PersonalDirectoGORE)
 @receiver(post_save, sender=PersonalIndirectoGORE)

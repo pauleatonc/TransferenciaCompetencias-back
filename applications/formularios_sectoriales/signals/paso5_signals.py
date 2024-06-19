@@ -27,23 +27,30 @@ def crear_encabezado_paso5(sender, instance, created, **kwargs):
 
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
-def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
+def handle_region_changes(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add':
         for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
             for region_pk in pk_set:
                 region = Region.objects.get(pk=region_pk)
-                # Cada FormularioSectorial necesita un Paso5 por región:
+                # Asegurarse de que cada FormularioSectorial tiene un Paso5 por región
                 Paso5.objects.get_or_create(
                     formulario_sectorial=formulario_sectorial,
                     region=region
                 )
 
     elif action == 'post_remove':
-        FormularioSectorial.objects.filter(
-            competencia=instance,
-            region_id__in=pk_set
-        ).delete()
-
+        for formulario_sectorial in FormularioSectorial.objects.filter(competencia=instance):
+            for region_pk in pk_set:
+                region = Region.objects.get(pk=region_pk)
+                # Eliminar Paso5 y otros modelos relacionados
+                Paso5.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                CostosDirectos.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                CostosIndirectos.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                PersonalDirecto.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                PersonalIndirecto.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                ResumenCostosPorSubtitulo.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                EvolucionGastoAsociado.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
+                VariacionPromedio.objects.filter(formulario_sectorial=formulario_sectorial, region=region).delete()
 
 def regenerar_resumen_costos(formulario_sectorial_id, region):
     subtitulos_directos = set(
