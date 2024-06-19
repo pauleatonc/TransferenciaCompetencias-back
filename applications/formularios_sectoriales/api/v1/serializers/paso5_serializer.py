@@ -275,8 +275,23 @@ class EstamentoSerializer(serializers.ModelSerializer):
         ]
 
 
+class AgruparPorCalidadJuridicaSerializer(serializers.ListSerializer):
+    def to_representation(self, data):
+        # Agrupar por calidad_juridica
+        result = {}
+        for item in data:
+            calidad_juridica = item.calidad_juridica.calidad_juridica if item.calidad_juridica else 'Sin Calidad Jurídica'
+            if calidad_juridica not in result:
+                result[calidad_juridica] = {
+                    "calidad_juridica": calidad_juridica,
+                    "personal": []
+                }
+            result[calidad_juridica]["personal"].append(self.child.to_representation(item))
+        # Convertimos el diccionario a una lista para mantener una estructura consistente de respuesta
+        return [value for key, value in result.items()]
+
+
 class PersonalDirectoSerializer(serializers.ModelSerializer):
-    calidad_juridica = serializers.PrimaryKeyRelatedField(queryset=CalidadJuridica.objects.all(), required=False, allow_null=True)
     estamento = serializers.PrimaryKeyRelatedField(queryset=Estamento.objects.all(), required=False, allow_null=True)
     nombre_estamento = serializers.SerializerMethodField()
     calidad_juridica_label_value = serializers.SerializerMethodField()
@@ -297,17 +312,14 @@ class PersonalDirectoSerializer(serializers.ModelSerializer):
             'renta_bruta',
             'grado',
         ]
+        list_serializer_class = AgruparPorCalidadJuridicaSerializer
 
     def get_nombre_estamento(self, obj):
         return obj.estamento.estamento if obj.estamento else None
 
     def get_estamento_label_value(self, obj):
-        # Método para el campo personalizado de item_subtitulo
         if obj.estamento:
-            return {
-                'label': obj.estamento.estamento,
-                'value': str(obj.estamento.id)
-            }
+            return {'label': obj.estamento.estamento, 'value': str(obj.estamento.id)}
         return {'label': '', 'value': ''}
 
     def get_nombre_calidad_juridica(self, obj):
