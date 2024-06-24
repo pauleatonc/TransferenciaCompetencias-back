@@ -11,7 +11,7 @@ from applications.base.models import BaseModel
 class FormularioGORE(BaseModel):
     competencia = models.ForeignKey(Competencia, on_delete=models.CASCADE)
     region = models.ForeignKey(Region, on_delete=models.CASCADE, related_name='formulario_gore')
-    nombre = models.CharField(max_length=200, unique=True)
+    nombre = models.CharField(max_length=250, unique=True)
     formulario_enviado = models.BooleanField(default=False)
     intento_envio = models.BooleanField(default=False)
     fecha_envio = models.DateTimeField(null=True, blank=True)
