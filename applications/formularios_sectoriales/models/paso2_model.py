@@ -19,7 +19,20 @@ class Paso2(PasoBase):
 
     def avance_numerico(self):
         completados = 0
-        total_campos = 3
+        total_campos = 4  # Valor inicial basado en las verificaciones existentes
+
+        # Verificar OrganismosIntervinientes
+        organismos = list(self.formulario_sectorial.p_2_1_organismos_intervinientes.all())
+        # Verifica todos excepto el primero si tiene más de uno
+        if len(organismos) > 1:
+            organismos_intervinientes_completos = all(
+                organismo.nombre_ministerio_servicio and organismo.descripcion
+                for organismo in organismos[1:]
+            )
+            if organismos_intervinientes_completos:
+                completados += 1
+        elif len(organismos) == 1:  # Si solo hay un elemento, directamente completa el campo
+            completados += 1
 
         # Verificar UnidadesIntervinientes
         unidades_intervinientes_completas = all(
@@ -41,12 +54,24 @@ class Paso2(PasoBase):
             completados += 1
 
         # Verificar FlujogramaCompetencia
-        flujograma_completo = any(
-            flujograma.flujograma_competencia
-            for flujograma in self.formulario_sectorial.p_2_5_flujograma_competencia.all()
-        )
-        if flujograma_completo:
-            completados += 1
+        flujogramas = self.formulario_sectorial.p_2_5_flujograma_competencia.all()
+        if flujogramas.exists() and self.descripcion_cualitativa:
+            flujograma_completo = any(
+                flujograma.flujograma_competencia for flujograma in flujogramas
+            )
+            if flujograma_completo:
+                completados += 1
+
+        # Nueva verificación para EtapasEjercicioCompetencia
+        etapas_existentes = self.formulario_sectorial.p_2_3_etapas_ejercicio_competencia.all()
+        if etapas_existentes.exists():  # Verifica si hay instancias
+            total_campos += 1  # Aumenta total_campos si hay al menos una instancia
+            etapas_completas = all(
+                etapa.nombre_etapa and etapa.descripcion_etapa
+                for etapa in etapas_existentes
+            )
+            if etapas_completas:
+                completados += 1  # Aumenta completados si todas las instancias tienen los campos requeridos
 
         return completados, total_campos
 
