@@ -45,4 +45,3 @@ def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwa
         for region_pk in pk_set:
             # Eliminar formularios GORE asociados a la competencia y a la región eliminada
             FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk).delete()
-
