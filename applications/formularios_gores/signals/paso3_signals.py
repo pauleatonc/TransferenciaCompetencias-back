@@ -43,10 +43,20 @@ def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
                 Paso3.objects.get_or_create(formulario_gore=formulario_gore)
 
     elif action == 'post_remove':
-        # Eliminación de los FormularioGORE y sus dependencias cuando se remueven regiones
-        formularios_gore_a_eliminar = FormularioGORE.objects.filter(competencia=instance, region_id__in=pk_set)
-        for formulario_gore in formularios_gore_a_eliminar:
-            formulario_gore.delete()  # Esto debería cascada eliminar Paso3 debido a on_delete=models.CASCADE
+        with transaction.atomic():
+            # Recuperar los FormularioGORE que serán eliminados
+            formularios_gore_a_eliminar = FormularioGORE.objects.filter(competencia=instance, region_id__in=pk_set)
+
+            for formulario_gore in formularios_gore_a_eliminar:
+                # Eliminación de dependencias asociadas al FormularioGORE
+                PersonalDirectoGORE.objects.filter(formulario_gore=formulario_gore).delete()
+                PersonalIndirectoGORE.objects.filter(formulario_gore=formulario_gore).delete()
+                RecursosComparados.objects.filter(formulario_gore=formulario_gore).delete()
+                SistemasInformaticos.objects.filter(formulario_gore=formulario_gore).delete()
+                RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario_gore).delete()
+
+                # Una vez eliminadas las dependencias, se puede eliminar el FormularioGORE
+                formulario_gore.delete()
 
 
 @receiver(post_save, sender=PersonalDirecto)
