@@ -503,22 +503,22 @@ def actualizar_subtitulo_21(sender, instance, **kwargs):
 
     try:
         paso3_instance = Paso3.objects.get(formulario_gore=formulario_gore)
+        suma_directo = PersonalDirectoGORE.objects.filter(
+            formulario_gore=formulario_gore,
+            sector__isnull=True
+        ).aggregate(suma_renta_bruta=Sum('renta_bruta'))['suma_renta_bruta'] or 0
+
+        suma_indirecto = PersonalIndirectoGORE.objects.filter(
+            formulario_gore=formulario_gore,
+            sector__isnull=True
+        ).aggregate(suma_total_rentas=Sum('total_rentas'))['suma_total_rentas'] or 0
+
+        paso3_instance.subtitulo_21_justificados_gore = suma_directo + suma_indirecto
+        paso3_instance.save()
+
     except Paso3.DoesNotExist:
-        # Crear la instancia de Paso3 si no existe
-        paso3_instance = Paso3.objects.create(formulario_gore=formulario_gore)
-
-    suma_directo = PersonalDirectoGORE.objects.filter(
-        formulario_gore=formulario_gore,
-        sector__isnull=True
-    ).aggregate(suma_renta_bruta=Sum('renta_bruta'))['suma_renta_bruta'] or 0
-
-    suma_indirecto = PersonalIndirectoGORE.objects.filter(
-        formulario_gore=formulario_gore,
-        sector__isnull=True
-    ).aggregate(suma_total_rentas=Sum('total_rentas'))['suma_total_rentas'] or 0
-
-    paso3_instance.subtitulo_21_justificados_gore = suma_directo + suma_indirecto
-    paso3_instance.save()
+        # Si no existe Paso3, simplemente pasa sin realizar ninguna acción
+        pass
 
 @receiver(post_save, sender=PersonalDirectoGORE)
 @receiver(post_save, sender=PersonalIndirectoGORE)
