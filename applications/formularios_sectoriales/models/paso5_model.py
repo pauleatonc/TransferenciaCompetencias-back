@@ -89,146 +89,75 @@ class Paso5(PasoBase):
     sub21b_gastos_en_personal_justificar = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
 
     def es_instancia_costos_completa(self, instancia):
-        # Revisar los campos básicos requeridos
         campos_requeridos = ['item_subtitulo', 'total_anual', 'es_transversal', 'descripcion']
-        campos_completos = all(getattr(instancia, campo, None) is not None for campo in
-                               campos_requeridos[:3])  # Primero verificamos los campos que no son de tipo texto
+        return all(getattr(instancia, campo, None) is not None for campo in campos_requeridos[:-1]) and bool(instancia.descripcion.strip())
 
-        # Verificar que el campo 'descripcion' no solo exista sino que tenga contenido relevante (no esté vacío ni solo espacios)
-        descripcion_completa = bool(getattr(instancia, 'descripcion', '').strip())
+    def es_personal_directo_completo(self, personal):
+        return personal.estamento is not None and personal.renta_bruta is not None
 
-        # Todos los campos deben estar completos para considerar la instancia completa
-        return campos_completos and descripcion_completa
+    def es_personal_indirecto_completo(self, personal):
+        return personal.estamento is not None and personal.numero_personas is not None and personal.renta_bruta is not None
 
-    def es_evolucion_gasto_completa(self, instancia):
-        return all([
-            instancia.subtitulo_id,
-            CostoAnio.objects.filter(evolucion_gasto=instancia).exists()
-        ]) and all(
-            getattr(anio, 'costo', None) is not None
-            for anio in CostoAnio.objects.filter(evolucion_gasto=instancia)
-        )
-
-    def es_variacion_promedio_completa(self, instancia):
-        return bool(instancia.descripcion)
-
-    def contar_personal_directo_completo(self):
-        personal_directo = PersonalDirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        completos = 0
-        for personal in personal_directo:
-            if personal.estamento is not None and personal.renta_bruta is not None:
-                completos += 1
-        return completos
-
-    def contar_personal_indirecto_completo(self):
-        personal_indirecto = PersonalIndirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        completos = 0
-        for personal in personal_indirecto:
-            if personal.estamento is not None and personal.numero_personas is not None and personal.renta_bruta is not None:
-                completos += 1
-        return completos
+    def verificar_costos_especiales(self, costos):
+        # Esta función verifica si hay costos especiales y devuelve True si existen
+        return costos.filter(item_subtitulo__item="04 - Otros Gastos en Personal").exists()
 
     def avance_numerico(self):
-        # Inicialización de variables para el conteo de "04 - Otros Gastos en Personal"
-        campos_especiales_contados = 0
+        completados = 0
+        total_campos = 4  # Comienza con 4 campos base para verificar
 
-        # Queries y conteos de instancias para costos directos e indirectos
-        costos_directos = CostosDirectos.objects.filter(
-            formulario_sectorial_id=self.formulario_sectorial_id,
-            region=self.region
-        )
-        total_costos_directos = costos_directos.count()
-        completados_costos_directos = sum(1 for costo in costos_directos if self.es_instancia_costos_completa(costo))
+        costos_directos = self.formulario_sectorial.p_5_1_a_costos_directos.filter(region=self.region)
+        costos_indirectos = self.formulario_sectorial.p_5_1_b_costos_indirectos.filter(region=self.region)
+        personal_directo = self.formulario_sectorial.p_5_3_a_personal_directo.filter(region=self.region)
+        personal_indirecto = self.formulario_sectorial.p_5_3_b_personal_indirecto.filter(region=self.region)
 
-        costos_indirectos = CostosIndirectos.objects.filter(
-            formulario_sectorial_id=self.formulario_sectorial_id,
-            region=self.region
-        )
-        total_costos_indirectos = costos_indirectos.count()
-        completados_costos_indirectos = sum(
-            1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo))
+        # Conteo de costos
+        if costos_directos.exists() and costos_indirectos.exists():
+            total_campos += 1  # Incrementa si ambos costos existen
+            if self.verificar_costos_especiales(costos_directos) or self.verificar_costos_especiales(costos_indirectos):
+                total_campos += 1  # Incrementa si existen costos especiales
+        total_campos = min(total_campos, 6)  # Asegura que no exceda 6
 
-        # Verificar costos específicos '04 - Otros Gastos en Personal'
-        costos_especiales = costos_directos.filter(item_subtitulo__item="04 - Otros Gastos en Personal")
-        if costos_especiales.exists():
-            campos_especiales_contados += 1  # Añadir a total campos si existe al menos un costo especial
-
-        costos_especiales_indirectos = costos_indirectos.filter(item_subtitulo__item="04 - Otros Gastos en Personal")
-        if costos_especiales_indirectos.exists():
-            campos_especiales_contados += 1  # Añadir a total campos si existe al menos un costo especial indirecto
-
-        # Verificar si existen instancias de personal que deban ser consideradas
-        personal_relevante = PersonalDirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region,
-            calidad_juridica__calidad_juridica__in=["Honorario asimilado a grado", "Comisión de servicio", "Otro"]
-        )
-        if personal_relevante.exists():
-            campos_especiales_contados -= 1  # Restar de total campos si existe al menos un personal relevante
-
-        personal_relevante_indirecto = PersonalIndirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region,
-            calidad_juridica__calidad_juridica__in=["Honorario asimilado a grado", "Comisión de servicio", "Otro"]
-        )
-        if personal_relevante_indirecto.exists():
-            campos_especiales_contados -= 1  # Restar de total campos si existe al menos un personal relevante
-
-        # Queries y conteos para evolución de gasto y variación promedio
-        evolucion_gasto = EvolucionGastoAsociado.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        total_evolucion_gasto = evolucion_gasto.count()
-        completados_evolucion_gasto = sum(
-            1 for evolucion in evolucion_gasto if self.es_evolucion_gasto_completa(evolucion))
-
-        variacion_promedio = VariacionPromedio.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        total_variacion_promedio = variacion_promedio.count()
-        completados_variacion_promedio = sum(
-            1 for variacion in variacion_promedio if self.es_variacion_promedio_completa(variacion))
-
-        # Queries y conteos para personal directo e indirecto
-        personal_directo = PersonalDirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        total_personal_directo = personal_directo.count()
-        completado_personal_directo = self.contar_personal_directo_completo()
-
-        personal_indirecto = PersonalIndirecto.objects.filter(
-            formulario_sectorial=self.formulario_sectorial,
-            region=self.region
-        )
-        total_personal_indirecto = personal_indirecto.count()
-        completado_personal_indirecto = self.contar_personal_indirecto_completo()
-
-        # Descripciones de personal
-        total_campos = (total_costos_directos + total_costos_indirectos +
-                        total_evolucion_gasto + total_variacion_promedio +
-                        total_personal_directo + total_personal_indirecto + campos_especiales_contados)
-        completados = (completados_costos_directos + completados_costos_indirectos +
-                       completados_evolucion_gasto + completados_variacion_promedio +
-                       completado_personal_directo + completado_personal_indirecto)
-
-        # Incluir descripciones si hay personal directo o indirecto
-        if total_personal_directo > 0:
+        # Conteo de personal
+        if personal_directo.exists() and personal_indirecto.exists():
             total_campos += 1
-            if self.descripcion_funciones_personal_directo.strip():
+
+        total_campos = min(total_campos, 6)  # Asegura que no exceda 6
+
+        # Completados
+        if all(self.es_instancia_costos_completa(costo) for costo in costos_directos) and costos_directos.exists():
+            completados += 1
+
+        if all(self.es_instancia_costos_completa(costo) for costo in costos_indirectos) and costos_indirectos.exists():
+            completados += 1
+
+        if all(self.es_personal_directo_completo(personal) for personal in
+               personal_directo) and personal_directo.exists():
+            completados += 1
+
+        if all(self.es_personal_indirecto_completo(personal) for personal in
+               personal_indirecto) and personal_indirecto.exists():
+            completados += 1
+
+        # Verificar cada CostoAnio para cada EvolucionGasto
+        evolucion_gastos = self.formulario_sectorial.p_5_2_evolucion_gasto_asociado.filter(region=self.region)
+        if evolucion_gastos.exists():
+            completados_evolucion_gasto = all(
+                costo_anio.costo is not None
+                for evolucion in evolucion_gastos
+                for costo_anio in evolucion.costo_anio.all()
+            )
+            if completados_evolucion_gasto:
                 completados += 1
 
-        if total_personal_indirecto > 0:
-            total_campos += 1
-            if self.descripcion_funciones_personal_indirecto.strip():
+        # Verificar cada VariacionPromedio
+        variaciones_promedio = self.formulario_sectorial.p_5_2_variacion_promedio.filter(region=self.region)
+        if variaciones_promedio.exists():
+            completados_variacion_promedio = all(
+                variacion.descripcion.strip()
+                for variacion in variaciones_promedio
+            )
+            if completados_variacion_promedio:
                 completados += 1
 
         return completados, total_campos
