@@ -34,31 +34,6 @@ def crear_instancias_relacionadas(sender, instance, created, **kwargs):
         Paso3.objects.create(formulario_gore=instance)
 
 
-@receiver(m2m_changed, sender=Competencia.regiones.through)
-def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):
-    if action == 'post_add':
-        for formulario_gore in FormularioGORE.objects.filter(competencia=instance):
-            for region_pk in pk_set:
-                # Asegurar que exista un Paso3 para cada FormularioGORE
-                Paso3.objects.get_or_create(formulario_gore=formulario_gore)
-
-    elif action == 'post_remove':
-        with transaction.atomic():
-            # Recuperar los FormularioGORE que serán eliminados
-            formularios_gore_a_eliminar = FormularioGORE.objects.filter(competencia=instance, region_id__in=pk_set)
-
-            for formulario_gore in formularios_gore_a_eliminar:
-                # Eliminación de dependencias asociadas al FormularioGORE
-                PersonalDirectoGORE.objects.filter(formulario_gore=formulario_gore).delete()
-                PersonalIndirectoGORE.objects.filter(formulario_gore=formulario_gore).delete()
-                RecursosComparados.objects.filter(formulario_gore=formulario_gore).delete()
-                SistemasInformaticos.objects.filter(formulario_gore=formulario_gore).delete()
-                RecursosFisicosInfraestructura.objects.filter(formulario_gore=formulario_gore).delete()
-
-                # Una vez eliminadas las dependencias, se puede eliminar el FormularioGORE
-                formulario_gore.delete()
-
-
 @receiver(post_save, sender=PersonalDirecto)
 @receiver(post_save, sender=PersonalIndirecto)
 def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
