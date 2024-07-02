@@ -1,3 +1,4 @@
+from django.http import HttpResponse, Http404
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, status
@@ -323,3 +324,15 @@ class DeleteAntecedenteAdicionalSectorialView(APIView):
         except FormularioSectorial.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+
+def descargar_antecedente(request, pk):
+    try:
+        formulario = FormularioSectorial.objects.get(pk=pk)
+        archivo = formulario.antecedente_adicional_sectorial
+        if archivo:
+            response = HttpResponse(archivo.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{archivo.name}"'
+            return response
+        raise Http404("No se encontró el archivo.")
+    except FormularioSectorial.DoesNotExist:
+        raise Http404("No se encontró el formulario correspondiente.")
