@@ -146,3 +146,4 @@ class ItemSubtituloAdmin(admin.ModelAdmin):
 
 admin.site.register(Subtitulos, SubtitulosAdmin)
 admin.site.register(ItemSubtitulo, ItemSubtituloAdmin)
+admin.site.register(Paso2)

@@ -33,7 +33,7 @@ class FormularioSectorial(BaseModel):
         # entonces proceder normalmente con la lógica de guardado.
         if self.formulario_enviado:
             # Validar y guardar cada paso
-            pasos = [self.paso1, self.paso2, self.paso3, self.paso4, self.paso5]
+            pasos = [self.paso1, self.paso2, self.paso3encabezado, self.paso4encabezado, self.paso5encabezado]
             for paso in pasos:
                 if paso is not None:
                     paso.save()
@@ -54,7 +54,7 @@ class FormularioSectorial(BaseModel):
             self.save()
 
     def todos_los_pasos_completados(self):
-        pasos = [self.paso1, self.paso2, self.paso3encabezado, self.paso4, self.paso5]
+        pasos = [self.paso1, self.paso2, self.paso3encabezado, self.paso4encabezado, self.paso5encabezado]
 
         pasos_completados = all(paso is not None and paso.completado for paso in pasos)
 

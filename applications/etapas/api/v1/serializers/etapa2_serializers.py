@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
 
 from applications.etapas.models import Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial, ObservacionesSubdereFormularioSectorial
+from applications.formularios_sectoriales.api.v1.FormularioSectorialViewSet import descargar_antecedente
 from applications.etapas.functions import (
     get_ultimo_editor,
     get_fecha_ultima_modificacion,
@@ -13,6 +15,17 @@ from applications.etapas.functions import (
 )
 
 User = get_user_model()
+
+
+class FormularioSectorialDetalleSerializer(serializers.ModelSerializer):
+    antecedente_adicional_sectorial = serializers.FileField(use_url=True)
+
+    class Meta:
+        model = FormularioSectorial
+        fields = [
+            'id', 'sector_id', 'nombre', 'estado', 'accion',
+            'antecedente_adicional_sectorial', 'descripcion_antecedente'
+        ]
 
 
 class Etapa2Serializer(serializers.ModelSerializer):
@@ -135,6 +148,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if usuario_sector_correcto else 'Formulario pendiente'
 
                 # Obtener antecedente_adicional_sectorial y descripcion_antecedente
+                # URL de descarga
+                download_antecedente = reverse('formularios_sectoriales_app:descargar-antecedente', kwargs={
+                    'pk': formulario_sectorial.id}) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
                 antecedente_adicional_sectorial = formulario_sectorial.antecedente_adicional_sectorial.url if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
                 descripcion_antecedente = formulario_sectorial.descripcion_antecedente if formulario_sectorial.descripcion_antecedente else 'No aplica'
 
@@ -144,6 +160,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
                     "nombre": f"Completar formulario Sectorial - {sector.nombre}",
                     "estado": estado,
                     "accion": accion,
+                    "download_antecedente": download_antecedente,
                     "antecedente_adicional_sectorial": antecedente_adicional_sectorial,
                     "descripcion_antecedente": descripcion_antecedente
                 }
@@ -231,6 +248,3 @@ class Etapa2Serializer(serializers.ModelSerializer):
             "resumen_observaciones_sectoriales": [resumen],
             "detalle_observaciones_sectoriales": detalle
         }
-
-
-
