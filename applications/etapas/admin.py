@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Etapa1
+from .models import Etapa1, Etapa2, Etapa3, Etapa4, Etapa5
+
 
 @admin.register(Etapa1)
 class Etapa1Admin(admin.ModelAdmin):
@@ -19,5 +20,22 @@ class Etapa1Admin(admin.ModelAdmin):
         # Aquí puedes incluir lógica adicional al guardar el modelo, si es necesario
         super().save_model(request, obj, form, change)
 
-# Si Etapa1 no es una clase abstracta, entonces no necesitas registrarla
-# Si ya está registrada en un admin.py diferente, no la registres nuevamente
+
+@admin.register(Etapa2)
+class Etapa2Admin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Etapa3)
+class Etapa3Admin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Etapa4)
+class Etapa4Admin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Etapa5)
+class Etapa5Admin(admin.ModelAdmin):
+    pass

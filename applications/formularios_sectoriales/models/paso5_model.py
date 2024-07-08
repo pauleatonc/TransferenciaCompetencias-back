@@ -93,10 +93,35 @@ class Paso5(PasoBase):
         return all(getattr(instancia, campo, None) is not None for campo in campos_requeridos[:-1]) and bool(instancia.descripcion.strip())
 
     def es_personal_directo_completo(self, personal):
-        return personal.estamento is not None and personal.renta_bruta is not None
+        # Verifica que los campos del modelo Personal no sean None
+        condiciones_base = (
+                personal.estamento is not None and
+                personal.renta_bruta is not None
+        )
+        # Verifica que los valores de justificación en Paso5 sean igual a 0
+        condiciones_justificar = (
+                self.sub21_personal_planta_justificar == 0 and
+                self.sub21_personal_contrata_justificar == 0 and
+                self.sub21_otras_remuneraciones_justificar == 0 and
+                self.sub21_gastos_en_personal_justificar == 0
+        )
+        return condiciones_base and condiciones_justificar
 
     def es_personal_indirecto_completo(self, personal):
-        return personal.estamento is not None and personal.numero_personas is not None and personal.renta_bruta is not None
+        # Verifica que los campos del modelo Personal no sean None
+        condiciones_base = (
+                personal.estamento is not None and
+                personal.numero_personas is not None and
+                personal.renta_bruta is not None
+        )
+        # Verifica que los valores de justificación en Paso5 sean igual a 0
+        condiciones_justificar = (
+                self.sub21b_personal_planta_justificar == 0 and
+                self.sub21b_personal_contrata_justificar == 0 and
+                self.sub21b_otras_remuneraciones_justificar == 0 and
+                self.sub21b_gastos_en_personal_justificar == 0
+        )
+        return condiciones_base and condiciones_justificar
 
     def verificar_costos_especiales(self, costos):
         # Esta función verifica si hay costos especiales y devuelve True si existen

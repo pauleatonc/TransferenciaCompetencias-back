@@ -81,29 +81,26 @@ class EtapaBase(BaseModel):
         return {'dias': 0, 'horas': 0, 'minutos': 0}
 
     def save(self, *args, **kwargs):
-        # Actualiza el estado antes de guardar
+        if hasattr(self, '_saving'):
+            super().save(*args, **kwargs)
+            return
+
         self.estado = self.actualizar_estado()
 
-        # Si el objeto ya existe, obtén el estado anterior y 'enviada'
-        estado_anterior = None
-        enviada_anterior = None
         if self.pk:
             instancia_anterior = self.__class__.objects.get(pk=self.pk)
             estado_anterior = instancia_anterior.estado
             enviada_anterior = instancia_anterior.enviada
 
-        # Guardar los cambios en la base de datos
+        self._saving = True
         super().save(*args, **kwargs)
+        del self._saving
 
-        # Si 'enviada' cambia de False a True
         if self.enviada and not enviada_anterior:
-            tiempo_transcurrido = self.calcular_tiempo_transcurrido()
-            self.tiempo_transcurrido_registrado = tiempo_transcurrido['dias'] * 24 * 3600 + tiempo_transcurrido['horas'] * 3600 + tiempo_transcurrido['minutos'] * 60
-            # Actualizar solo el campo 'tiempo_transcurrido_registrado' en la base de datos
-            super(EtapaBase, self).save(update_fields=['tiempo_transcurrido_registrado'])
+            # Calcula tiempo transcurrido y actualiza el campo sin disparar señales adicionales
+            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido_total()
+            super().save(update_fields=['tiempo_transcurrido_registrado'])
 
-        # Si cambia a 'finalizada' desde cualquier otro estado (mantiene la lógica existente)
         if self.estado == 'finalizada' and estado_anterior != 'finalizada':
             self.ultima_finalizacion = timezone.now()
-            # Actualizar solo el campo 'ultima_finalizacion' en la base de datos
-            super(EtapaBase, self).save(update_fields=['ultima_finalizacion'])
+            super().save(update_fields=['ultima_finalizacion'])
