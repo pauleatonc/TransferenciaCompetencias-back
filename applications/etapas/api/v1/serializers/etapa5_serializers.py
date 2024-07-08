@@ -44,13 +44,11 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'tipo_usuario',
 
             # Campos DIPRES etapa 5
-            'comentario_minuta_etapa5',
             'archivo_minuta_etapa5',
             'minuta_etapa5_enviada',
 
             # Campos Revisión SUBDERE etapa 5
             'comentario_minuta_gore',
-            'archivo_observacion_minuta_gore',
             'observacion_minuta_gore_enviada'
 
         ]

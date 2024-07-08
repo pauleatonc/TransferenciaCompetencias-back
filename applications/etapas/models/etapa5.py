@@ -15,7 +15,6 @@ class Etapa5(EtapaBase):
     usuario_notificado = models.BooleanField(default=False)
 
     """ Campos DIPRES etapa 5"""
-    comentario_minuta_etapa5 = models.TextField(max_length=500, blank=True)
     archivo_minuta_etapa5 = models.FileField(upload_to='minutas_dipres_etapa5',
                                            validators=[
                                                FileExtensionValidator(
@@ -26,16 +25,7 @@ class Etapa5(EtapaBase):
 
     """ Campos Revisión SUBDERE etapa 5"""
     comentario_minuta_gore = models.TextField(max_length=500, blank=True)
-    archivo_observacion_minuta_gore = models.FileField(
-        upload_to='observaciones_formularios_etapa5',
-        validators=[
-            FileExtensionValidator(['pdf'], message='Solo se permiten archivos PDF.'),
-            validate_file_size_twenty
-        ],
-        verbose_name='Archivo de Observación',
-        blank=True,
-        null=True
-    )
+
     observacion_minuta_gore_enviada = models.BooleanField(default=False)
 
 
