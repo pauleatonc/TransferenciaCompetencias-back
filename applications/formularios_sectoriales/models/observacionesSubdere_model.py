@@ -14,12 +14,7 @@ class ObservacionesSubdereFormularioSectorial(BaseModel):
     observacion_paso3 = models.TextField(max_length=500, blank=True)
     observacion_paso4 = models.TextField(max_length=500, blank=True)
     observacion_paso5 = models.TextField(max_length=500, blank=True)
-    documento = models.FileField(upload_to='formulario_sectorial',
-                                 validators=[
-                                     FileExtensionValidator(
-                                         ['pdf'], message='Solo se permiten archivos PDF.'),
-                                     validate_file_size_twenty],
-                                 verbose_name='Documento observación', blank=True, null=True)
+
     descripcion_documento = models.TextField(max_length=500, blank=True)
 
     observacion_enviada = models.BooleanField(default=False)

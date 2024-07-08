@@ -9,7 +9,6 @@ User = get_user_model()
 
 
 class CamposObservacionesSerializer(serializers.ModelSerializer):
-    documento = serializers.FileField(required=False, allow_null=True)
 
     class Meta:
         model = ObservacionesSubdereFormularioSectorial
@@ -21,7 +20,6 @@ class CamposObservacionesSerializer(serializers.ModelSerializer):
             'observacion_paso4',
             'observacion_paso5',
             'observacion_enviada',
-            'documento',
             'descripcion_documento',
             'fecha_envio',
         ]
@@ -29,12 +27,14 @@ class CamposObservacionesSerializer(serializers.ModelSerializer):
 
 class ObservacionesSubdereSerializer(WritableNestedModelSerializer):
     observaciones_sectoriales = CamposObservacionesSerializer()
+    antecedente_adicional_subdere = serializers.FileField(required=False, allow_null=True, allow_empty_file=True)
 
     class Meta:
         model = FormularioSectorial
         fields = [
             'id',
-            'observaciones_sectoriales'
+            'observaciones_sectoriales',
+            'antecedente_adicional_subdere'
         ]
 
     def update_observaciones_instance(self, instance, observaciones_sectoriales_data):

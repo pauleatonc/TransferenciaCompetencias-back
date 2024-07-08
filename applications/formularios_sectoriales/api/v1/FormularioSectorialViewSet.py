@@ -82,9 +82,25 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
-        # Selecciona el serializer adecuado en función de la acción
         if self.action == 'retrieve':
             return FormularioSectorialDetailSerializer
+        elif self.action == 'paso_1':
+            return Paso1Serializer
+        elif self.action == 'paso_2':
+            return Paso2Serializer
+        elif self.action == 'paso_3':
+            return Paso3GeneralSerializer
+        elif self.action == 'paso_4':
+            return Paso4GeneralSerializer
+        elif self.action == 'paso_5':
+            return Paso5GeneralSerializer
+        elif self.action == 'resumen':
+            return ResumenFormularioSerializer
+        elif self.action == 'observaciones_sectoriales':
+            return ObservacionesSubdereSerializer
+        else:
+            return FormularioSectorialDetailSerializer
+        # Asegúrate de tener un serializador por defecto para las acciones restantes
         return super().get_serializer_class()
 
     def get_permissions(self):
