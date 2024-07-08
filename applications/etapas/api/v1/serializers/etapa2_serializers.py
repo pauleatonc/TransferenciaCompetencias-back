@@ -132,6 +132,7 @@ class Etapa2Serializer(serializers.ModelSerializer):
         )
 
     def get_formulario_sectorial(self, obj):
+        request = self.context.get('request')
         user = self.context['request'].user
         es_usuario_sectorial = obj.competencia.usuarios_sectoriales.filter(id=user.id).exists()
         sectores = obj.competencia.sectores.all()
@@ -149,9 +150,13 @@ class Etapa2Serializer(serializers.ModelSerializer):
 
                 # Obtener antecedente_adicional_sectorial y descripcion_antecedente
                 # URL de descarga
-                download_antecedente = reverse('formularios_sectoriales_app:descargar-antecedente', kwargs={
-                    'pk': formulario_sectorial.id}) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
-                antecedente_adicional_sectorial = formulario_sectorial.antecedente_adicional_sectorial.url if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
+                download_antecedente = request.build_absolute_uri(
+                    reverse('formularios_sectoriales_app:descargar-antecedente', kwargs={'pk': formulario_sectorial.id})
+                ) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
+
+                antecedente_adicional_sectorial = request.build_absolute_uri(
+                    formulario_sectorial.antecedente_adicional_sectorial.url) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
+
                 descripcion_antecedente = formulario_sectorial.descripcion_antecedente if formulario_sectorial.descripcion_antecedente else 'No aplica'
 
                 detalle_formulario = {
@@ -235,7 +240,9 @@ class Etapa2Serializer(serializers.ModelSerializer):
         else:
             accion_resumen = 'Observaciones pendientes'
 
-        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision'
+        todos_formularios_enviados = all(formulario.formulario_enviado for formulario in formularios_sectoriales)
+        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision' if todos_formularios_enviados else 'pendiente'
+
         resumen = {
             "nombre": 'Observaciones de formularios sectoriales',
             "estado": estado_resumen,
