@@ -38,6 +38,7 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
     calcular_tiempo_transcurrido = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
+    antecedente_adicional_subdere = serializers.FileField(required=False, allow_null=True, allow_empty_file=True)
 
     class Meta:
         model = FormularioSectorial
@@ -52,7 +53,8 @@ class FormularioSectorialDetailSerializer(serializers.ModelSerializer):
             'fecha_ultima_modificacion',
             'fecha_envio',
             'formulario_enviado',
-            'intento_envio'
+            'intento_envio',
+            'antecedente_adicional_subdere',
         ]
 
     def get_competencia_nombre(self, obj):
