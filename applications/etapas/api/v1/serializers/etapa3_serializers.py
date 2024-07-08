@@ -45,13 +45,11 @@ class Etapa3Serializer(serializers.ModelSerializer):
             'omitida',
 
             # Campos DIPRES etapa 3
-            'comentario_minuta_etapa3',
             'archivo_minuta_etapa3',
             'minuta_etapa3_enviada',
 
             # Campos Revisión SUBDERE etapa 3
             'comentario_minuta_sectorial',
-            'archivo_observacion_minuta_sectorial',
             'observacion_minuta_sectorial_enviada'
         ]
 
