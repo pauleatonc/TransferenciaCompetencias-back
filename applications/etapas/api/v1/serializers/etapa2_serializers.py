@@ -5,7 +5,6 @@ from rest_framework import serializers
 
 from applications.etapas.models import Etapa2
 from applications.formularios_sectoriales.models import FormularioSectorial, ObservacionesSubdereFormularioSectorial
-from applications.formularios_sectoriales.api.v1.FormularioSectorialViewSet import descargar_antecedente
 from applications.etapas.functions import (
     get_ultimo_editor,
     get_fecha_ultima_modificacion,
@@ -149,11 +148,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
                 accion = 'Ver Formulario' if formulario_sectorial.formulario_enviado else 'Subir Formulario' if usuario_sector_correcto else 'Formulario pendiente'
 
                 # Obtener antecedente_adicional_sectorial y descripcion_antecedente
-                # URL de descarga
-                download_antecedente = request.build_absolute_uri(
-                    reverse('formularios_sectoriales_app:descargar-antecedente', kwargs={'pk': formulario_sectorial.id})
-                ) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
-
                 antecedente_adicional_sectorial = request.build_absolute_uri(
                     formulario_sectorial.antecedente_adicional_sectorial.url) if formulario_sectorial.antecedente_adicional_sectorial else 'No aplica'
 
@@ -165,7 +159,6 @@ class Etapa2Serializer(serializers.ModelSerializer):
                     "nombre": f"Completar formulario Sectorial - {sector.nombre}",
                     "estado": estado,
                     "accion": accion,
-                    "download_antecedente": download_antecedente,
                     "antecedente_adicional_sectorial": antecedente_adicional_sectorial,
                     "descripcion_antecedente": descripcion_antecedente
                 }

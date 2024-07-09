@@ -71,16 +71,16 @@ def comprobar_y_finalizar_observaciones_etapa2(sender, instance, **kwargs):
         etapa2.save()
 
 
-@receiver(post_save, sender=Etapa3)
+@receiver(post_save, sender=Etapa2)
 def verificar_y_aprobar_etapa2(sender, instance, **kwargs):
-    if kwargs.get('update_fields') and 'aprobada' not in kwargs['update_fields']:
-        # Obtener Etapa2 relacionada con la competencia
-        etapa2 = Etapa2.objects.filter(competencia=instance.competencia).first()
+    # Asumimos que instance es una instancia de Etapa2
+    # Obtener la instancia de Etapa3 relacionada
+    etapa3 = Etapa3.objects.filter(competencia=instance.competencia).first()
 
-        # Verificar si la instancia de Etapa3 ha especificado el campo omitida y si las observaciones están completas
-        if etapa2 and instance.omitida is not None and etapa2.observaciones_completas:
-            etapa2.aprobada = True
-            etapa2.save(update_fields=['aprobada'])
+    # Verificar si Etapa3 está especificada como omitida y si las observaciones de Etapa2 están completas
+    if etapa3 and etapa3.omitida is not None and instance.observaciones_completas:
+        instance.aprobada = True
+        instance.save(update_fields=['aprobada'])
 
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
