@@ -32,6 +32,11 @@ class Paso2(PasoBase):
         return all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
 
     def es_fluctuacion_completa(self, fluctuacion):
+        # Verificar que el campo 'descripcion' de FluctuacionPresupuestaria está completo
+        if fluctuacion.descripcion is None or fluctuacion.descripcion.strip() == '':
+            return False
+
+        # Verificar que todos los costos de CostoAnioGore asociados tienen 'costo' lleno
         costos_anio = CostoAnioGore.objects.filter(evolucion_gasto=fluctuacion)
         return all(costo.costo is not None for costo in costos_anio)
 
