@@ -16,6 +16,7 @@ class Etapa1Serializer(serializers.ModelSerializer):
     usuarios_vinculados = serializers.SerializerMethodField()
     ultimo_editor = serializers.SerializerMethodField()
     fecha_ultima_modificacion = serializers.SerializerMethodField()
+    calcular_tiempo_transcurrido = serializers.ReadOnlyField()
 
     class Meta:
         model = Etapa1
@@ -25,7 +26,7 @@ class Etapa1Serializer(serializers.ModelSerializer):
             'estado',
             'competencia_creada',
             'usuarios_vinculados',
-            'tiempo_transcurrido_registrado',
+            'calcular_tiempo_transcurrido',
             'ultimo_editor',
             'fecha_ultima_modificacion'
         ]
