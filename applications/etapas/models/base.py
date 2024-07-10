@@ -100,7 +100,7 @@ class EtapaBase(BaseModel):
 
         # Lógica adicional si necesario
         if self.enviada and not self.__dict__.get('enviada_anterior', False):
-            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido_total()
+            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido()
             super().save(update_fields=['tiempo_transcurrido_registrado'])
 
         if self.estado == 'finalizada' and self.__dict__.get('estado_anterior', '') != 'finalizada':
