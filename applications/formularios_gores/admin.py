@@ -14,6 +14,16 @@ class Paso2Inline(admin.TabularInline):
     extra = 1
 
 
+class CostosDirectosGore(admin.TabularInline):
+    model = CostosDirectosGore
+    extra = 0
+
+
+class CostosIndirectosGore(admin.TabularInline):
+    model = CostosIndirectosGore
+    extra = 0
+
+
 class CostoAnioInline(admin.TabularInline):
     model = CostoAnioGore
     extra = 0
@@ -51,6 +61,8 @@ class FormularioSectorialAdmin(admin.ModelAdmin):
     inlines = [
         Paso1Inline,
         Paso2Inline,
+        CostosDirectosGore,
+        CostosIndirectosGore,
         Paso3Inline,
         FluctuacionesPresupuestariasInline,
         FlujogramaEjercicioInline,
