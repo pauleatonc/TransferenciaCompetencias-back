@@ -20,53 +20,38 @@ class Paso2(PasoBase):
         return 2
 
     def es_instancia_costos_completa(self, instancia):
-        # Mantén la lista de campos requeridos, excepto 'es_transversal'
-        campos_requeridos = [
-            'total_anual_gore', 'descripcion'
-        ]
+        # Verificar según id_sectorial y subtitulo
+        if instancia.id_sectorial is not None:
+            if instancia.subtitulo and instancia.subtitulo.subtitulo == 'Sub. 21':
+                return True
+            campos_requeridos = ['total_anual_gore', 'descripcion', 'es_transitorio']
+        else:
+            campos_requeridos = ['total_anual_gore', 'descripcion', 'es_transitorio', 'item_subtitulo']
 
-        # Verifica primero que los campos distintos a 'es_transversal' no sean None
-        campos_completos = all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
+        # Verifica que todos los campos requeridos estén completos
+        return all(getattr(instancia, campo, None) is not None for campo in campos_requeridos)
 
-        # Luego verifica específicamente 'es_transitorio' para asegurar que no sea None
-        es_transitorio_completo = getattr(instancia, 'es_transitorio', None) is not None
+    def es_fluctuacion_completa(self, fluctuacion):
+        # Verificar que el campo 'descripcion' de FluctuacionPresupuestaria está completo
+        if fluctuacion.descripcion is None or fluctuacion.descripcion.strip() == '':
+            return False
 
-        # Un ítem está completo si todos los campos están completos y 'es_transitorio' no es None
-        completa = campos_completos and es_transitorio_completo
-
-        return completa
-
-    def es_fluctuacion_completa(self, instancia):
-        return all([
-            instancia.subtitulo_id,
-            CostoAnioGore.objects.filter(evolucion_gasto=instancia).exists()
-        ]) and all(
-            getattr(anio, 'costo', None) is not None
-            for anio in CostoAnioGore.objects.filter(evolucion_gasto=instancia)
-        )
+        # Verificar que todos los costos de CostoAnioGore asociados tienen 'costo' lleno
+        costos_anio = CostoAnioGore.objects.filter(evolucion_gasto=fluctuacion)
+        return all(costo.costo is not None for costo in costos_anio)
 
     def avance_numerico(self):
-        # Verifica instancias de CostosDirectos y CostosIndirectos
         costos_directos = CostosDirectosGore.objects.filter(formulario_gore_id=self.formulario_gore_id)
-        total_costos_directos = costos_directos.count()
-        completados_costos_directos = sum([1 for costo in costos_directos if self.es_instancia_costos_completa(costo)])
+        completados_costos_directos = all(self.es_instancia_costos_completa(costo) for costo in costos_directos)
 
         costos_indirectos = CostosIndirectosGore.objects.filter(formulario_gore_id=self.formulario_gore_id)
-        total_costos_indirectos = costos_indirectos.count()
-        completados_costos_indirectos = sum(
-            [1 for costo in costos_indirectos if self.es_instancia_costos_completa(costo)])
+        completados_costos_indirectos = all(self.es_instancia_costos_completa(costo) for costo in costos_indirectos)
 
-        # Verificar EvolucionGastoAsociado y CostoAnio
         fluctuacion_gasto = FluctuacionPresupuestaria.objects.filter(formulario_gore=self.formulario_gore)
-        total_fluctuacion_gasto = fluctuacion_gasto.count()
-        completados_fluctuacion_gasto = sum(
-            1 for fluctuacion in fluctuacion_gasto if self.es_fluctuacion_completa(fluctuacion))
+        completados_fluctuacion_gasto = all(self.es_fluctuacion_completa(fluctuacion) for fluctuacion in fluctuacion_gasto)
 
-        # Total de campos y completados se ajusta para incluir el número de instancias
-        total_campos = ( total_costos_directos + total_costos_indirectos +
-                        total_fluctuacion_gasto)
-        completados = (completados_costos_directos + completados_costos_indirectos +
-                       completados_fluctuacion_gasto)
+        total_campos = 3
+        completados = (1 if completados_costos_directos else 0) + (1 if completados_costos_indirectos else 0) + (1 if completados_fluctuacion_gasto else 0)
 
         return completados, total_campos
 

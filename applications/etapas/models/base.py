@@ -42,21 +42,25 @@ class EtapaBase(BaseModel):
         raise NotImplementedError("Subclases deben implementar este método.")
 
     def actualizar_estado(self):
-        if self.omitida:
+        # Primero verificar si la etapa está aprobada
+        if self.aprobada:
+            return 'finalizada'
+        # Verificar si la etapa está omitida
+        elif self.omitida:
             return 'omitida'
+        # Si no tiene fecha de inicio, está no iniciada
         elif not self.fecha_inicio:
             return 'no_iniciada'
-        elif self.aprobada:
-            return 'finalizada'
+        # Si está enviada pero aún no aprobada
         elif self.enviada:
             return 'en_revision'
+        # Verificar condiciones de plazo y tiempo transcurrido
         else:
-            # Solo considerar el plazo si plazo_dias está definido
             if self.plazo_dias is not None:
                 tiempo_transcurrido = self.calcular_tiempo_transcurrido()
                 if tiempo_transcurrido['dias'] > self.plazo_dias:
                     return 'atrasada'
-            # Si plazo_dias es None, se considera que no está atrasada
+            # Por defecto, si no cumple las condiciones anteriores
             return 'en_estudio'
 
     def segundos_restantes(self):
@@ -81,26 +85,24 @@ class EtapaBase(BaseModel):
         return {'dias': 0, 'horas': 0, 'minutos': 0}
 
     def save(self, *args, **kwargs):
+        # Fuerza la actualización del estado antes de cualquier otra lógica
+        self.estado = self.actualizar_estado()
+
         if hasattr(self, '_saving'):
+            # Evita la recursión si _saving ya está establecido
             super().save(*args, **kwargs)
             return
 
-        self.estado = self.actualizar_estado()
-
-        if self.pk:
-            instancia_anterior = self.__class__.objects.get(pk=self.pk)
-            estado_anterior = instancia_anterior.estado
-            enviada_anterior = instancia_anterior.enviada
-
+        # Manejo de la lógica previa al guardado
         self._saving = True
         super().save(*args, **kwargs)
-        del self._saving
+        self._saving = False
 
-        if self.enviada and not enviada_anterior:
-            # Calcula tiempo transcurrido y actualiza el campo sin disparar señales adicionales
+        # Lógica adicional si necesario
+        if self.enviada and not self.__dict__.get('enviada_anterior', False):
             self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido_total()
             super().save(update_fields=['tiempo_transcurrido_registrado'])
 
-        if self.estado == 'finalizada' and estado_anterior != 'finalizada':
+        if self.estado == 'finalizada' and self.__dict__.get('estado_anterior', '') != 'finalizada':
             self.ultima_finalizacion = timezone.now()
             super().save(update_fields=['ultima_finalizacion'])
