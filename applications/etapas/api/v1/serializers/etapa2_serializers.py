@@ -56,7 +56,8 @@ class Etapa2Serializer(serializers.ModelSerializer):
             'observaciones_sectorial',
             'oficio_origen',
             'tipo_usuario',
-            'observaciones_completas'
+            'observaciones_completas',
+            'aprobada'
         ]
 
     def get_tipo_usuario(self, obj):

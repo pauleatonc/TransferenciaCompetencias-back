@@ -66,24 +66,8 @@ def comprobar_y_finalizar_observaciones_etapa2(sender, instance, **kwargs):
     etapa2 = Etapa2.objects.filter(competencia=instance.formulario_sectorial.competencia).first()
 
     if todas_enviadas and etapa2:
-        etapa2.enviada = False
         etapa2.observaciones_completas = True
         etapa2.save()
-
-
-@receiver(post_save, sender=Etapa2)
-def verificar_y_aprobar_etapa2(sender, instance, **kwargs):
-    # Verificar si ya se está procesando para evitar recursión
-    if getattr(instance, '_no_recurse', False):
-        return
-
-    if instance.observaciones_completas:
-        instance.aprobada = True
-        # Establecer la bandera antes de guardar para evitar recursión
-        setattr(instance, '_no_recurse', True)
-        instance.save()
-        # Quitar la bandera después de guardar
-        delattr(instance, '_no_recurse')
 
 
 @receiver(m2m_changed, sender=Competencia.sectores.through)
