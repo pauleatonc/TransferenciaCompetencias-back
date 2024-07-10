@@ -23,12 +23,20 @@ class Etapa1Admin(admin.ModelAdmin):
 
 @admin.register(Etapa2)
 class Etapa2Admin(admin.ModelAdmin):
-    pass
+    list_display = ('id', 'nombre_etapa', 'competencia', 'fecha_inicio', 'plazo_dias', 'aprobada')
+    search_fields = ('competencia__nombre', 'competencia__id')
+    list_filter = ('competencia', 'aprobada', 'estado')
+    date_hierarchy = 'fecha_inicio'
+    ordering = ('-fecha_inicio',)
 
 
 @admin.register(Etapa3)
 class Etapa3Admin(admin.ModelAdmin):
-    pass
+    list_display = ('id', 'nombre_etapa', 'competencia', 'fecha_inicio', 'plazo_dias', 'aprobada')
+    search_fields = ('competencia__nombre', 'competencia__id')
+    list_filter = ('competencia', 'aprobada', 'estado')
+    date_hierarchy = 'fecha_inicio'
+    ordering = ('-fecha_inicio',)
 
 
 @admin.register(Etapa4)
