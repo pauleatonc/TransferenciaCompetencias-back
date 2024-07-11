@@ -89,32 +89,28 @@ class EtapaBase(BaseModel):
         return {'dias': dias, 'horas': horas, 'minutos': minutos}
 
     def save(self, *args, **kwargs):
-        # Fuerza la actualización del estado antes de cualquier otra lógica
+        # Actualiza el estado antes de cualquier operación de guardado
         self.estado = self.actualizar_estado()
 
+        # Si '_saving' está activo, simplemente guarda sin modificar nada más para evitar recursión
         if hasattr(self, '_saving'):
-            # Evita la recursión si _saving ya está establecido
             super().save(*args, **kwargs)
             return
 
-        # Manejo de la lógica previa al guardado
+        # Previene la recursión con una bandera temporal
         self._saving = True
-        super().save(*args, **kwargs)
-        self._saving = False
 
-        # Comprobar cambios en 'enviada' y 'aprobada' y registrar fechas
-        if not self.pk:
-            # Es un nuevo objeto, por lo tanto se guarda por primera vez
-            super().save(*args, **kwargs)
-        else:
-            # Es una actualización, verificar el estado anterior
+        # Comprobar y registrar cambios en 'enviada' y 'aprobada' antes de guardar los cambios
+        if self.pk:
             instancia_anterior = self.__class__.objects.get(pk=self.pk)
             if not instancia_anterior.enviada and self.enviada:
                 self.fecha_enviada = timezone.now()
             if not instancia_anterior.aprobada and self.aprobada:
                 self.fecha_aprobada = timezone.now()
 
+        # Realiza el guardado principal
         super().save(*args, **kwargs)
+        self._saving = False
 
     def tiempo_llenado_formulario(self):
         if self.fecha_inicio and self.fecha_enviada:

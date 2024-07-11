@@ -3,9 +3,6 @@ from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from django.utils import timezone
-
-from applications.etapas.models import Etapa3, Etapa4
 from applications.formularios_gores.models import FormularioGORE
 from applications.regioncomuna.models import Region
 
@@ -45,3 +42,16 @@ def modificar_formulario_gore_por_region(sender, instance, action, pk_set, **kwa
         for region_pk in pk_set:
             # Eliminar formularios GORE asociados a la competencia y a la región eliminada
             FormularioGORE.objects.filter(competencia=competencia, region_id=region_pk).delete()
+
+
+@receiver(post_save, sender=FormularioGORE)
+def cerrar_etapa4_si_corresponde(sender, instance, **kwargs):
+    competencia = instance.competencia
+    formularios_gore = FormularioGORE.objects.filter(competencia=competencia)
+
+    # Comprobamos si todos los formularios están enviados
+    if all(formulario.formulario_enviado for formulario in formularios_gore):
+        etapa4 = competencia.etapa4
+        if etapa4 and not etapa4.aprobada:
+            etapa4.aprobada = True
+            etapa4.save()

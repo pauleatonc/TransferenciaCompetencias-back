@@ -3,8 +3,6 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1
-from applications.users.models import User
 
 
 @receiver(m2m_changed, sender=Competencia.usuarios_sectoriales.through)
