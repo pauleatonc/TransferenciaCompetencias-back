@@ -189,7 +189,7 @@ class FormularioSectorialViewSet(viewsets.ModelViewSet):
             return manejar_permiso_patch(request, formulario_sectorial, ResumenFormularioSerializer)
 
         # Si el método es GET, simplemente serializas y retornas los datos como antes
-        serializer = ResumenFormularioSerializer(formulario_sectorial)
+        serializer = ResumenFormularioSerializer(instance=formulario_sectorial, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['get', 'patch'], url_path='observaciones-subdere-sectorial')

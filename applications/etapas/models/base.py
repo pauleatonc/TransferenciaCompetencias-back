@@ -25,8 +25,8 @@ class EtapaBase(BaseModel):
     enviada = models.BooleanField(default=False)
     aprobada = models.BooleanField(default=False)
     omitida = models.BooleanField(default=None, null=True, blank=True)
-    tiempo_transcurrido_registrado = models.IntegerField(default=0)
-    ultima_finalizacion = models.DateTimeField(null=True, blank=True)
+    fecha_enviada = models.DateTimeField(null=True, blank=True)
+    fecha_aprobada = models.DateTimeField(null=True, blank=True)
     oficio_origen = models.FileField(upload_to='oficios_competencias',
                                      validators=[
                                          FileExtensionValidator(
@@ -42,21 +42,25 @@ class EtapaBase(BaseModel):
         raise NotImplementedError("Subclases deben implementar este método.")
 
     def actualizar_estado(self):
-        if self.omitida:
+        # Primero verificar si la etapa está aprobada
+        if self.aprobada:
+            return 'finalizada'
+        # Verificar si la etapa está omitida
+        elif self.omitida:
             return 'omitida'
+        # Si no tiene fecha de inicio, está no iniciada
         elif not self.fecha_inicio:
             return 'no_iniciada'
-        elif self.aprobada:
-            return 'finalizada'
+        # Si está enviada pero aún no aprobada
         elif self.enviada:
             return 'en_revision'
+        # Verificar condiciones de plazo y tiempo transcurrido
         else:
-            # Solo considerar el plazo si plazo_dias está definido
             if self.plazo_dias is not None:
                 tiempo_transcurrido = self.calcular_tiempo_transcurrido()
                 if tiempo_transcurrido['dias'] > self.plazo_dias:
                     return 'atrasada'
-            # Si plazo_dias es None, se considera que no está atrasada
+            # Por defecto, si no cumple las condiciones anteriores
             return 'en_estudio'
 
     def segundos_restantes(self):
@@ -68,39 +72,61 @@ class EtapaBase(BaseModel):
 
     def calcular_tiempo_transcurrido(self):
         """
-        Calcula el tiempo transcurrido en segundos desde fecha_inicio hasta ahora.
+        Calcula el tiempo transcurrido en segundos desde fecha_inicio hasta la fecha actual o hasta fecha_enviada si enviada es True.
         """
-        if self.fecha_inicio:
-            tiempo_actual = timezone.now()
-            delta = tiempo_actual - self.fecha_inicio
-            total_seconds = int(delta.total_seconds())
-            dias = total_seconds // (24 * 3600)
-            horas = (total_seconds % (24 * 3600)) // 3600
-            minutos = (total_seconds % 3600) // 60
-            return {'dias': dias, 'horas': horas, 'minutos': minutos}
-        return {'dias': 0, 'horas': 0, 'minutos': 0}
+        if not self.fecha_inicio:
+            return {'dias': 0, 'horas': 0, 'minutos': 0}
+
+        # Determina el punto final del cálculo en base a si enviada es True y fecha_enviada está definida
+        tiempo_final = self.fecha_enviada if self.enviada and self.fecha_enviada else timezone.now()
+
+        delta = tiempo_final - self.fecha_inicio
+        total_seconds = int(delta.total_seconds())
+        dias = total_seconds // (24 * 3600)
+        horas = (total_seconds % (24 * 3600)) // 3600
+        minutos = (total_seconds % 3600) // 60
+
+        return {'dias': dias, 'horas': horas, 'minutos': minutos}
 
     def save(self, *args, **kwargs):
+        # Fuerza la actualización del estado antes de cualquier otra lógica
+        self.estado = self.actualizar_estado()
+
         if hasattr(self, '_saving'):
+            # Evita la recursión si _saving ya está establecido
             super().save(*args, **kwargs)
             return
 
-        self.estado = self.actualizar_estado()
-
-        if self.pk:
-            instancia_anterior = self.__class__.objects.get(pk=self.pk)
-            estado_anterior = instancia_anterior.estado
-            enviada_anterior = instancia_anterior.enviada
-
+        # Manejo de la lógica previa al guardado
         self._saving = True
         super().save(*args, **kwargs)
-        del self._saving
+        self._saving = False
 
-        if self.enviada and not enviada_anterior:
-            # Calcula tiempo transcurrido y actualiza el campo sin disparar señales adicionales
-            self.tiempo_transcurrido_registrado = self.calcular_tiempo_transcurrido_total()
-            super().save(update_fields=['tiempo_transcurrido_registrado'])
+        # Comprobar cambios en 'enviada' y 'aprobada' y registrar fechas
+        if not self.pk:
+            # Es un nuevo objeto, por lo tanto se guarda por primera vez
+            super().save(*args, **kwargs)
+        else:
+            # Es una actualización, verificar el estado anterior
+            instancia_anterior = self.__class__.objects.get(pk=self.pk)
+            if not instancia_anterior.enviada and self.enviada:
+                self.fecha_enviada = timezone.now()
+            if not instancia_anterior.aprobada and self.aprobada:
+                self.fecha_aprobada = timezone.now()
 
-        if self.estado == 'finalizada' and estado_anterior != 'finalizada':
-            self.ultima_finalizacion = timezone.now()
-            super().save(update_fields=['ultima_finalizacion'])
+        super().save(*args, **kwargs)
+
+    def tiempo_llenado_formulario(self):
+        if self.fecha_inicio and self.fecha_enviada:
+            return (self.fecha_enviada - self.fecha_inicio).total_seconds()
+        return 0
+
+    def tiempo_revision_subdere(self):
+        if self.fecha_enviada and self.fecha_aprobada:
+            return (self.fecha_aprobada - self.fecha_enviada).total_seconds()
+        return 0
+
+    def tiempo_total_etapa(self):
+        if self.fecha_inicio and self.fecha_aprobada:
+            return (self.fecha_aprobada - self.fecha_inicio).total_seconds()
+        return 0
