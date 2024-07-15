@@ -25,6 +25,19 @@ def crear_encabezado_paso5(sender, instance, created, **kwargs):
         # Crear instancia de Paso5
         Paso5Encabezado.objects.create(formulario_sectorial=instance)
 
+        # Obtener todas las regiones asociadas a la competencia del formulario
+        competencia = instance.competencia
+        if competencia:
+            regiones = competencia.regiones.all()
+            for region in regiones:
+                # Crear instancias de Paso3 para cada región
+                Paso5.objects.create(
+                    formulario_sectorial=instance,
+                    region=region
+                )
+        else:
+            print("Advertencia: No hay competencia asociada al formulario sectorial.")
+
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
 def handle_region_changes(sender, instance, action, pk_set, **kwargs):
