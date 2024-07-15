@@ -1,14 +1,8 @@
-from rest_framework import serializers
-from applications.competencias.models import Competencia
-from applications.formularios_sectoriales.models import FormularioSectorial, MarcoJuridico, OrganigramaRegional
 from django.contrib.auth import get_user_model
-from django.utils import timezone
+from rest_framework import serializers
 
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
+from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.formularios_sectoriales.models import PasoBase, Paso1, Paso2, Paso3, Paso4, Paso5
-from .base_serializer import FormularioSectorialDetailSerializer
-
 
 User = get_user_model()
 

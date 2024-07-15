@@ -1,14 +1,12 @@
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import serializers
-
-from applications.etapas.models import Etapa5
 
 from applications.etapas.functions import (
     get_ultimo_editor,
     get_fecha_ultima_modificacion,
     obtener_estado_accion_generico,
 )
+from applications.etapas.models import Etapa5
 
 User = get_user_model()
 
