@@ -1,8 +1,6 @@
-from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
-from applications.base.functions import validate_file_size_twenty
 from applications.base.models import BaseModel
 from applications.formularios_sectoriales.models import FormularioSectorial
 

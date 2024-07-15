@@ -50,6 +50,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     paso3_gore = Paso3ResumenSerializer(read_only=True)
     formulario_completo = serializers.SerializerMethodField()
     antecedente_adicional_gore = serializers.FileField(required=False, allow_null=True)
+    download_antecedente_adicional_gore = serializers.SerializerMethodField()
     delete_antecedente_adicional_gore = serializers.BooleanField(required=False, default=False)
 
     class Meta:
@@ -66,6 +67,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'paso3_gore',
             'formulario_completo',
             'antecedente_adicional_gore',
+            'download_antecedente_adicional_gore',
             'delete_antecedente_adicional_gore',
             'descripcion_antecedente'
         ]
@@ -91,3 +93,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             instance.delete_file()
         validated_data.pop('delete_antecedente_adicional_gore', None)
         return super().update(instance, validated_data)
+
+    def get_download_antecedente_adicional_gore(self, obj):
+        request = self.context.get('request')
+        if obj.antecedente_adicional_gore and request:
+            return request.build_absolute_uri(obj.antecedente_adicional_gore.url)
+        return None

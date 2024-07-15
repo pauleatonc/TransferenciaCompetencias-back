@@ -11,6 +11,23 @@ def crear_encabezado_paso4(sender, instance, created, **kwargs):
         # Crear instancia de Paso4
         Paso4Encabezado.objects.create(formulario_sectorial=instance)
 
+        # Obtener todas las regiones asociadas a la competencia del formulario
+        competencia = instance.competencia
+        if competencia:
+            regiones = competencia.regiones.all()
+            for region in regiones:
+                # Crear instancias de Paso3 para cada región
+                Paso4.objects.create(
+                    formulario_sectorial=instance,
+                    region=region
+                )
+                IndicadorDesempeno.objects.create(
+                    formulario_sectorial=instance,
+                    region=region
+                )
+        else:
+            print("Advertencia: No hay competencia asociada al formulario sectorial.")
+
 
 @receiver(m2m_changed, sender=Competencia.regiones.through)
 def crear_instancias_relacionadas(sender, instance, action, pk_set, **kwargs):

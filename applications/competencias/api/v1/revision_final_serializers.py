@@ -26,6 +26,7 @@ User = get_user_model()
 
 class RecomendacionesDesfavorablesSerializer(serializers.ModelSerializer):
     region_label_value = serializers.SerializerMethodField()
+
     class Meta:
         model = RecomendacionesDesfavorables
         fields = [
@@ -46,6 +47,7 @@ class RecomendacionesDesfavorablesSerializer(serializers.ModelSerializer):
 
 class TemporalidadSerializer(serializers.ModelSerializer):
     region_label_value = serializers.SerializerMethodField()
+
     class Meta:
         model = Temporalidad
         fields = [
@@ -73,6 +75,7 @@ class Paso1RevisionFinalSubdereSerializer(serializers.ModelSerializer):
     avance = serializers.SerializerMethodField()
     campos_obligatorios_completados = serializers.ReadOnlyField()
     estado_stepper = serializers.ReadOnlyField()
+
     class Meta:
         model = Paso1RevisionFinalSubdere
         fields = [
@@ -129,7 +132,6 @@ class RevisionFinalCompetenciaDetailSerializer(serializers.ModelSerializer):
             'ultimo_editor',
             'fecha_ultima_modificacion',
         ]
-
 
     def get_competencia_nombre(self, obj):
         if obj:
@@ -202,7 +204,7 @@ class RevisionFinalCompetenciaPaso1Serializer(WritableNestedModelSerializer):
         return RegionSerializer(regiones_qs, many=True).data
 
 
-class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
+class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
     paso2_revision_final_subdere = Paso2RevisionFinalSubdereSerializer()
     solo_lectura = serializers.SerializerMethodField()
     recomendaciones_desfavorables = RecomendacionesDesfavorablesSerializer(many=True, read_only=False)
@@ -328,7 +330,7 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         recomendaciones_desfavorables_data = validated_data.pop('recomendaciones_desfavorables', None)
-        temporalidad_data = validated_data.pop('temporalidad_gradualidad', None)
+        temporalidades_data = validated_data.pop('temporalidad_gradualidad', None)
 
         # Actualizar los atributos de Competencia
         for attr, value in validated_data.items():
@@ -338,10 +340,30 @@ class RevisionFinalCompetenciaPaso2Serializer(serializers.ModelSerializer):
         # Actualizar o crear modelos anidados
 
         if recomendaciones_desfavorables_data:
-            self.update_or_create_nested_instances(RecomendacionesDesfavorables, recomendaciones_desfavorables_data, instance)
+            self.update_or_create_nested_instances(RecomendacionesDesfavorables, recomendaciones_desfavorables_data,
+                                                   instance)
 
-        if temporalidad_data:
-            self.update_or_create_nested_instances(Temporalidad, temporalidad_data, instance)
+        if temporalidades_data is not None:
+            for temporalidad_data in temporalidades_data:
+                temporalidad_id = temporalidad_data.pop('id', None)
+                delete_flag = temporalidad_data.pop('DELETE', False)
+                regiones = temporalidad_data.pop('region', [])
+
+                if delete_flag:
+                    Temporalidad.objects.filter(id=temporalidad_id).delete()
+                    print(f"Temporalidad eliminada: ID {temporalidad_id}")
+                    continue
+
+                temporalidad_instance, _ = Temporalidad.objects.update_or_create(
+                    id=temporalidad_id,
+                    defaults=temporalidad_data,
+                    competencia=instance
+                )
+
+                if regiones is not None:
+                    temporalidad_instance.region.set(regiones)
+                    continue
+
         return instance
 
 
