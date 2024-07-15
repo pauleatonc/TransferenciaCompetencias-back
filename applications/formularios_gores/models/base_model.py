@@ -24,6 +24,14 @@ class FormularioGORE(BaseModel):
                                                        blank=True, null=True)
     descripcion_antecedente = models.TextField(blank=True, null=True, max_length=500)
 
+    # Documento adicional revisión SUBDERE
+    antecedente_adicional_subdere = models.FileField(upload_to='formulario_gore',
+                                 validators=[
+                                     FileExtensionValidator(
+                                         ['pdf'], message='Solo se permiten archivos PDF.'),
+                                     validate_file_size_twenty],
+                                 verbose_name='Antecedente adicional Observación SUBDERE', blank=True, null=True)
+
     def save(self, *args, **kwargs):
         if self.formulario_enviado and not self.fecha_envio:
             self.fecha_envio = timezone.now()
