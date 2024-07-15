@@ -1,13 +1,10 @@
 from django.db import transaction
-from django.utils import timezone
-
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from applications.etapas.models import Etapa1, Etapa2, Etapa3
-from applications.formularios_sectoriales.models import FormularioSectorial, Paso1, OrganigramaRegional
-from applications.regioncomuna.models import Region
+from applications.etapas.models import Etapa1, Etapa2
+from applications.formularios_sectoriales.models import FormularioSectorial
 from applications.formularios_sectoriales.models import ObservacionesSubdereFormularioSectorial
 from applications.sectores_gubernamentales.models import SectorGubernamental
 
