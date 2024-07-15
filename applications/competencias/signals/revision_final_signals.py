@@ -109,8 +109,8 @@ def update_competencia_status(sender, instance, **kwargs):
                 instance.save(update_fields=['recomendacion_transferencia'])
 
             # Generar y guardar el PDF si el formulario final ha sido enviado
-            if instance.formulario_final_enviado:
-                save_complete_document_pdf(instance.id)
+            #if instance.formulario_final_enviado:
+                #save_complete_document_pdf(instance.id)
 
     finally:
         # Quitar marca para permitir futuras actualizaciones
