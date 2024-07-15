@@ -204,6 +204,9 @@ def get_subtitulos_disponibles(modelo_costos, formulario_obj):
     # Asegura que solo se consideren las instancias con un item_subtitulo definido
     items_utilizados = modelo_costos.objects.filter(
         formulario_gore=formulario_obj, item_subtitulo__isnull=False
+    ).exclude(
+        id_sectorial__isnull=False,
+        subtitulo__subtitulo="Sub. 21"
     ).values_list('item_subtitulo__id', flat=True)
 
     # Filtra ItemSubtitulo para excluir los utilizados
@@ -222,6 +225,9 @@ def get_item_subtitulos_disponibles_y_agrupados(modelo_costos, formulario_obj):
     # Asegura que solo se consideren las instancias con un item_subtitulo definido
     items_utilizados = modelo_costos.objects.filter(
         formulario_gore=formulario_obj, item_subtitulo__isnull=False
+    ).exclude(
+        id_sectorial__isnull=False,
+        subtitulo__subtitulo="Sub. 21"
     ).values_list('item_subtitulo__id', flat=True)
 
     # Filtra ItemSubtitulo para excluir los utilizados
