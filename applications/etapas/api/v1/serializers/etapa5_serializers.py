@@ -4,9 +4,10 @@ from rest_framework import serializers
 from applications.etapas.functions import (
     get_ultimo_editor,
     get_fecha_ultima_modificacion,
-    obtener_estado_accion_generico,
+    obtener_estado_accion_generico, reordenar_detalle,
 )
 from applications.etapas.models import Etapa5
+from applications.formularios_gores.models import FormularioGORE, ObservacionesSubdereFormularioGORE
 
 User = get_user_model()
 
@@ -22,6 +23,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
     minuta_gore = serializers.SerializerMethodField()
     observacion_minuta_gore = serializers.SerializerMethodField()
     tipo_usuario = serializers.SerializerMethodField()
+    observaciones_subere_gore = serializers.SerializerMethodField()
 
     class Meta:
         model = Etapa5
@@ -38,6 +40,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'oficio_inicio_dipres',
             'minuta_gore',
             'observacion_minuta_gore',
+            'observaciones_subere_gore',
             'oficio_origen',
             'tipo_usuario',
             'aprobada',
@@ -60,6 +63,9 @@ class Etapa5Serializer(serializers.ModelSerializer):
 
     def get_fecha_ultima_modificacion(self, obj):
         return get_fecha_ultima_modificacion(self, obj)
+
+    def reordenar_detalle(self, detalle, user):
+        return reordenar_detalle(self, detalle, user)
 
     def get_usuario_notificado(self, obj):
         usuarios_dipres = obj.competencia.usuarios_dipres.all()
@@ -123,3 +129,66 @@ class Etapa5Serializer(serializers.ModelSerializer):
             accion_finalizada_usuario_grupo='Ver Observaciones',
             accion_finalizada_general='Ver Observaciones',
         )
+
+    def get_observaciones_subere_gore(self, obj):
+        user =  self.context['request'].user
+        es_subdere = user.groups.filter(name='SUBDERE').exists()
+        es_usuario_gore = user.groups.filter(name='Usuario GORE').exists()
+        formularios_gore = FormularioGORE.objects.filter(competencia=obj.competencia)
+        observaciones = ObservacionesSubdereFormularioGORE.objects.filter(
+            formulario_gore__in=formularios_gore)
+
+        detalle = []
+        for formulario in formularios_gore:
+            observacion = observaciones.filter(formulario_gore=formulario).first()
+            if observacion:
+                estado_revision = es_subdere and obj.observacion_minuta_gore_enviada
+                estado = 'finalizada' if observacion.observacion_enviada else 'revision' if estado_revision else 'pendiente'
+
+                if observacion.observacion_enviada and (es_subdere or es_usuario_gore):
+                    accion = 'Ver Observación'
+                elif observacion.observacion_enviada and not es_subdere and not es_usuario_gore:
+                    accion = 'Finalizada'
+                elif es_subdere:
+                    accion = 'Subir Observación'
+                else:
+                    accion = 'Observación pendiente'
+
+                detalle.append({
+                    "id": formulario.id,
+                    "nombre": f"Observación del formulario GORE ({formulario.nombre})",
+                    "estado": estado,
+                    "accion": accion
+                })
+
+        # Si solo hay una observación, devuelve directamente el detalle
+        if len(detalle) <= 1:
+            return detalle
+
+        # Verificar si todas las observaciones han sido enviadas
+        todas_observaciones_enviadas = all(observacion.observacion_enviada for observacion in observaciones)
+
+        if todas_observaciones_enviadas:
+            if es_subdere or es_usuario_gore:
+                accion_resumen = 'Ver Observaciones'
+            else:
+                accion_resumen = 'Observaciones Finalizadas'
+
+        else:
+            accion_resumen = 'Observaciones pendientes'
+
+        todos_formularios_enviados = all(formulario.formulario_enviado for formulario in formularios_gore)
+        estado_resumen = 'finalizada' if todas_observaciones_enviadas else 'revision' if todos_formularios_enviados else 'pendiente'
+
+        resumen = {
+            "nombre": 'Observaciones de formularios GORE',
+            "estado": estado_resumen,
+            "accion": accion_resumen
+        }
+
+        detalle = self.reordenar_detalle(detalle, self.context['request'].user)
+
+        return {
+            "resumen_observaciones_subdere_gore": [resumen],
+            "detalle_observaciones_subdere_gore": detalle
+        }
