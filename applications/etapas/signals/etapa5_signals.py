@@ -1,11 +1,9 @@
-from django.db import transaction
 from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 
 from applications.competencias.models import Competencia
-from django.utils import timezone
-
-from applications.etapas.models import Etapa4, Etapa5
+from applications.etapas.models import Etapa5
+from applications.formularios_gores.models import ObservacionesSubdereFormularioGORE
 
 
 @receiver(m2m_changed, sender=Competencia.usuarios_dipres.through)
@@ -18,16 +16,18 @@ def actualizar_etapa5_al_modificar_usuarios_dipres(sender, instance, action, pk_
                 etapa5.save()
 
 
-@receiver(post_save, sender=Etapa5)
-def verificar_y_aprobar_etapa5(sender, instance, **kwargs):
-    # Verificar si ya se está procesando para evitar recursión
-    if getattr(instance, '_no_recurse', False):
-        return
+@receiver(post_save, sender=ObservacionesSubdereFormularioGORE)
+def comprobar_y_finalizar_observaciones_etapa5(sender, instance, **kwargs):
+    # Comprobar si todas las observaciones han sido enviadas
+    todas_enviadas = all(
+        observacion.observacion_enviada for observacion in
+        ObservacionesSubdereFormularioGORE.objects.filter(
+            formulario_gore__competencia=instance.formulario_gore.competencia)
+    )
 
-    if instance.observacion_minuta_gore_enviada:
-        instance.aprobada = True
-        # Establecer la bandera antes de guardar para evitar recursión
-        setattr(instance, '_no_recurse', True)
-        instance.save()
-        # Quitar la bandera después de guardar
-        delattr(instance, '_no_recurse')
+    # Obtener Etapa2 relacionada con la competencia
+    etapa5 = Etapa5.objects.filter(competencia=instance.formulario_gore.competencia).first()
+
+    if todas_enviadas and etapa5:
+        etapa5.observacion_minuta_gore_enviada = True
+        etapa5.save()

@@ -1,7 +1,9 @@
+import logging
+
+from django.contrib.auth import get_user_model
 from drf_writable_nested import WritableNestedModelSerializer
 from rest_framework import serializers
-from applications.competencias.models import Competencia
-import logging
+
 from applications.formularios_sectoriales.models import (
     FormularioSectorial,
     Paso5Encabezado,
@@ -20,13 +22,6 @@ from applications.formularios_sectoriales.models import (
     PersonalIndirecto,
     EtapasEjercicioCompetencia
 )
-
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-
-from applications.regioncomuna.models import Region
-from applications.sectores_gubernamentales.models import SectorGubernamental
-from .base_serializer import FormularioSectorialDetailSerializer
 
 User = get_user_model()
 
