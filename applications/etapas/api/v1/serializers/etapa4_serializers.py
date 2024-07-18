@@ -115,6 +115,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
         )
 
     def get_formularios_gore(self, obj):
+        request = self.context.get('request')
         user = self.context['request'].user
         es_usuario_gore = obj.competencia.usuarios_gore.filter(id=user.id).exists()
         regiones = obj.competencia.regiones.all()
@@ -131,7 +132,7 @@ class Etapa4Serializer(serializers.ModelSerializer):
                 accion = 'Ver Formulario' if formulario_gore.formulario_enviado else 'Subir Formulario' if usuario_region_correcta else 'Formulario pendiente'
 
                 # Obtener antecedente_adicional_gore y descripcion_antecedente
-                antecedente_adicional_gore = formulario_gore.antecedente_adicional_gore.url if formulario_gore.antecedente_adicional_gore else 'No aplica'
+                antecedente_adicional_gore = request.build_absolute_uri(formulario_gore.antecedente_adicional_gore.url) if formulario_gore.antecedente_adicional_gore else 'No aplica'
                 descripcion_antecedente = formulario_gore.descripcion_antecedente if formulario_gore.descripcion_antecedente else 'No aplica'
 
                 detalle_formulario = {
