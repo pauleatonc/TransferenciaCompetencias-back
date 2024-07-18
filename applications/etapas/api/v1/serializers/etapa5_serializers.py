@@ -40,6 +40,7 @@ class Etapa5Serializer(serializers.ModelSerializer):
             'observacion_minuta_gore',
             'oficio_origen',
             'tipo_usuario',
+            'aprobada',
 
             # Campos DIPRES etapa 5
             'archivo_minuta_etapa5',
