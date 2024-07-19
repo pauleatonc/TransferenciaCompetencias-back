@@ -66,8 +66,9 @@ class UserSerializer(serializers.ModelSerializer):
                 competencia = Competencia.objects.get(id=competencia_id)
 
                 # Asignar competencias basándose en el perfil del usuario
-                if user.perfil in ['SUBDERE', 'DIPRES']:
+                if user.perfil in ['SUBDERE']:
                     competencia.usuarios_subdere.add(user)
+                elif user.perfil in ['DIPRES']:
                     competencia.usuarios_dipres.add(user)
                 elif user.perfil == 'Usuario Sectorial' and user.sector in competencia.sectores.all():
                     competencia.usuarios_sectoriales.add(user)

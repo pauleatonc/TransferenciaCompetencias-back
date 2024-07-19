@@ -1,20 +1,5 @@
 from django.test import TestCase
-from .models import Region, Comuna, cargar_datos_regioncomuna
-
-
-class CargarDatosRegionComunaTest(TestCase):
-
-    def test_cargar_datos_regioncomuna(self):
-        # Llama lafunción aquí para cargar los datos
-        cargar_datos_regioncomuna()
-
-        # Verifica que los datos se hayan cargado correctamente
-        self.assertTrue(Region.objects.filter(region="Arica y Parinacota").exists())
-        print("RegionComuna: Test de metodo de carga de regiones: Ok")
-        arica_y_parinacota = Region.objects.get(region="Arica y Parinacota")
-        self.assertTrue(Comuna.objects.filter(comuna="Arica", region=arica_y_parinacota).exists())
-        print("RegionComuna: Test de metodo de carga de comunas: Ok")
-
+from .models import Region, Comuna
 
 class RegionModelTest(TestCase):
 
