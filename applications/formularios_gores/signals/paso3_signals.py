@@ -67,7 +67,8 @@ def crear_o_actualizar_personal_gore(sender, instance, created, **kwargs):
         }
         obj, created_gore = modelo_gore.objects.get_or_create(
             formulario_gore=formulario_gore,
-            id_sectorial=instance.id,  # Utiliza el ID sectorial para encontrar y actualizar la instancia correspondiente en GORE
+            id_sectorial=instance.id,
+            # Utiliza el ID sectorial para encontrar y actualizar la instancia correspondiente en GORE
             sector=sector,
             defaults=defaults
         )
@@ -84,7 +85,7 @@ def eliminar_personal_gore_correspondiente(sender, instance, **kwargs):
 
     # Utiliza el ID sectorial para encontrar y eliminar la instancia correspondiente en GORE
     modelo_gore.objects.filter(id_sectorial=instance.id).delete()
-    
+
 
 # Mapeo entre ItemSubtitulo y CalidadJuridica
 relacion_item_calidad = {
@@ -95,59 +96,47 @@ relacion_item_calidad = {
 }
 
 
+# Actualizar o crear instancias de personal basándose en los subtítulos y la ausencia de sector
 def actualizar_instancias_personal(modelo_costos, modelo_personal, instance, created=False):
-    """
-    Actualiza o elimina las instancias de Personal (Directo o Indirecto) basándose en el estado del item_subtitulo
-    seleccionado en el modelo de costos. Específicamente, maneja la creación de instancias excluyendo el caso
-    "04 - Otros Gastos en Personal".
-    """
-    # Manejar la creación o actualización de costos
     if instance.item_subtitulo and instance.sector is None:
         item_subtitulo_texto = instance.item_subtitulo.item
         calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
 
+        # Manejar el caso especial donde los costos cambian pero no se crean nuevos
         if item_subtitulo_texto == "04 - Otros Gastos en Personal" and not created:
-            # Si estamos actualizando y es el caso especial "04 - Otros Gastos en Personal",
-            # verifica si se deben eliminar instancias de personal asociadas
-            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo, sector__isnull=True).exists():
-                # No hay más costos asociados a este ítem, eliminar todas las instancias de personal relacionadas
+            # Si no existe ningún otro costo en la región que cumpla con la calidad jurídica especificada, eliminar personal
+            if not modelo_costos.objects.filter(item_subtitulo=instance.item_subtitulo).exists():
                 personal_asociado = modelo_personal.objects.filter(
                     formulario_gore=instance.formulario_gore,
-                    calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in calidades]
+                    sector__isnull=True,
+                    calidad_juridica__in=[CalidadJuridica.objects.get(calidad_juridica=calidad) for calidad in
+                                          calidades],
                 )
                 personal_asociado.delete()
-            return  # Finaliza la ejecución para este caso
+            return
 
+        # Convertir calidades en lista si no es una lista
         if not isinstance(calidades, list):
             calidades = [calidades]
 
+        # Crear o actualizar instancias de personal
         for calidad in calidades:
             calidad_juridica_obj, _ = CalidadJuridica.objects.get_or_create(calidad_juridica=calidad)
-            # Solo crea la instancia de personal si aún no existe y no es el caso especial "04 - Otros Gastos en Personal"
-            if not modelo_personal.objects.filter(formulario_gore=instance.formulario_gore,
-                                                  calidad_juridica=calidad_juridica_obj).exists():
+            if not modelo_personal.objects.filter(
+                    formulario_gore=instance.formulario_gore,
+                    calidad_juridica=calidad_juridica_obj
+            ).exists():
                 modelo_personal.objects.create(
                     formulario_gore=instance.formulario_gore,
                     calidad_juridica=calidad_juridica_obj
                 )
 
-def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
-    """
-    Elimina instancias asociadas a los ítems si ya no existen costos vinculados.
-    """
-
-    # Eliminación de instancias de personal que ya no tienen costos asociados.
-    for calidad, _ in relacion_item_calidad.items():
-        calidades = relacion_item_calidad[calidad] if isinstance(relacion_item_calidad[calidad], list) else [relacion_item_calidad[calidad]]
-        for calidad in calidades:
-            try:
-                calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
-                if not modelo_costos.objects.filter(formulario_gore=instance.formulario_gore,
-                                                    item_subtitulo__item=calidad, sector__isnull=True).exists():
-                    modelo_personal.objects.filter(formulario_gore=instance.formulario_gore,
-                                                   calidad_juridica=calidad_juridica_obj).delete()
-            except CalidadJuridica.DoesNotExist:
-                continue
+        # Eliminar instancias de personal que ya no cumplen la relación de calidad debido a la actualización
+        personal_existente = modelo_personal.objects.filter(formulario_gore=instance.formulario_gore,
+                                                            sector__isnull=True)
+        for personal in personal_existente:
+            if personal.calidad_juridica.calidad_juridica not in calidades:
+                personal.delete()
 
 
 @receiver(post_save, sender=CostosDirectosGore)
@@ -155,19 +144,43 @@ def actualizar_personal_directo(sender, instance, **kwargs):
     actualizar_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance)
 
 
-@receiver(post_delete, sender=CostosDirectosGore)
-def eliminar_personal_directo(sender, instance, **kwargs):
-    eliminar_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance)
-
-
 @receiver(post_save, sender=CostosIndirectosGore)
 def actualizar_personal_indirecto(sender, instance, **kwargs):
     actualizar_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance)
 
 
+def eliminar_instancias_personal(modelo_costos, modelo_personal, instance):
+    if instance.item_subtitulo and instance.sector is None:
+        item_subtitulo_texto = instance.item_subtitulo.item
+        calidades = relacion_item_calidad.get(item_subtitulo_texto, [])
+
+        # Convertir calidades en lista si no es una lista
+        if not isinstance(calidades, list):
+            calidades = [calidades]
+
+        # Eliminar instancias de personal que corresponden a la calidad jurídica relacionada con el item de subtítulo eliminado
+        for calidad in calidades:
+            try:
+                calidad_juridica_obj = CalidadJuridica.objects.get(calidad_juridica=calidad)
+                personal_correspondiente = modelo_personal.objects.filter(
+                    formulario_gore=instance.formulario_gore,
+                    sector__isnull=True,
+                    calidad_juridica=calidad_juridica_obj
+                )
+                personal_correspondiente.delete()
+            except CalidadJuridica.DoesNotExist:
+                continue  # Si la calidad jurídica no existe, simplemente se ignora
+
+
+@receiver(post_delete, sender=CostosDirectosGore)
+def eliminar_personal_directo(sender, instance, **kwargs):
+    eliminar_instancias_personal(CostosDirectosGore, PersonalDirectoGORE, instance)
+
+
 @receiver(post_delete, sender=CostosIndirectosGore)
 def eliminar_personal_indirecto(sender, instance, **kwargs):
     eliminar_instancias_personal(CostosIndirectosGore, PersonalIndirectoGORE, instance)
+
 
 
 def get_item_subtitulo(item):
@@ -519,6 +532,7 @@ def actualizar_subtitulo_21(sender, instance, **kwargs):
     except Paso3.DoesNotExist:
         # Si no existe Paso3, simplemente pasa sin realizar ninguna acción
         pass
+
 
 @receiver(post_save, sender=PersonalDirectoGORE)
 @receiver(post_save, sender=PersonalIndirectoGORE)
