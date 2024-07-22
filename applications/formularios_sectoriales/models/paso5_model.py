@@ -318,7 +318,7 @@ class PersonalDirecto(BaseModel):
     estamento = models.ForeignKey(Estamento, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     calidad_juridica = models.ForeignKey(CalidadJuridica, on_delete=models.CASCADE, related_name='personal_directo', null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True, default=None)
+    grado = models.CharField(max_length=10, null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['created_date']
@@ -334,7 +334,7 @@ class PersonalIndirecto(BaseModel):
     numero_personas = models.IntegerField(null=True, blank=True)
     renta_bruta = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     total_rentas = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
-    grado = models.IntegerField(null=True, blank=True, default=None)
+    grado = models.CharField(max_length=10, null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['created_date']

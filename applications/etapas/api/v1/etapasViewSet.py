@@ -1,6 +1,5 @@
+from rest_framework import permissions
 from rest_framework import viewsets
-
-from rest_framework.permissions import IsAuthenticated
 
 from applications.etapas.models import (
     Etapa1,
@@ -9,10 +8,6 @@ from applications.etapas.models import (
     Etapa4,
     Etapa5,
 )
-from applications.users.permissions import (
-    IsSUBDEREOrSuperuser
-)
-
 from .serializers import (
     Etapa1Serializer,
     Etapa2Serializer,
@@ -22,72 +17,66 @@ from .serializers import (
 )
 
 
-from rest_framework.permissions import BasePermission
+class IsSUBDEREOrSuperuser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_superuser or request.user.groups.filter(name='SUBDERE').exists()
 
 
-class IsDIPRESOrSUBDEREOrSuperuser(BasePermission):
+class IsDIPRESOrSUBDEREOrSuperuser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_superuser or \
+            request.user.groups.filter(name='DIPRES').exists() or \
+            request.user.groups.filter(name='SUBDERE').exists()
+
+
+class ReadOnly(permissions.BasePermission):
     """
-    Permite el acceso solo a usuarios que son superusuarios, pertenecen al grupo SUBDERE o al grupo DIPRES,
-    y además están asignados a la misma competencia que la etapa.
+    Permiso global de solo lectura.
     """
 
     def has_permission(self, request, view):
-        # Permitir si es superusuario.
-        if request.user and request.user.is_superuser:
-            return True
+        return request.method in permissions.SAFE_METHODS
 
-        user_groups = request.user.groups.values_list('name', flat=True)
-        is_subdere_or_dipres = 'SUBDERE' in user_groups or 'DIPRES' in user_groups
 
-        # Para las operaciones que no requieren un objeto específico (como POST), se retorna True aquí.
-        # Esto porque la verificación detallada se hace en has_object_permission.
-        return is_subdere_or_dipres
+class CustomDIPRESPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.groups.filter(name='DIPRES').exists() and \
+            request.method in permissions.SAFE_METHODS
 
+
+class ReadOnlyForCompetencia(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        if request.user and request.user.is_superuser:
-            return True
-
-        user_groups = request.user.groups.values_list('name', flat=True)
-        is_subdere = 'SUBDERE' in user_groups
-        is_dipres = 'DIPRES' in user_groups
-
-        # Si el usuario es SUBDERE, solo se verifica la pertenencia al grupo.
-        if is_subdere:
-            return True
-
-        # Si el usuario es DIPRES, se verifica además que pertenezca a la misma competencia.
-        if is_dipres:
-            competencia = obj.competencia  # Asumiendo que 'obj' tiene un atributo 'competencia'.
-            return request.user in competencia.usuarios_dipres.all()
-
-        return False
+        return request.method in permissions.SAFE_METHODS and \
+            (obj.competencia.usuarios_dipres.filter(id=request.user.id).exists() or \
+             obj.competencia.usuarios_sectoriales.filter(id=request.user.id).exists() or \
+             obj.competencia.usuarios_gore.filter(id=request.user.id).exists())
 
 
 class Etapa1ViewSet(viewsets.ModelViewSet):
     queryset = Etapa1.objects.all()
     serializer_class = Etapa1Serializer
-    permission_classes = [IsSUBDEREOrSuperuser]
+    permission_classes = [IsSUBDEREOrSuperuser | ReadOnly]
 
 
-class  Etapa2ViewSet(viewsets.ModelViewSet):
+class Etapa2ViewSet(viewsets.ModelViewSet):
     queryset = Etapa2.objects.all()
     serializer_class = Etapa2Serializer
-    permission_classes = [IsSUBDEREOrSuperuser]
+    permission_classes = [IsSUBDEREOrSuperuser | ReadOnly]
 
 
 class Etapa3ViewSet(viewsets.ModelViewSet):
     queryset = Etapa3.objects.all()
     serializer_class = Etapa3Serializer
-    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser]
+    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser | CustomDIPRESPermission | ReadOnlyForCompetencia]
 
 
-class  Etapa4ViewSet(viewsets.ModelViewSet):
+class Etapa4ViewSet(viewsets.ModelViewSet):
     queryset = Etapa4.objects.all()
     serializer_class = Etapa4Serializer
-    permission_classes = [IsSUBDEREOrSuperuser]
+    permission_classes = [IsSUBDEREOrSuperuser | ReadOnly]
 
 
 class Etapa5ViewSet(viewsets.ModelViewSet):
     queryset = Etapa5.objects.all()
     serializer_class = Etapa5Serializer
-    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser]
+    permission_classes = [IsDIPRESOrSUBDEREOrSuperuser | CustomDIPRESPermission | ReadOnlyForCompetencia]
