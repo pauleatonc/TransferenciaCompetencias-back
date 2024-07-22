@@ -145,7 +145,7 @@ class FormularioGOREViewSet(viewsets.ModelViewSet):
             # Aquí manejas el PATCH utilizando la lógica de permisos y actualización
             return manejar_permiso_patch(request, formulario_gore, ResumenFormularioSerializer)
 
-        serializer = ResumenFormularioSerializer(formulario_gore)
+        serializer = ResumenFormularioSerializer(instance=formulario_gore, context={'request': request})
         return Response(serializer.data)
 
 

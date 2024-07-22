@@ -4,8 +4,8 @@ from applications.formularios_sectoriales.models import FormularioSectorial
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-
 User = get_user_model()
+
 
 class FormularioGOREDetailSerializer(serializers.ModelSerializer):
     competencia_nombre = serializers.SerializerMethodField()
