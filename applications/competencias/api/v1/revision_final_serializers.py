@@ -410,6 +410,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     formulario_completo = serializers.SerializerMethodField()
     antecedente_adicional_revision_subdere = serializers.FileField(required=False, allow_null=True)
     delete_antecedente_adicional_revision_subdere = serializers.BooleanField(write_only=True, required=False)
+    download_antecedente_revision_subdere = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -424,7 +425,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'imprimir_formulario_final',
             'antecedente_adicional_revision_subdere',
             'delete_antecedente_adicional_revision_subdere',
-            'descripcion_antecedente'
+            'descripcion_antecedente',
+            'download_antecedente_revision_subdere'
         ]
 
     def get_competencia_nombre(self, obj):
@@ -444,3 +446,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             instance.delete_file()
         validated_data.pop('delete_antecedente_revision_subdere', None)
         return super().update(instance, validated_data)
+
+    def get_download_antecedente_revision_subdere(self, obj):
+        requests = self.context.get('request')
+        if requests and obj.antecedente_adicional_revision_subdere:
+            return requests.build_absolute_uri(obj.antecedente_adicional_revision_subdere.url)
+        return None
