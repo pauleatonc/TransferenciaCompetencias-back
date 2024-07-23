@@ -11,6 +11,7 @@ from applications.competencias.models import (
     Paso1RevisionFinalSubdere,
     Paso2RevisionFinalSubdere,
     ImagenesRevisionSubdere,
+    CompetenciaAgrupada
 )
 
 from applications.competencias.api.v1.serializers import (
@@ -22,6 +23,17 @@ from applications.regioncomuna.api.v1.serializer import RegionSerializer
 from applications.regioncomuna.models import Region
 
 User = get_user_model()
+
+
+class CompetenciaAgrupadaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompetenciaAgrupada
+        fields = [
+            'id',
+            'nombre',
+            'competencias',
+            'modalidad_ejercicio',
+        ]
 
 
 class RecomendacionesDesfavorablesSerializer(serializers.ModelSerializer):
@@ -213,6 +225,7 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
     regiones_temporalidad = serializers.SerializerMethodField()
     temporalidad_opciones = serializers.SerializerMethodField()
     modalidad_ejercicio_opciones = serializers.SerializerMethodField()
+    competencias_agrupadas = CompetenciaAgrupadaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Competencia
@@ -221,6 +234,7 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
             'solo_lectura',
             'paso2_revision_final_subdere',
             'nombre',
+            'competencias_agrupadas',
             'sectores',
             'regiones_recomendadas',
             'recomendaciones_desfavorables',
@@ -286,7 +300,8 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
         # Procesar campos anidados
         for field_name in [
             'recomendaciones_desfavorables',
-            'temporalidad_gradualidad'
+            'temporalidad_gradualidad',
+            'competencias_agrupadas'
         ]:
             if field_name in data:
                 nested_data = data[field_name]
@@ -309,20 +324,22 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
             delete_flag = data.pop('DELETE', False)
             region_id = data.pop('region', None)  # Asumiendo que recibes un ID de región
 
+            # Determinar el nombre correcto del campo basado en el modelo
+            competencia_field_name = 'competencias' if model == CompetenciaAgrupada else 'competencia'
+
             if item_id is not None and not delete_flag:
                 obj, created = model.objects.update_or_create(
                     id=item_id,
-                    competencia=instance,
-                    defaults={**data}
+                    defaults={**data, competencia_field_name: instance}  # Uso dinámico del nombre del campo
                 )
                 if region_id is not None:
                     obj.region_id = region_id  # Asigna directamente el ID de la región
                 obj.save()
             elif not delete_flag:
                 obj = model.objects.create(
-                    competencia=instance,
-                    region_id=region_id,  # Asigna el ID al crear
-                    **data
+                    **data,
+                    **{competencia_field_name: instance},  # Uso dinámico del nombre del campo
+                    region_id=region_id  # Asigna el ID al crear
                 )
                 obj.save()
             elif delete_flag:
@@ -331,6 +348,7 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
     def update(self, instance, validated_data):
         recomendaciones_desfavorables_data = validated_data.pop('recomendaciones_desfavorables', None)
         temporalidades_data = validated_data.pop('temporalidad_gradualidad', None)
+        competencias_agrupadas_data = validated_data.pop('competencias_agrupadas', None)
 
         # Actualizar los atributos de Competencia
         for attr, value in validated_data.items():
@@ -342,6 +360,9 @@ class RevisionFinalCompetenciaPaso2Serializer(WritableNestedModelSerializer):
         if recomendaciones_desfavorables_data:
             self.update_or_create_nested_instances(RecomendacionesDesfavorables, recomendaciones_desfavorables_data,
                                                    instance)
+
+        if competencias_agrupadas_data is not None:
+            self.update_or_create_nested_instances(CompetenciaAgrupada, competencias_agrupadas_data, instance)
 
         if temporalidades_data is not None:
             for temporalidad_data in temporalidades_data:
@@ -410,6 +431,7 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
     formulario_completo = serializers.SerializerMethodField()
     antecedente_adicional_revision_subdere = serializers.FileField(required=False, allow_null=True)
     delete_antecedente_adicional_revision_subdere = serializers.BooleanField(write_only=True, required=False)
+    download_antecedente_revision_subdere = serializers.SerializerMethodField()
 
     class Meta:
         model = Competencia
@@ -424,7 +446,8 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             'imprimir_formulario_final',
             'antecedente_adicional_revision_subdere',
             'delete_antecedente_adicional_revision_subdere',
-            'descripcion_antecedente'
+            'descripcion_antecedente',
+            'download_antecedente_revision_subdere'
         ]
 
     def get_competencia_nombre(self, obj):
@@ -444,3 +467,9 @@ class ResumenFormularioSerializer(serializers.ModelSerializer):
             instance.delete_file()
         validated_data.pop('delete_antecedente_revision_subdere', None)
         return super().update(instance, validated_data)
+
+    def get_download_antecedente_revision_subdere(self, obj):
+        requests = self.context.get('request')
+        if requests and obj.antecedente_adicional_revision_subdere:
+            return requests.build_absolute_uri(obj.antecedente_adicional_revision_subdere.url)
+        return None
