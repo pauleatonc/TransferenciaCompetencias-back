@@ -98,7 +98,7 @@ class RevisionFinalCompetenciaViewSet(viewsets.ModelViewSet):
             return manejar_permiso_patch(request, competencia, ResumenFormularioSerializer)
 
         # Si el método es GET, simplemente serializas y retornas los datos como antes
-        serializer = ResumenFormularioSerializer(competencia)
+        serializer = ResumenFormularioSerializer(instance=competencia, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='subir-imagen', parser_classes=[MultiPartParser, FormParser])
