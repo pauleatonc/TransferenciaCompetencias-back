@@ -75,7 +75,7 @@ class CompetenciaAdmin(admin.ModelAdmin, ImportExportMixin):
         (None, {
             'fields': (
             'nombre', 'agrupada', 'creado_por', 'sectores', 'regiones', 'ambito_competencia', 'origen', 'fecha_inicio', 'fecha_fin',
-            'formulario_final_enviado', 'plazo_formulario_sectorial', 'plazo_formulario_gore', 'oficio_origen')
+            'formulario_final_enviado', 'plazo_formulario_sectorial', 'plazo_formulario_gore', 'oficio_origen', 'imprimir_formulario_final')
         }),
         ('Usuarios', {
             'fields': ('usuarios_subdere', 'usuarios_dipres', 'usuarios_sectoriales', 'usuarios_gore')

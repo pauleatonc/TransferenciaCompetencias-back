@@ -190,24 +190,17 @@ def process_formulario_sectorial_step(writer, request, formulario, step_function
     return current_page
 
 
-def download_complete_document(request, competencia_id):
+def build_competencia_pdf(request, competencia_id):
     temp_pdf = NamedTemporaryFile(delete=False, suffix='.pdf')
     final_pdf_path = temp_pdf.name
-    # Ruta donde se guardará el PDF
-    media_root = settings.MEDIA_ROOT
-    pdf_path = os.path.join(media_root, 'documento_final', f'competencia_{competencia_id}_document.pdf')
-
-    # Asegurar que el directorio existe
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
-
-    # Inicializa PdfWriter
     pdf_writer = PdfWriter()
 
-    # Diccionario para rastrear el índice
+    # Obtener y procesar el contenido común aquí
     index_entries = []
     current_page = 1
 
-    # Obtener el PDF del resumen de la competencia
+    # Resumen de la Competencia
+    resumen_competencia(None, competencia_id, return_pdf=True)
     pdf_bytes = resumen_competencia(None, competencia_id, return_pdf=True)
     pdf_reader = PdfReader(BytesIO(pdf_bytes))
     num_pages = len(pdf_reader.pages)
@@ -220,31 +213,33 @@ def download_complete_document(request, competencia_id):
     formularios_sectoriales = FormularioSectorial.objects.filter(competencia_id=competencia_id)
     for formulario in formularios_sectoriales:
 
-        # Example usage for FormularioSectorial paso1
+        # FormularioSectorial paso1
         current_page = process_formulario_sectorial_step(
             pdf_writer, request, formulario, formulario_sectorial_paso1,
             'Formulario Sectorial Paso 1', current_page, index_entries
         )
 
-        # Example usage for MarcoJuridico documents
+        # MarcoJuridico
         for marco_juridico in MarcoJuridico.objects.filter(formulario_sectorial=formulario):
             current_page = process_and_add_document_to_pdf(pdf_writer, marco_juridico.documento.url, current_page,
-                f'Marco Jurídico - {marco_juridico.documento}', index_entries)
+                                                           f'Marco Jurídico - {marco_juridico.documento}',
+                                                           index_entries)
 
-        # Example usage for OrganigramaNacional
+        # OrganigramaNacional
         if formulario.paso1.organigrama_nacional:
             current_page = process_and_add_document_to_pdf(pdf_writer, formulario.paso1.organigrama_nacional.url,
                                                            current_page, 'Organigrama Nacional', index_entries)
 
-        # Example usage for OrganigramaRegional
+        # OrganigramaRegional
         for organigrama in formulario.organigramaregional.all():
             if organigrama.documento and organigrama.documento.name:
                 current_page = process_and_add_document_to_pdf(pdf_writer, organigrama.documento.url, current_page,
-                    f'Organigrama Regional - {organigrama.documento}', index_entries)
+                                                               f'Organigrama Regional - {organigrama.documento}',
+                                                               index_entries)
             else:
                 print("No document file associated with this OrganigramaRegional instance.")
 
-        # Example usage for FormularioSectorial paso2
+        # FormularioSectorial paso2
         current_page = process_formulario_sectorial_step(
             pdf_writer, request, formulario, formulario_sectorial_paso2,
             'Formulario Sectorial Paso 2', current_page, index_entries
@@ -256,20 +251,21 @@ def download_complete_document(request, competencia_id):
     for page in index_pdf_reader.pages:
         pdf_writer.add_page(page)
 
+    # Agregar números de página al documento
+    add_page_numbers(final_pdf_path)
+
     # Guardar el PDF en el archivo especificado
     with open(final_pdf_path, "wb") as out:
         pdf_writer.write(out)
 
-    # Agregar números de página al documento
-    add_page_numbers(final_pdf_path)
+    return final_pdf_path, pdf_writer
 
-    # Abrir el archivo PDF para enviarlo en la respuesta
+
+def download_complete_document(request, competencia_id):
+    final_pdf_path, _ = build_competencia_pdf(request, competencia_id)
     pdf = open(final_pdf_path, 'rb')
-
-    # Configura la respuesta para mostrar el PDF en línea en el navegador
     response = FileResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="competencia_{competencia_id}_document.pdf"'
-
     return response
 
     # Asegúrate de cerrar y eliminar el archivo temporal si ya no es necesario
@@ -277,50 +273,18 @@ def download_complete_document(request, competencia_id):
     os.unlink(temp_pdf.name)
 
 
-def save_complete_document_pdf(request, competencia_id):
-    # Ruta donde se guardará el PDF
-    media_root = settings.MEDIA_ROOT
-    pdf_path = os.path.join(media_root, 'documento_final', f'competencia_{competencia_id}_document.pdf')
+def save_complete_document(request, competencia_id):
+    # Construir el PDF y obtener la ruta del archivo temporal y el PdfWriter
+    final_pdf_path, pdf_writer = build_competencia_pdf(request, competencia_id)
 
-    # Asegurar que el directorio existe
-    os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
+    # Ruta donde se guardará el PDF dentro de la carpeta media/documento_final
+    media_path = os.path.join(settings.MEDIA_ROOT, 'documento_final')
+    os.makedirs(media_path, exist_ok=True)  # Crear el directorio si no existe
+    final_storage_path = os.path.join(media_path, f'competencia_{competencia_id}_document.pdf')
 
-    # Inicializa PdfWriter
-    pdf_writer = PdfWriter()
+    # Mover el archivo del lugar temporal al directorio final
+    os.replace(final_pdf_path, final_storage_path)
 
-    # Obtener el PDF del resumen de la competencia
-    pdf_bytes = resumen_competencia(None, competencia_id, return_pdf=True)
-    pdf_reader = PdfReader(BytesIO(pdf_bytes))
-    for page in range(len(pdf_reader.pages)):
-        pdf_writer.add_page(pdf_reader.pages[page])
-
-    # Obtener PDFs de todos los formularios sectoriales asociados
-    formularios_sectoriales = FormularioSectorial.objects.filter(competencia_id=competencia_id)
-    for formulario in formularios_sectoriales:
-        pdf_bytes = formulario_sectorial_paso1(request, formulario.id,
-                                               return_pdf=True)  # Pasa `request` en lugar de `None`
-        pdf_reader = PdfReader(BytesIO(pdf_bytes))
-        for page in pdf_reader.pages:
-            pdf_writer.add_page(page)
-
-        # Example usage for MarcoJuridico documents
-        for marco_juridico in MarcoJuridico.objects.filter(formulario_sectorial=formulario):
-            current_page = process_and_add_document_to_pdf(pdf_writer, marco_juridico.documento.url, current_page)
-
-        # Example usage for OrganigramaNacional
-        if formulario.paso1.organigrama_nacional:
-            current_page = process_and_add_document_to_pdf(pdf_writer, formulario.paso1.organigrama_nacional.url,
-                                                           current_page)
-
-        # Example usage for OrganigramaRegional
-        for organigrama in formulario.organigramaregional.all():
-            if organigrama.documento and organigrama.documento.name:
-                current_page = process_and_add_document_to_pdf(pdf_writer, organigrama.documento.url, current_page)
-            else:
-                print("No document file associated with this OrganigramaRegional instance.")
-
-    # Guardar el PDF en el archivo especificado
-    with open(pdf_path, "wb") as out:
-        pdf_writer.write(out)
-
-    return pdf_path
+    # Opcionalmente, puedes querer responder con la URL del archivo
+    file_url = settings.MEDIA_URL + 'documento_final/' + f'competencia_{competencia_id}_document.pdf'
+    return HttpResponse(f"Documento guardado correctamente. Disponible en: <a href='{file_url}'>{file_url}</a>")

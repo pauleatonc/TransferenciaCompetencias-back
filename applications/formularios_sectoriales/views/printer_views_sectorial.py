@@ -102,11 +102,15 @@ def formulario_sectorial_paso2(request, formulario_sectorial_id, return_pdf=Fals
     # Agrupar los datos por 'etapa'
     etapas_con_procedimientos = []
     for etapa in etapas:
-        procedimientos = etapa.procedimientos.all()
-        etapas_con_procedimientos.append({
-            'etapa': etapa,
-            'procedimientos': procedimientos
-        })
+        nombre_etapa = etapa.nombre_etapa
+        descri
+
+        for procedimiento in procedimientos:
+            procedimientos = etapa.procedimientos.all()
+            etapas_con_procedimientos.append({
+                'etapa': etapa,
+                'procedimientos': procedimientos
+            })
 
     context = {
         'sector': formulario_sectorial.sector,

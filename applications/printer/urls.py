@@ -6,4 +6,5 @@ urlpatterns = [
     path('preview/formulario-sectorial_paso1/<int:formulario_sectorial_id>/', views.formulario_sectorial_paso1, name='formulario-sectorial_paso1'),
     path('preview/formulario-sectorial_paso2/<int:formulario_sectorial_id>/', views.formulario_sectorial_paso2, name='formulario-sectorial_paso2'),
     path('download/complete-document/<int:competencia_id>/', views.download_complete_document, name='complete-document'),
+    path('save/complete-document/<int:competencia_id>/', views.save_complete_document, name='save-complete-document')
 ]
