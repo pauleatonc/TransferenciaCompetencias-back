@@ -402,6 +402,8 @@ class Paso5EncabezadoSerializer(serializers.ModelSerializer):
 
 class Paso5Serializer(serializers.ModelSerializer):
     avance = serializers.SerializerMethodField()
+    personal_directo_pendiente = serializers.SerializerMethodField()
+    personal_indirecto_pendiente = serializers.SerializerMethodField()
 
     class Meta:
         model = Paso5
@@ -438,12 +440,38 @@ class Paso5Serializer(serializers.ModelSerializer):
             'sub21b_otras_remuneraciones_justificar',
             'sub21b_total_gastos_en_personal',
             'sub21b_gastos_en_personal_justificado',
-            'sub21b_gastos_en_personal_justificar'
+            'sub21b_gastos_en_personal_justificar',
+            'personal_directo_pendiente',
+            'personal_indirecto_pendiente'
         ]
 
 
     def avance(self, obj):
         return obj.avance()
+
+    def get_personal_directo_pendiente(self, obj):
+        pendientes = []
+        if obj.sub21_personal_planta_justificar and obj.sub21_personal_planta_justificar != 0:
+            pendientes.append('Planta')
+        if obj.sub21_personal_contrata_justificar and obj.sub21_personal_contrata_justificar != 0:
+            pendientes.append('Contrata')
+        if obj.sub21_otras_remuneraciones_justificar and obj.sub21_otras_remuneraciones_justificar != 0:
+            pendientes.append('Otras remuneraciones')
+        if obj.sub21_gastos_en_personal_justificar and obj.sub21_gastos_en_personal_justificar != 0:
+            pendientes.append('Otros gastos en personal')
+        return pendientes
+
+    def get_personal_indirecto_pendiente(self, obj):
+        pendientes = []
+        if obj.sub21b_personal_planta_justificar and obj.sub21b_personal_planta_justificar != 0:
+            pendientes.append('Planta')
+        if obj.sub21b_personal_contrata_justificar and obj.sub21b_personal_contrata_justificar != 0:
+            pendientes.append('Contrata')
+        if obj.sub21b_otras_remuneraciones_justificar and obj.sub21b_otras_remuneraciones_justificar != 0:
+            pendientes.append('Otras remuneraciones')
+        if obj.sub21b_gastos_en_personal_justificar and obj.sub21b_gastos_en_personal_justificar != 0:
+            pendientes.append('Otros gastos en personal')
+        return pendientes
 
 
 def eliminar_instancia_costo(modelo, instancia_id):

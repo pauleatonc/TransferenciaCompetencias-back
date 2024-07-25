@@ -10,7 +10,6 @@ from applications.competencias.models import (
     Paso1RevisionFinalSubdere,
     Paso2RevisionFinalSubdere
 )
-from applications.printer.views import save_complete_document_pdf
 
 
 @receiver(post_save, sender=Competencia)
@@ -108,28 +107,8 @@ def update_competencia_status(sender, instance, **kwargs):
                 instance.recomendacion_transferencia = recomendacion
                 instance.save(update_fields=['recomendacion_transferencia'])
 
-            # Generar y guardar el PDF si el formulario final ha sido enviado
-            #if instance.formulario_final_enviado:
-                #save_complete_document_pdf(instance.id)
-
     finally:
         # Quitar marca para permitir futuras actualizaciones
         delattr(instance, '_updating_status')
-
-
-@receiver(pre_save, sender=Competencia)
-def check_status_change(sender, instance, **kwargs):
-    if instance.pk:
-        # Comprueba el estado anterior del campo 'imprimir_formulario_final'
-        previous = sender.objects.get(pk=instance.pk)
-        if previous.imprimir_formulario_final != instance.imprimir_formulario_final:
-            # Guarda el nuevo estado en una variable del objeto para acceder después del guardado
-            instance._imprimir_formulario_final_changed = True
-
-@receiver(post_save, sender=Competencia)
-def generate_pdf_on_status_change(sender, instance, created, **kwargs):
-    # Comprueba si la instancia es recién creada o si el campo específico cambió
-    if hasattr(instance, '_imprimir_formulario_final_changed') and instance.imprimir_formulario_final:
-        save_complete_document_pdf(instance.id)
 
 
